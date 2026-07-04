@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: TypeScript · Unit Tests · Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript — zero errors
+        run: npx tsc --noEmit
+
+      - name: Unit tests
+        run: npx vitest run
+        env:
+          # Feature flags off in CI — matches production behaviour
+          VITE_SUPABASE_URL: https://placeholder.supabase.co
+          VITE_SUPABASE_ANON_KEY: placeholder-anon-key
+          VITE_APP_NAME: Chronicle AI
+          VITE_APP_VERSION: ${{ github.sha }}
+          VITE_APP_ENV: production
+          VITE_ENABLE_DEBUG_PANEL: 'false'
+          VITE_ENABLE_DEV_TOOLS: 'false'
+          VITE_ENABLE_MOCK_AI: 'false'
+
+      - name: Production build
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: https://placeholder.supabase.co
+          VITE_SUPABASE_ANON_KEY: placeholder-anon-key
+          VITE_APP_NAME: Chronicle AI
+          VITE_APP_VERSION: ${{ github.sha }}
+          VITE_APP_ENV: production
+          VITE_ENABLE_DEBUG_PANEL: 'false'
+          VITE_ENABLE_DEV_TOOLS: 'false'
+          VITE_ENABLE_MOCK_AI: 'false'
+
+      - name: Verify no API key in bundle
+        run: |
+          if grep -rE "sk-proj-|sk-[A-Za-z0-9]{20,}" dist/; then
+            echo "ERROR: OpenAI API key found in production bundle!"
+            exit 1
+          fi
+          echo "Bundle clean — no API keys found."
+
+  # Integration tests run separately against a real database.
+  # Uncomment and configure once Supabase CI integration is set up.
+  # integration:
+  #   name: Integration Tests
+  #   runs-on: ubuntu-latest
+  #   services:
+  #     postgres:
+  #       image: supabase/postgres:15.1.0.117
+  #       env:
+  #         POSTGRES_PASSWORD: postgres
+  #       ports:
+  #         - 5432:5432
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-node@v4
+  #       with:
+  #         node-version: '20'
+  #         cache: 'npm'
+  #     - run: npm ci
+  #     - run: bash scripts/setup-test-db.sh
+  #     - run: npm run test:integration

@@ -1,0 +1,167 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   Chronicle AI — Global Styles
+   Design language: JRPG / dark fantasy aesthetic
+   Void background, arcane gold accents, spirit teal
+   ============================================================ */
+
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* iOS safe-area padding support */
+    padding-top: env(safe-area-inset-top);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  body {
+    @apply bg-void-950 text-white font-body;
+    background-image: radial-gradient(
+      ellipse at 50% 0%,
+      rgba(30, 30, 69, 0.6) 0%,
+      transparent 60%
+    );
+    min-height: 100vh;
+    /* Prevent iOS rubber-band overscroll from showing white */
+    overscroll-behavior: none;
+  }
+
+  h1, h2, h3 {
+    @apply font-display tracking-wide;
+  }
+
+  h4, h5, h6 {
+    @apply font-body font-semibold tracking-tight;
+  }
+
+  /* Scrollbar — dark theme */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-void-900;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-void-600 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-arcane-600;
+  }
+
+  /* Focus ring — accessibility (WCAG 2.4.7, 2.4.11) */
+  :focus-visible {
+    @apply outline-none ring-2 ring-arcane-400 ring-offset-2 ring-offset-void-950;
+  }
+
+  /* Selection */
+  ::selection {
+    @apply bg-arcane-800 text-arcane-100;
+  }
+
+  /* Reduced motion — respect OS preference (WCAG 2.3.3)
+     Disables all transitions and animations for users who prefer reduced motion.
+     Individual components may still show a static indicator (e.g. a dot instead
+     of a spinning ring) — those use the motion-safe: prefix. */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  /* Chronicle panel — reusable dark card */
+  .chr-panel {
+    @apply bg-void-900/80 border border-void-700/50 rounded-lg backdrop-blur-sm;
+    box-shadow: var(--tw-shadow-panel);
+  }
+
+  .chr-panel-arcane {
+    @apply chr-panel border-arcane-800/40;
+  }
+
+  .chr-panel-spirit {
+    @apply chr-panel border-spirit-800/40;
+  }
+
+  /* Lore text — narrative/flavour text style */
+  .lore-text {
+    @apply font-lore text-void-200 italic leading-relaxed;
+  }
+
+  /* Stat block labels */
+  .stat-label {
+    @apply font-mono text-xs uppercase tracking-widest text-void-400;
+  }
+
+  /* Section divider — arcane */
+  .chr-divider {
+    @apply border-t border-void-700/50;
+  }
+
+  /* Skip link — WCAG 2.4.1 bypass block
+     Visually hidden until focused; moves to top-left on focus. */
+  .skip-link {
+    @apply sr-only;
+    &:focus-visible {
+      @apply not-sr-only fixed top-2 left-2 z-[9999];
+      @apply px-4 py-2 rounded-md text-sm font-body font-semibold;
+      @apply bg-arcane-600 text-void-950;
+      @apply ring-2 ring-arcane-400 ring-offset-2 ring-offset-void-950;
+    }
+  }
+
+  /* Touch target helper — ensures minimum 44×44px tap area (WCAG 2.5.5) */
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
+
+  /* Safe-area bottom padding for bottom-fixed UI (iOS notch) */
+  .safe-area-bottom {
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  }
+}
+
+@layer utilities {
+  .text-gradient-arcane {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #f7cf4d 0%, #e39a08 100%);
+  }
+
+  .text-gradient-spirit {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #72e0d7 0%, #21afa6 100%);
+  }
+
+  .glow-arcane {
+    filter: drop-shadow(0 0 8px rgba(243, 207, 77, 0.4));
+  }
+
+  .glow-spirit {
+    filter: drop-shadow(0 0 8px rgba(59, 202, 192, 0.4));
+  }
+
+  /* Screen-reader only with override — used by skip-link */
+  .sr-only-focusable {
+    @apply sr-only;
+    &:focus {
+      @apply not-sr-only;
+    }
+  }
+}

@@ -1,0 +1,364 @@
+/**
+ * Chronicle AI — Pixel Design Layer (Phase 9.0)
+ *
+ * Additive retro-RPG presentation on top of the existing design system.
+ * GBA/NDS-inspired: heavy pixel borders, crisp fonts, torchlight warmth.
+ * Purely presentational — no component contracts change.
+ */
+
+/* ── Crisp pixel rendering ─────────────────────────────────────────────────── */
+
+.pixel-crisp {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  -webkit-font-smoothing: none;
+  font-smooth: never;
+}
+
+.font-pixel-display {
+  font-family: 'Press Start 2P', 'Courier New', monospace;
+  letter-spacing: 0.02em;
+  -webkit-font-smoothing: none;
+}
+
+.font-pixel-body {
+  font-family: 'VT323', 'Courier New', monospace;
+  font-size: 1.125em; /* VT323 renders small — compensate */
+  -webkit-font-smoothing: none;
+}
+
+/* ── Pixel borders ─────────────────────────────────────────────────────────── */
+
+/* Classic GBA dialog border: hard outer edge, inner highlight, corner notches */
+.pixel-border {
+  border: 2px solid #1e1e45;
+  box-shadow:
+    0 0 0 2px #050510,               /* outer dark frame */
+    inset 0 0 0 2px #0a0a1a,         /* inner shadow line */
+    inset 2px 2px 0 2px rgba(247, 207, 77, 0.08); /* torchlight top-left */
+  border-radius: 0;                   /* pixel UIs have no rounded corners */
+}
+
+.pixel-border-arcane {
+  border: 2px solid #c27505;
+  box-shadow:
+    0 0 0 2px #050510,
+    inset 0 0 0 2px #3c1b05,
+    inset 2px 2px 0 2px rgba(247, 207, 77, 0.15);
+  border-radius: 0;
+}
+
+.pixel-border-harm {
+  border: 2px solid #dc2626;
+  box-shadow:
+    0 0 0 2px #050510,
+    inset 0 0 0 2px #450a0a,
+    inset 2px 2px 0 2px rgba(248, 113, 113, 0.12);
+  border-radius: 0;
+}
+
+.pixel-border-spirit {
+  border: 2px solid #198c87;
+  box-shadow:
+    0 0 0 2px #050510,
+    inset 0 0 0 2px #092c2d,
+    inset 2px 2px 0 2px rgba(59, 202, 192, 0.12);
+  border-radius: 0;
+}
+
+/* ── Pixel buttons ─────────────────────────────────────────────────────────── */
+
+.pixel-btn {
+  border-radius: 0;
+  border: 2px solid #1e1e45;
+  box-shadow:
+    0 3px 0 0 #050510,                /* hard drop for "raised key" feel */
+    inset 1px 1px 0 1px rgba(255, 255, 255, 0.06);
+  transition: transform 80ms steps(2), box-shadow 80ms steps(2);
+  transform: translateY(0);
+}
+
+.pixel-btn:hover:not(:disabled) {
+  filter: brightness(1.15);
+}
+
+.pixel-btn:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow:
+    0 0 0 0 #050510,
+    inset 1px 1px 0 1px rgba(0, 0, 0, 0.2);
+}
+
+/* ── Torch flicker ─────────────────────────────────────────────────────────── */
+
+@keyframes torch-flicker {
+  0%, 100% { opacity: 1; }
+  8%   { opacity: 0.92; }
+  22%  { opacity: 0.98; }
+  36%  { opacity: 0.90; }
+  54%  { opacity: 1; }
+  73%  { opacity: 0.95; }
+  88%  { opacity: 0.99; }
+}
+
+.torch-flicker {
+  animation: torch-flicker 3.2s infinite steps(12);
+}
+
+.torch-glow {
+  box-shadow: 0 0 24px 4px rgba(244, 184, 32, 0.12);
+  animation: torch-flicker 3.2s infinite steps(12);
+}
+
+/* ── HP/XP bar fill (steps() for pixel feel) ───────────────────────────────── */
+
+.pixel-bar-track {
+  border-radius: 0;
+  border: 2px solid #1e1e45;
+  box-shadow: inset 0 2px 0 0 rgba(0, 0, 0, 0.5);
+  background: #0a0a1a;
+  overflow: hidden;
+}
+
+.pixel-bar-fill {
+  height: 100%;
+  transition: width 500ms steps(10);
+  background-image: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.25) 0%,
+    rgba(255, 255, 255, 0.25) 30%,
+    transparent 30%
+  );
+}
+
+/* ── Floating damage numbers ───────────────────────────────────────────────── */
+
+@keyframes damage-float {
+  0%   { transform: translateY(0) scale(1); opacity: 0; }
+  10%  { transform: translateY(-4px) scale(1.3); opacity: 1; }
+  30%  { transform: translateY(-14px) scale(1); opacity: 1; }
+  100% { transform: translateY(-36px) scale(0.9); opacity: 0; }
+}
+
+.damage-popup {
+  animation: damage-float 1.1s steps(11) forwards;
+  pointer-events: none;
+  font-family: 'Press Start 2P', monospace;
+  text-shadow:
+    2px 2px 0 #050510,
+    -1px -1px 0 #050510,
+    1px -1px 0 #050510,
+    -1px 1px 0 #050510;
+}
+
+@keyframes crit-flash {
+  0%   { opacity: 0; }
+  15%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.crit-flash {
+  animation: crit-flash 200ms steps(3) forwards;
+  pointer-events: none;
+}
+
+/* ── Blinking cursor (menu selection) ──────────────────────────────────────── */
+
+@keyframes cursor-blink {
+  0%, 49%  { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+.pixel-cursor::before {
+  content: '▶';
+  display: inline-block;
+  margin-right: 0.4em;
+  color: #f7cf4d;
+  animation: cursor-blink 0.9s infinite steps(1);
+}
+
+/* ── Ambient particles ─────────────────────────────────────────────────────── */
+
+@keyframes firefly-drift {
+  0%   { transform: translate(0, 0); opacity: 0; }
+  15%  { opacity: 0.9; }
+  50%  { transform: translate(var(--drift-x, 20px), var(--drift-y, -30px)); opacity: 0.5; }
+  85%  { opacity: 0.9; }
+  100% { transform: translate(calc(var(--drift-x, 20px) * 1.8), calc(var(--drift-y, -30px) * 1.6)); opacity: 0; }
+}
+
+.particle-firefly {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  background: #f7cf4d;
+  box-shadow: 0 0 6px 2px rgba(247, 207, 77, 0.6);
+  animation: firefly-drift var(--duration, 7s) infinite steps(24);
+  animation-delay: var(--delay, 0s);
+}
+
+@keyframes rain-fall {
+  0%   { transform: translateY(-10vh); opacity: 0.7; }
+  100% { transform: translateY(110vh); opacity: 0.3; }
+}
+
+.particle-rain {
+  position: absolute;
+  width: 2px;
+  height: 12px;
+  background: linear-gradient(to bottom, transparent, #3bcac0aa);
+  animation: rain-fall var(--duration, 0.8s) infinite linear;
+  animation-delay: var(--delay, 0s);
+}
+
+@keyframes snow-fall {
+  0%   { transform: translateY(-5vh) translateX(0); opacity: 0.9; }
+  100% { transform: translateY(105vh) translateX(var(--sway, 24px)); opacity: 0.4; }
+}
+
+.particle-snow {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  background: #f0f0f5;
+  animation: snow-fall var(--duration, 6s) infinite linear;
+  animation-delay: var(--delay, 0s);
+}
+
+@keyframes fog-drift {
+  0%   { transform: translateX(-8%); }
+  50%  { transform: translateX(8%); }
+  100% { transform: translateX(-8%); }
+}
+
+.particle-fog {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 60% 40% at 30% 70%, rgba(92, 92, 152, 0.10), transparent 70%),
+              radial-gradient(ellipse 50% 35% at 75% 40%, rgba(92, 92, 152, 0.07), transparent 70%);
+  animation: fog-drift 24s infinite ease-in-out;
+}
+
+/* ── Water shimmer ─────────────────────────────────────────────────────────── */
+
+@keyframes water-shimmer {
+  0%, 100% { background-position: 0% 50%; }
+  50%      { background-position: 100% 50%; }
+}
+
+.water-shimmer {
+  background: linear-gradient(105deg,
+    transparent 40%, rgba(59, 202, 192, 0.08) 48%,
+    rgba(59, 202, 192, 0.14) 50%, rgba(59, 202, 192, 0.08) 52%, transparent 60%);
+  background-size: 300% 100%;
+  animation: water-shimmer 5s infinite steps(20);
+}
+
+/* ── Menu transition (steps for retro feel) ────────────────────────────────── */
+
+@keyframes menu-slide-in {
+  0%   { transform: translateY(8px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+.menu-enter {
+  animation: menu-slide-in 160ms steps(4) forwards;
+}
+
+/* ── Typing indicator (Director is narrating) ──────────────────────────────── */
+
+@keyframes pixel-type {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-3px); }
+}
+
+.pixel-type-dot {
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  background: #f4b820;
+  animation: pixel-type 0.6s infinite steps(2);
+}
+
+/* ── XP gain popup (Phase 10.1) ────────────────────────────────────────────── */
+
+@keyframes xp-gain-float {
+  0%   { transform: translateY(6px) scale(0.9); opacity: 0; }
+  15%  { transform: translateY(0) scale(1.15); opacity: 1; }
+  30%  { transform: translateY(0) scale(1); opacity: 1; }
+  80%  { transform: translateY(0) scale(1); opacity: 1; }
+  100% { transform: translateY(-10px) scale(0.95); opacity: 0; }
+}
+
+.xp-gain-popup {
+  animation: xp-gain-float 2.4s steps(24) forwards;
+}
+
+/* ── Level-up celebration (Phase 10.1) ─────────────────────────────────────── */
+
+@keyframes level-up-burst {
+  0%   { transform: scale(0.7); opacity: 0; }
+  40%  { transform: scale(1.08); opacity: 1; }
+  60%  { transform: scale(1); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes level-up-ray {
+  0%   { transform: scale(0.3) rotate(var(--ray-angle, 0deg)); opacity: 0; }
+  50%  { opacity: 0.5; }
+  100% { transform: scale(1.6) rotate(var(--ray-angle, 0deg)); opacity: 0; }
+}
+
+.level-up-burst {
+  animation: level-up-burst 500ms steps(10) forwards;
+}
+
+.level-up-ray {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 2px;
+  height: 40%;
+  background: linear-gradient(to top, transparent, #f7cf4d, transparent);
+  transform-origin: bottom center;
+  animation: level-up-ray 900ms steps(18) forwards;
+}
+
+/* ── Scanline overlay (optional retro CRT feel — off by default) ───────────── */
+
+.scanlines::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px, transparent 2px,
+    rgba(5, 5, 16, 0.12) 2px, rgba(5, 5, 16, 0.12) 3px
+  );
+}
+
+/* ── Reduced motion: kill all pixel animations ─────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .torch-flicker,
+  .torch-glow,
+  .particle-firefly,
+  .particle-rain,
+  .particle-snow,
+  .particle-fog,
+  .water-shimmer,
+  .damage-popup,
+  .crit-flash,
+  .menu-enter,
+  .pixel-type-dot,
+  .pixel-cursor::before,
+  .xp-gain-popup,
+  .level-up-burst,
+  .level-up-ray {
+    animation: none !important;
+  }
+  .pixel-bar-fill {
+    transition: none !important;
+  }
+}

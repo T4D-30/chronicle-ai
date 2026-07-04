@@ -1,0 +1,32 @@
+# Director Document Upload — Status & Remaining Work
+
+*Status: Fully implemented, including real text extraction (Phase 10.4). This document originally specified the build plan (Phase 10.2); recorded what was built through Phase 10.3 (storage, retrieval, UI, prompt integration, with an extraction-free placeholder parser); now reflects Phase 10.4's real extraction work.*
+
+---
+
+## What's Built
+
+- **Database** — `director_documents` table + `search_director_documents` SQL function (migration `0006_director_documents.sql`), full-text search via a generated `tsvector` column and GIN index, owner-only RLS on both the table and the `director-documents` Storage bucket. Verified against a real local Postgres instance during development — real `ts_rank`/`ts_headline` output confirmed, not assumed.
+- **Service layer** (`src/lib/supabase/directorDocuments.ts`) — `uploadDirectorDocument`, `listDirectorDocuments`, `getDirectorDocument`, `indexDirectorDocument`, `getDirectorDocumentSignedUrl`, `deleteDirectorDocument`. First service module in this project to use Supabase Storage (every prior upload — portraits — used a base64 column instead). Unchanged by Phase 10.4.
+- **Real text extraction** (`src/lib/directorDocuments/textExtractionParser.ts`, Phase 10.4) — `TextExtractionParser`, now the active `DirectorDocumentParser`. TXT/Markdown via `FileReader.readAsText`; PDF via Mozilla's `pdfjs-dist` (standard browser build — chosen over `pdf-parse`, which depends on a native Node addon and would break the client bundle); DOCX via `mammoth`. All three run entirely client-side; no external API call, no OpenAI Vision. Every path fails gracefully to `{ text: null, confidence: 'unavailable' }` on a corrupt/unreadable file rather than throwing — a failed extraction still leaves the document uploaded and stored, just unindexed. `is_indexed` is only ever set `true` after real, non-null extracted text exists.
+- **Manual parser** (`src/lib/directorDocuments/manualParser.ts`) — `ManualDocumentParser`, the original extraction-free implementation, superseded as the *active* parser by `TextExtractionParser` but retained, fully functional, as a documented fallback/reference (swap `getActiveDocumentParser()`'s return value back to it if ever needed).
+- **Full-text retriever** (`src/lib/directorDocuments/fullTextRetriever.ts`) — `FullTextRetriever`, the shipped `DocumentRetriever`. Calls `search_director_documents` via `supabase.rpc()`. **Unchanged by Phase 10.4**, exactly as required — retrieval and extraction are cleanly separate concerns.
+- **Upload/management UI** — `DirectorDocumentsPanel`, mounted on `CampaignDetailPage`. Upload with category selection, list with indexed/not-indexed status, delete with confirmation. Phase 10.4 added a distinct, non-error "extraction warning" message (visually and semantically separate from an upload failure) shown when a document uploads successfully but extraction yields no text.
+- **Director prompt integration** — `useAdventureSession.ts`'s `submitAction` retrieves relevant excerpts (via `getActiveDocumentRetriever()`) before building the Director request; `NarrateRequest.documentContext` carries them; the Edge Function's system prompt renders a `## REFERENCE DOCUMENTS` section and instructs the Director to use them as background knowledge, never verbatim quotes, never claiming knowledge beyond what was actually retrieved. Unchanged by Phase 10.4.
+- **Tests** — `tests/integration/directorDocuments.integration.test.ts` (15 tests, real Postgres, including RLS-across-users and genuine ranked search), `tests/unit/DirectorDocumentsPanel.test.tsx` (18 tests, updated Phase 10.4 to mock the parser and cover the new extraction-warning UI), `tests/unit/directorDocumentParserRetriever.test.ts` (8 tests, `ManualDocumentParser`/`FullTextRetriever`, unchanged), `tests/unit/textExtractionParser.test.ts` (18 tests, new Phase 10.4 — real TXT/Markdown/PDF extraction, real DOCX error-handling, and a fully-documented single jsdom-only test-environment gap for the DOCX happy path — see that file's own extensive comments and the note in `docs/KNOWN_LIMITATIONS.md`), `tests/unit/promptBuilder.test.ts`'s `documentContext` block (4 tests), `tests/unit/useAdventureSession.test.tsx`'s retrieval-wiring block (6 tests, including a real fail-open-on-error test).
+
+## Modular Retrieval Architecture (the actual design goal)
+
+`DocumentRetriever` (`src/lib/directorDocuments/types.ts`) is the swappable contract. `FullTextRetriever` is the one shipped implementation. `getActiveDocumentRetriever()` is the single swap point — nothing above it (the hook, the Edge Function, the prompt) knows or cares which retrieval strategy produced the excerpts it receives. An embeddings-based retriever is a valid future implementation of the same interface; full-text search was chosen first because it required no new external dependency and was fully verifiable locally.
+
+## What's Genuinely Still Missing
+
+**OCR for scanned/image-only PDFs.** `TextExtractionParser`'s PDF path (`pdfjs-dist`) reads real text layers only — it does not perform optical character recognition on scanned pages, so a scanned PDF with no embedded text layer will correctly extract nothing and stay unindexed. This would require a genuinely different technology (OCR, likely OpenAI Vision or a dedicated OCR library) and is explicitly out of scope for this pass, per direct instruction.
+
+**Embeddings-based retrieval.** Not attempted. Full-text search is real and load-bearing; an embeddings alternative remains a valid future `DocumentRetriever` implementation if full-text search proves insufficient at scale, but there is no evidence yet that it's needed.
+
+**One test-environment gap (not a shipped-code gap).** The DOCX extraction happy path could not be verified end-to-end inside this project's Vitest suite due to a jsdom/Node CJS-interop limitation in how `mammoth` resolves its own browser-specific code path — documented in full, with every verification step taken, in `tests/unit/textExtractionParser.test.ts`'s own comments and in `docs/KNOWN_LIMITATIONS.md`. The underlying extraction mechanism itself was directly verified against the real fixture; only the specific combination of "run inside Vitest's CJS module resolution" could not be made to exercise mammoth's real browser code path automatically.
+
+---
+
+*Last updated: Phase 10.4 — Director Document Real Text Extraction*
