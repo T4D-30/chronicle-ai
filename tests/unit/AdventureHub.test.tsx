@@ -7,7 +7,7 @@
  *  - Session controls (pause, resume, end)
  *  - Error banner rendering
  */
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, it, expect, vi } from 'vitest'
@@ -93,9 +93,14 @@ describe('AdventureHub — layout', () => {
 
   it('renders the status bar with campaign title', () => {
     renderHub()
-    expect(screen.getByTestId('adventure-status-bar')).toBeInTheDocument()
-    // The title appears inside a Link "← The Shattered Throne" — use partial match
-    expect(screen.getByText(/The Shattered Throne/)).toBeInTheDocument()
+    const statusBar = screen.getByTestId('adventure-status-bar')
+    expect(statusBar).toBeInTheDocument()
+    // The title appears inside a Link "← The Shattered Throne" — use partial match.
+    // Scoped to the status bar specifically: as of the Adventure Hub redesign, the
+    // campaign title can ALSO legitimately appear in AdventureScenePanel's location
+    // title (it falls back to the campaign title when no current location is set) —
+    // a real, additive UI element, not a duplicate bug.
+    expect(within(statusBar).getByText(/The Shattered Throne/)).toBeInTheDocument()
   })
 
   it('renders turn count in the status bar', () => {
@@ -296,8 +301,13 @@ describe('AdventureHub — story panel', () => {
       mode: 'exploration' as const, createdAt: '2024-01-01T00:00:00Z',
     }]
     renderHub({ turns })
-    expect(screen.getByText(/I look around\./)).toBeInTheDocument()
-    expect(screen.getByText(/You see a dimly lit cave\./)).toBeInTheDocument()
+    // Scoped to the story scroll specifically: as of the Adventure Hub
+    // redesign, the same turn's playerInput can ALSO legitimately appear
+    // in PartyStatusPanel's "Recent Events" list (it reuses the same
+    // real turns array) — a real, additive UI element, not a duplicate bug.
+    const storyScroll = screen.getByTestId('story-scroll')
+    expect(within(storyScroll).getByText(/I look around\./)).toBeInTheDocument()
+    expect(within(storyScroll).getByText(/You see a dimly lit cave\./)).toBeInTheDocument()
   })
 })
 
@@ -351,7 +361,14 @@ describe('AdventureHub — world status sidebar (Phase 9.1)', () => {
         worldState: { ...DEFAULT_WORLD_STATE, worldTime: 'Dusk, third day of travel' },
       },
     })
-    expect(screen.getByText('Dusk, third day of travel')).toBeInTheDocument()
+    // Scoped to the world-status-sidebar specifically: as of the
+    // Adventure Hub redesign, the same real worldTime value can ALSO
+    // legitimately appear in AdventureLeftNav's World Status card and
+    // AdventureScenePanel's time line (both reuse the same real
+    // worldState.worldTime, never a second, fabricated value) — real,
+    // additive UI, not a duplicate bug.
+    const sidebar = screen.getByTestId('world-status-sidebar')
+    expect(within(sidebar).getByText('Dusk, third day of travel')).toBeInTheDocument()
   })
 
   it('shows discovered location and known NPC counts from real world state', () => {
@@ -407,5 +424,134 @@ describe('AdventureHub — current location (Phase 9.2, real data only)', () => 
       },
     })
     expect(screen.queryByTestId('current-location-row')).not.toBeInTheDocument()
+  })
+})
+
+describe('AdventureHub — redesign: left nav integration', () => {
+  it('renders the left navigation sidebar', () => {
+    renderHub()
+    expect(screen.getByTestId('adventure-left-sidebar')).toBeInTheDocument()
+  })
+
+  it('clicking a left-nav item switches the active panel, exactly like the bottom tabs', async () => {
+    const user = userEvent.setup()
+    renderHub()
+    await user.click(screen.getByTestId('adventure-left-sidebar').querySelector('button')!)
+    // Home maps to 'story', already active by default — switch to Journal instead
+    const journalNavButton = within(screen.getByTestId('adventure-left-sidebar')).getByRole('button', { name: /Journal/i })
+    await user.click(journalNavButton)
+    // The bottom tab reflects the same activePanel state the left nav just changed
+    expect(screen.getByRole('tab', { name: /Journal/i })).toHaveAttribute('aria-selected', 'true')
+  })
+
+  it('clicking End Session in the left nav calls actions.end, same as the header End button', async () => {
+    const user = userEvent.setup()
+    const end = vi.fn().mockResolvedValue(undefined)
+    renderHub({}, { end })
+    await user.click(screen.getByRole('button', { name: 'End Session' }))
+    expect(end).toHaveBeenCalledOnce()
+  })
+})
+
+describe('AdventureHub — redesign: scene panel integration (story view only)', () => {
+  it('renders the scene panel when on the Story tab', () => {
+    renderHub()
+    expect(screen.getByTestId('adventure-scene-panel')).toBeInTheDocument()
+  })
+
+  it('does not render the scene panel (art placeholder/location chrome) when on the Journal tab', async () => {
+    const user = userEvent.setup()
+    renderHub()
+    await user.click(screen.getByRole('tab', { name: /Journal/i }))
+    expect(screen.queryByTestId('adventure-scene-panel')).not.toBeInTheDocument()
+  })
+
+  it('does not render the scene panel when on the Quests tab', async () => {
+    const user = userEvent.setup()
+    renderHub()
+    await user.click(screen.getByRole('tab', { name: /Quests/i }))
+    expect(screen.queryByTestId('adventure-scene-panel')).not.toBeInTheDocument()
+  })
+
+  it('does not render the scene panel when on the Codex tab', async () => {
+    const user = userEvent.setup()
+    renderHub()
+    await user.click(screen.getByRole('tab', { name: /Codex/i }))
+    expect(screen.queryByTestId('adventure-scene-panel')).not.toBeInTheDocument()
+  })
+
+  it('still renders the real Journal panel content when on the Journal tab (unwrapped, unchanged)', async () => {
+    const user = userEvent.setup()
+    renderHub()
+    await user.click(screen.getByRole('tab', { name: /Journal/i }))
+    expect(screen.getByRole('tabpanel')).toHaveAttribute('id', 'panel-journal')
+  })
+})
+
+describe('AdventureHub — redesign: party status panel integration', () => {
+  it('renders the party status sidebar', () => {
+    renderHub()
+    expect(screen.getByTestId('adventure-party-status-sidebar')).toBeInTheDocument()
+  })
+
+  it('shows the real character name in the party status sidebar', () => {
+    renderHub()
+    const sidebar = screen.getByTestId('adventure-party-status-sidebar')
+    expect(within(sidebar).getByText('Aldric Sorn')).toBeInTheDocument()
+  })
+
+  it('clicking "View Full Journal" in the party status panel switches to the Journal tab', async () => {
+    const user = userEvent.setup()
+    renderHub()
+    const sidebar = screen.getByTestId('adventure-party-status-sidebar')
+    await user.click(within(sidebar).getByRole('button', { name: /View Full Journal/i }))
+    expect(screen.getByRole('tab', { name: /Journal/i })).toHaveAttribute('aria-selected', 'true')
+  })
+})
+
+describe('AdventureHub — redesign: submit action and quick actions still work end-to-end', () => {
+  it('submitting free-text player input still calls actions.submitAction (ActionBar unchanged)', async () => {
+    const user = userEvent.setup()
+    const submitAction = vi.fn()
+    renderHub({}, { submitAction })
+    const textarea = screen.getByPlaceholderText(/What do you do/i)
+    await user.type(textarea, 'I search the room.')
+    await user.click(screen.getByRole('button', { name: /^Send$/i }))
+    expect(submitAction).toHaveBeenCalledWith('I search the room.')
+  })
+
+  it('clicking a quick-action button still calls actions.submitAction with its real text (ActionBar unchanged)', async () => {
+    const user = userEvent.setup()
+    const submitAction = vi.fn()
+    renderHub({}, { submitAction })
+    await user.click(screen.getByRole('button', { name: 'Look around' }))
+    expect(submitAction).toHaveBeenCalledWith('I look around carefully.')
+  })
+
+  it('clicking a suggested-action chip still calls actions.submitAction with the suggested text', async () => {
+    const user = userEvent.setup()
+    const submitAction = vi.fn()
+    renderHub({ suggestedActions: ['Open the door', 'Retreat quietly'] }, { submitAction })
+    await user.click(screen.getByRole('button', { name: 'Open the door' }))
+    expect(submitAction).toHaveBeenCalledWith('Open the door')
+  })
+})
+
+describe('AdventureHub — redesign: empty state', () => {
+  it('shows the honest "your story begins" empty state on a fresh session with no turns', () => {
+    renderHub({ turns: [] })
+    expect(screen.getByText(/YOUR STORY BEGINS/i)).toBeInTheDocument()
+  })
+
+  it('the party status panel\'s recent events also show an honest empty state on a fresh session', () => {
+    renderHub({ turns: [] })
+    const sidebar = screen.getByTestId('adventure-party-status-sidebar')
+    expect(within(sidebar).getByTestId('recent-events-empty')).toBeInTheDocument()
+  })
+
+  it('the left nav\'s current objective shows an honest empty state when no threads are active', () => {
+    renderHub()
+    const leftNav = screen.getByTestId('adventure-left-sidebar')
+    expect(within(leftNav).getByText('No active objective yet.')).toBeInTheDocument()
   })
 })

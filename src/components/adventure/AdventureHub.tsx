@@ -26,6 +26,9 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Button, Badge } from '@/components/ui'
 import { CharacterSidebar } from './CharacterSidebar'
+import { AdventureLeftNav } from './AdventureLeftNav'
+import { AdventureScenePanel } from './AdventureScenePanel'
+import { PartyStatusPanel } from './PartyStatusPanel'
 import { DicePanel } from './DicePanel'
 import { StoryPanel } from './panels/StoryPanel'
 import { JournalPanel } from './panels/JournalPanel'
@@ -215,6 +218,25 @@ export function AdventureHub({ state, actions }: AdventureHubProps) {
 
       {/* ── Main content area ────────────────────────────────────────── */}
       <div className="flex-1 flex overflow-hidden min-h-0">
+        {/* Left navigation — new in the redesign, desktop-only (lg+).
+            Drives the SAME activePanel state as the bottom tab nav below;
+            see AdventureLeftNav's own header comment for why the bottom
+            tabs are not removed or replaced. */}
+        <aside
+          className="hidden lg:flex w-56 flex-col border-r border-void-700/50 bg-void-900/40 overflow-hidden flex-shrink-0"
+          data-testid="adventure-left-sidebar"
+        >
+          <AdventureLeftNav
+            campaign={campaign}
+            session={session}
+            activePanel={activePanel}
+            onSelectPanel={setActivePanel}
+            onEndSession={() => void actions.end()}
+            isSessionDone={isSessionDone}
+            isActionInFlight={state.isActionInFlight}
+          />
+        </aside>
+
         {/* Panel area — Combat Panel overrides normal panels when in combat */}
         <main
           className="flex-1 overflow-hidden min-w-0 relative"
@@ -238,20 +260,40 @@ export function AdventureHub({ state, actions }: AdventureHubProps) {
           )}
         </main>
 
-        {/* Character sidebar — always visible on lg+ screens */}
+        {/* Party/status panel — new in the redesign, desktop-only (lg+).
+            Deliberately additive: does NOT replace the existing character
+            sidebar (still reachable via the Character tab/nav item,
+            unchanged) — this is the always-visible at-a-glance summary
+            described in PartyStatusPanel's own header comment. */}
         <aside
-          className="hidden lg:flex w-64 flex-col border-l border-void-700/50 bg-void-900/40 overflow-hidden"
+          className="hidden lg:flex w-64 flex-col border-l border-void-700/50 bg-void-900/40 overflow-hidden flex-shrink-0"
+          data-testid="adventure-party-status-sidebar"
+        >
+          <PartyStatusPanel
+            character={character}
+            turns={state.turns}
+            onViewJournal={() => setActivePanel('journal')}
+          />
+        </aside>
+
+        {/* Character sidebar — detailed stat block, xl+ screens only (bumped
+            up from lg so the redesign's 3-column layout — left nav /
+            center / party-status — is the primary lg+ experience; this
+            detailed sidebar remains fully reachable at any breakpoint via
+            the Character tab/nav item, unchanged). */}
+        <aside
+          className="hidden xl:flex w-64 flex-col border-l border-void-700/50 bg-void-900/40 overflow-hidden"
           data-testid="adventure-character-sidebar"
         >
           <CharacterSidebar character={character} />
         </aside>
 
-        {/* World status sidebar — third column, xl+ screens only.
-            Additive: shows only real, currently-available world-state signals.
-            Fields the Constitution would require (weather, time-of-day, active
-            events, NPC relationships) are Phase 10 Living World work and are
-            NOT fabricated here — see WorldStatusSidebar for what is and isn't
-            shown and why. */}
+        {/* World status sidebar — fourth column, xl+ screens only (unchanged
+            breakpoint). Additive: shows only real, currently-available
+            world-state signals. Fields the Constitution would require
+            (weather, time-of-day, active events, NPC relationships) are
+            Phase 10 Living World work and are NOT fabricated here — see
+            WorldStatusSidebar for what is and isn't shown and why. */}
         <aside
           className="hidden xl:flex w-60 flex-col border-l border-void-700/50 bg-void-900/40 overflow-hidden"
           data-testid="adventure-world-sidebar"
@@ -431,6 +473,7 @@ function ActivePanelContent({
     case 'story':
       return (
         <div id="panel-story" role="tabpanel" className="h-full flex flex-col">
+          <AdventureScenePanel campaign={campaign}>
           <StoryPanel
             campaign={campaign}
             turns={turns}
@@ -469,6 +512,7 @@ function ActivePanelContent({
             onSubmitAction={actions.submitAction}
             onCancelStream={actions.cancelStream}
           />
+          </AdventureScenePanel>
         </div>
       )
     case 'character':
