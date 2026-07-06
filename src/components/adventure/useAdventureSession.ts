@@ -2,6 +2,11 @@
  * useAdventureSession
  * Phase 2.4 — adds submitAction() which wires the full turn loop:
  *   playerInput → callNarrateStreaming → appendTurn (via Edge Function) → turns updated
+ *
+ * submitAction()'s turn orchestration (Rules Engine → AI Director →
+ * persistence) lives in runPlayerTurn() (@/lib/adventure/adventureController).
+ * This hook snapshots React state, calls the controller, and maps its
+ * callbacks onto setState — it holds no orchestration logic of its own.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -10,7 +15,6 @@ import {
   getCharacter,
   updateCharacter,
   updateWorldState,
-  updateDirectorConfig,
   appendTurn,
   startSession,
   pauseSession,
@@ -24,27 +28,17 @@ import type { Campaign, CharacterRecord, GameSession, NarrativeTurn } from '@/li
 import {
   applyWorldStateUpdate,
   hasWorldStateChanges,
-  applyDirectorConfigUpdate,
-  hasDirectorConfigChanges,
 } from '@/lib/engine/worldDispatcher'
-import {
-  buildNarrateRequest,
-  callNarrateStreaming,
-  parseDirectorResponse,
-  buildFallbackNarration,
-} from '@/lib/ai'
-import type { DirectorResult, NarrateRequest } from '@/lib/ai'
+import { buildFallbackNarration } from '@/lib/ai'
+import type { DirectorResult } from '@/lib/ai'
 import type { CombatState, EnemyCombatant, CombatResult } from '@/lib/engine'
-import { getActiveDocumentRetriever } from '@/lib/directorDocuments/fullTextRetriever'
 import {
   initCombat,
   summariseCombatResult,
-  parseEnemiesFromDirector,
   isReadyToLevel,
-  parseAction,
-  resolveCharacterAction,
   summariseCharacterAction,
 } from '@/lib/engine'
+import { runPlayerTurn } from '@/lib/adventure/adventureController'
 
 export type AdventureLoadStatus =
   | 'loading'
@@ -194,10 +188,8 @@ export function useAdventureSession(campaignId: string): [AdventureState, Advent
 
     // Snapshot current state synchronously before any awaits — same
     // established pattern as commitCombatResult() above. Needed here
-    // because Phase 10.3 adds a real async step (document retrieval)
-    // before the request can be built; the previous version of this
-    // function ran entirely inside a synchronous setState updater, which
-    // cannot await anything.
+    // because the controller's document-retrieval step is a real async
+    // step before the request can be built.
     const snap = await new Promise<{
       campaign: Campaign | null
       character: CharacterRecord | null
@@ -214,79 +206,6 @@ export function useAdventureSession(campaignId: string): [AdventureState, Advent
     if (!campaign || !character || !session) return
     if (narrationStatus === 'streaming') return // already streaming
 
-    // ── Full dice transparency (Phase 9.3, locked Director rule) ────────────
-    // Only actions that classify into a real skill category (FORCE, FINESSE,
-    // ENDURE, REASON, PERCEIVE, INFLUENCE) roll a check. Pure narration,
-    // dialogue, or movement (category UNKNOWN) never rolls — per design
-    // decision, mechanizing every single line of play would work against
-    // the "Story-first, Player-first" half of the same rule set. See
-    // classifyAction()/parseAction() in intent.ts and resolveCharacterAction()
-    // in resolveAction.ts — both already existed; this is the first caller
-    // to wire them into the exploration turn flow.
-    //
-    // parseAction() is called first because it's pure (no dice) and gives
-    // us the intent's own suggestedDc — resolveCharacterAction() is then
-    // called exactly ONCE with that real DC. Calling resolveCharacterAction
-    // twice (once to discover a DC, once "for real") would silently
-    // consume two dice rolls from the RNG stream for one player action.
-    const parsedIntent = parseAction(trimmedInput)
-    let checkSummary: ReturnType<typeof summariseCharacterAction> | null = null
-    if (parsedIntent.category !== 'UNKNOWN') {
-      const actionResult = resolveCharacterAction({
-        character: character.sheet,
-        intent: trimmedInput,
-        dc: parsedIntent.suggestedDc,
-      })
-      if (actionResult.resolution) {
-        checkSummary = summariseCharacterAction(actionResult.resolution)
-      }
-    }
-
-    // ── Director document retrieval (Phase 10.3) ─────────────────────────────
-    // Retrieves relevant excerpts from this campaign's indexed reference
-    // documents (DM guides, campaign bibles, homebrew rules, world lore)
-    // for the player's current input. Uses whichever DocumentRetriever is
-    // currently active (getActiveDocumentRetriever()) — this call site
-    // never knows or cares whether that's the shipped FullTextRetriever or
-    // a future embeddings-based one. Failure here must never block the
-    // turn: an unavailable retriever degrades to "no document context this
-    // turn," not a broken action submission — same fail-open posture as
-    // every other best-effort context source in this hook.
-    let documentContext: NonNullable<NarrateRequest['documentContext']> = []
-    try {
-      const retriever = getActiveDocumentRetriever()
-      const results = await retriever.retrieve(campaign.id, trimmedInput, 5)
-      documentContext = results.map((r) => ({
-        fileName: r.fileName,
-        category: r.category,
-        excerpt: r.excerpt,
-      }))
-    } catch {
-      // Fail open — see comment above. No error surfaced to the player;
-      // this is a context-enrichment step, not a blocking dependency.
-      documentContext = []
-    }
-
-    const request = buildNarrateRequest({
-      session,
-      campaign,
-      character: character.sheet,
-      playerInput: trimmedInput,
-      recentTurns: turns,
-      checkResult: checkSummary
-        ? {
-            category: checkSummary.category,
-            stat: checkSummary.stat,
-            dc: checkSummary.dc,
-            total: checkSummary.roll.total,
-            outcome: checkSummary.outcome,
-            outcomeLabel: checkSummary.outcomeLabel,
-            isSuccess: checkSummary.isSuccess,
-          }
-        : undefined,
-      documentContext,
-    })
-
     setState((s) => ({
       ...s,
       narrationStatus: 'streaming' as NarrationStatus,
@@ -296,98 +215,53 @@ export function useAdventureSession(campaignId: string): [AdventureState, Advent
     }))
 
     streamControllerRef.current?.abort()
-    streamControllerRef.current = callNarrateStreaming(request, {
-      onToken: (token) => {
-        setState((prev) => ({
-          ...prev,
-          streamingText: prev.streamingText + token,
-        }))
-      },
-      onDone: (response) => {
-        void (async () => {
-          try {
-            const result = parseDirectorResponse(response)
-            // Build the new turn from the response
-            const newTurn: NarrativeTurn = {
-              id: result.turnId,
-              sessionId: request.sessionId,
-              turnNumber: session.turnNumber + 1,
-              playerInput: trimmedInput,
-              aiNarration: result.narration,
-              diceRolls: checkSummary ? [checkSummary] : [],
-              mode: request.mode,
-              createdAt: new Date().toISOString(),
-            }
-
-            // Persist world state updates (current location, new locations,
-            // NPC alive status) — same pattern as the combat-result path.
-            let updatedCampaign: Campaign | null = campaign
-            if (updatedCampaign && hasWorldStateChanges(result.worldStateUpdates)) {
-              const newWorldState = applyWorldStateUpdate(updatedCampaign.worldState, result.worldStateUpdates)
-              updatedCampaign = await updateWorldState(updatedCampaign.id, newWorldState)
-            }
-
-            // Persist Director config updates (plot threads / NPC memory —
-            // Quest Log and Codex, Phase 9.2). Applied on top of whatever
-            // updatedCampaign is at this point so both writes aren't lost
-            // to a stale read.
-            if (updatedCampaign && hasDirectorConfigChanges(result.directorConfigUpdates)) {
-              const newDirectorConfig = applyDirectorConfigUpdate(
-                updatedCampaign.directorConfig,
-                result.directorConfigUpdates,
-              )
-              updatedCampaign = await updateDirectorConfig(updatedCampaign.id, newDirectorConfig)
-            }
-
-            setState((prev) => {
-              const next = {
-                ...prev,
-                isActionInFlight: false,
-                narrationStatus: 'done' as NarrationStatus,
-                streamingText: '',
-                suggestedActions: result.suggestedActions,
-                lastDirectorResult: result,
-                campaign: updatedCampaign ?? prev.campaign,
-                turns: [...prev.turns, newTurn].slice(-20),
-                session: prev.session
-                  ? { ...prev.session, turnNumber: prev.session.turnNumber + 1 }
-                  : prev.session,
-                lastCheckResult: checkSummary,
-              }
-              // Auto-enter combat when Director signals it
-              if (result.combatTriggered && !next.combatState && next.character) {
-                const enemies = parseEnemiesFromDirector(result.worldStateUpdates)
-                const player = {
-                  id: 'player',
-                  name: next.character.sheet.name,
-                  isPlayer: true as const,
-                  sheet: { ...next.character.sheet },
-                }
-                next.combatState = initCombat(player, enemies)
-              }
-              return next
-            })
-          } catch (err) {
-            setState((prev) => ({
+    runPlayerTurn(
+      { campaign, character, session, recentTurns: turns, playerInput: trimmedInput },
+      {
+        onToken: (token) => {
+          setState((prev) => ({
+            ...prev,
+            streamingText: prev.streamingText + token,
+          }))
+        },
+        onStreamStart: (controller) => {
+          streamControllerRef.current = controller
+        },
+        onResult: (result) => {
+          setState((prev) => {
+            const next = {
               ...prev,
               isActionInFlight: false,
-              narrationStatus: 'error',
+              narrationStatus: 'done' as NarrationStatus,
               streamingText: '',
-              error: buildFallbackNarration(err),
-            }))
-          }
-        })()
+              suggestedActions: result.directorResult.suggestedActions,
+              lastDirectorResult: result.directorResult,
+              campaign: result.updatedCampaign ?? prev.campaign,
+              turns: [...prev.turns, result.turn].slice(-20),
+              session: prev.session
+                ? { ...prev.session, turnNumber: prev.session.turnNumber + 1 }
+                : prev.session,
+              lastCheckResult: result.checkSummary,
+            }
+            // Auto-enter combat when the Director signaled it, unless
+            // already in combat.
+            if (result.combatState && !next.combatState) {
+              next.combatState = result.combatState
+            }
+            return next
+          })
+        },
+        onError: (err) => {
+          setState((prev) => ({
+            ...prev,
+            isActionInFlight: false,
+            narrationStatus: 'error',
+            streamingText: '',
+            error: buildFallbackNarration(err),
+          }))
+        },
       },
-      onError: (err) => {
-        setState((prev) => ({
-          ...prev,
-          isActionInFlight: false,
-          narrationStatus: 'error',
-          streamingText: '',
-          error: buildFallbackNarration(err),
-        }))
-      },
-    })
+    )
   }, [])
 
   const cancelStream = useCallback(() => {
