@@ -7,7 +7,7 @@ changes. This file only exists so Claude Code loads it automatically.
 ## Workflow checklist
 
 - [ ] Read AGENTS.md (if not already loaded this session).
-- [ ] Confirm the task fits one phase, on one feature branch, off latest `main`.
+- [ ] Confirm the task is scoped to a single objective, on the correct feature branch, and based on the latest target branch.
 - [ ] Check "Stop and Ask Before" in AGENTS.md — pause if the task touches any of those areas.
 - [ ] Implement only what was requested.
 - [ ] Run TypeScript, tests, and the production build.
