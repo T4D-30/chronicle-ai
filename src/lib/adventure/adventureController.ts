@@ -15,6 +15,11 @@ import {
   updateDirectorConfig,
   updateCharacter,
   appendTurn,
+  getCampaign,
+  getCharacter,
+  getResumableSession,
+  startSession,
+  getRecentTurns,
 } from '@/lib/supabase'
 import type { Campaign, CharacterRecord, GameSession, NarrativeTurn } from '@/lib/supabase'
 import {
@@ -308,4 +313,36 @@ export async function levelUpCharacter(
   patch: LevelUpPatch,
 ): Promise<CharacterRecord> {
   return updateCharacter(characterId, patch)
+}
+
+export interface LoadAdventureResult {
+  campaign: Campaign
+  character: CharacterRecord | null
+  session: GameSession | null
+  turns: NarrativeTurn[]
+}
+
+/**
+ * Gather the campaign, character, session, and recent turns needed to
+ * enter or resume an adventure. Returns character/session as null when the
+ * campaign has no character yet — the caller decides what that means for
+ * presentation.
+ *
+ * Extracted from useAdventureSession.ts's load(). Behavior is unchanged —
+ * this is a relocation, not a rewrite.
+ */
+export async function loadAdventure(campaignId: string): Promise<LoadAdventureResult> {
+  const campaign = await getCampaign(campaignId)
+  if (!campaign.characterId) {
+    return { campaign, character: null, session: null, turns: [] }
+  }
+
+  const [character, existingSession] = await Promise.all([
+    getCharacter(campaign.characterId),
+    getResumableSession(campaignId),
+  ])
+  const session = existingSession ?? (await startSession(campaignId))
+  const turns = await getRecentTurns(session.id, 20)
+
+  return { campaign, character, session, turns }
 }

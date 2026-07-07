@@ -11,14 +11,9 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  getCampaign,
-  getCharacter,
-  startSession,
   pauseSession,
   resumeSession,
   endSession,
-  getResumableSession,
-  getRecentTurns,
   ServiceError,
 } from '@/lib/supabase'
 import type { Campaign, CharacterRecord, GameSession, NarrativeTurn } from '@/lib/supabase'
@@ -30,6 +25,7 @@ import {
   runPlayerTurn,
   commitCombatResult as commitCombatResultToController,
   levelUpCharacter as levelUpCharacterToController,
+  loadAdventure as loadAdventureFromController,
 } from '@/lib/adventure/adventureController'
 
 export type AdventureLoadStatus =
@@ -125,17 +121,11 @@ export function useAdventureSession(campaignId: string): [AdventureState, Advent
   const load = useCallback(async () => {
     setState((s) => ({ ...s, status: 'loading', error: null }))
     try {
-      const campaign = await getCampaign(campaignId)
-      if (!campaign.characterId) {
+      const { campaign, character, session, turns } = await loadAdventureFromController(campaignId)
+      if (!character || !session) {
         setState((s) => ({ ...s, status: 'no_character', campaign }))
         return
       }
-      const [character, existingSession] = await Promise.all([
-        getCharacter(campaign.characterId),
-        getResumableSession(campaignId),
-      ])
-      const session = existingSession ?? (await startSession(campaignId))
-      const turns = await getRecentTurns(session.id, 20)
       setState({
         ...INITIAL_STATE,
         status: 'ready',
