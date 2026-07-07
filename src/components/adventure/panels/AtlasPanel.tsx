@@ -10,7 +10,8 @@
  *   • Location list grouped by type in discovery hierarchy order
  *   • Visited/discovered badges; Director property chips; NPC count
  *   • Click any location card → detail view with breadcrumb nav
- *   • Detail: description, property chips, NPCs, child locations
+ *   • Detail: collapsible sections — description, lore, items, NPCs,
+ *     property chips, child locations (native details/summary, default open)
  *
  * Keyboard accessibility:
  *   • All interactive elements reachable and operable via keyboard
@@ -145,6 +146,7 @@ export function AtlasPanel({ campaign }: AtlasPanelProps) {
   if (selected) {
     return (
       <LocationDetail
+        key={selected.id}
         location={selected}
         allLocations={locations}
         npcs={npcs}
@@ -480,94 +482,141 @@ function LocationDetail({
       <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
 
         {/* Description */}
-        {location.description ? (
-          <p className="lore-text text-sm text-void-300 leading-relaxed">
-            {location.description}
-          </p>
-        ) : (
-          <p className="text-void-600 text-sm italic">No description recorded.</p>
-        )}
-
-        {/* Director property chips */}
-        {properties.length > 0 && (
-          <section aria-label="Known properties">
-            <p className="stat-label mb-2">Known Properties</p>
-            <div className="flex flex-wrap gap-2">
-              {properties.map(([key, value]) => (
-                <div
-                  key={key}
-                  className="flex items-center gap-1 px-2 py-1 rounded bg-void-900 border border-void-700/50 text-xs"
-                  title={`${key}: ${value}`}
-                >
-                  <span className="text-void-500 capitalize">
-                    {key.replace(/([A-Z])/g, ' $1').toLowerCase()}:
-                  </span>
-                  <span
-                    className={`font-mono ${
-                      value === true  ? 'text-heal-400' :
-                      value === false ? 'text-harm-400' :
-                      'text-arcane-300'
-                    }`}
-                  >
-                    {String(value)}
-                  </span>
-                </div>
-              ))}
-            </div>
+        <details open>
+          <summary className="stat-label mb-2 cursor-pointer select-none">Description</summary>
+          <section aria-label="Description" className="pt-1">
+            {location.description ? (
+              <p className="lore-text text-sm text-void-300 leading-relaxed">
+                {location.description}
+              </p>
+            ) : (
+              <p className="text-void-600 text-sm italic">No description recorded.</p>
+            )}
           </section>
+        </details>
+
+        {/* Lore */}
+        <details open>
+          <summary className="stat-label mb-2 cursor-pointer select-none">Lore</summary>
+          <section aria-label="Lore" className="pt-1">
+            {location.lore ? (
+              <p className="lore-text text-sm text-void-300 leading-relaxed">
+                {location.lore}
+              </p>
+            ) : (
+              <p className="text-void-600 text-sm italic">No lore recorded yet.</p>
+            )}
+          </section>
+        </details>
+
+        {/* Items */}
+        {location.items && location.items.length > 0 && (
+          <details open>
+            <summary className="stat-label mb-2 cursor-pointer select-none">Items Here</summary>
+            <section aria-label="Items at this location" className="pt-1">
+              <ul className="flex flex-col gap-1.5 list-none p-0 m-0">
+                {location.items.map((item) => (
+                  <li
+                    key={item.id}
+                    className="flex flex-col px-3 py-2 rounded-lg bg-void-900 border border-void-700/50"
+                  >
+                    <span className="font-body text-sm text-void-200">{item.name}</span>
+                    {item.description && (
+                      <span className="text-void-500 text-xs mt-0.5">{item.description}</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          </details>
         )}
 
         {/* NPCs */}
         {locationNpcs.length > 0 && (
-          <section aria-label="NPCs at this location">
-            <p className="stat-label mb-2">NPCs Here</p>
-            <ul className="flex flex-col gap-1.5 list-none p-0 m-0">
-              {locationNpcs.map((npc) => (
-                <li
-                  key={npc.id}
-                  className="flex items-center justify-between px-3 py-2 rounded-lg bg-void-900 border border-void-700/50"
-                >
-                  <span
-                    className={`font-body text-sm ${npc.isAlive ? 'text-void-200' : 'text-void-600 line-through'}`}
-                    aria-label={`${npc.name} — ${npc.isAlive ? 'alive' : 'deceased'}`}
+          <details open>
+            <summary className="stat-label mb-2 cursor-pointer select-none">NPCs Here</summary>
+            <section aria-label="NPCs at this location" className="pt-1">
+              <ul className="flex flex-col gap-1.5 list-none p-0 m-0">
+                {locationNpcs.map((npc) => (
+                  <li
+                    key={npc.id}
+                    className="flex items-center justify-between px-3 py-2 rounded-lg bg-void-900 border border-void-700/50"
                   >
-                    {npc.name}
-                  </span>
-                  <Badge variant={npc.isAlive ? 'neutral' : 'harm'}>
-                    {npc.isAlive ? 'Alive' : 'Deceased'}
-                  </Badge>
-                </li>
-              ))}
-            </ul>
-          </section>
+                    <span
+                      className={`font-body text-sm ${npc.isAlive ? 'text-void-200' : 'text-void-600 line-through'}`}
+                      aria-label={`${npc.name} — ${npc.isAlive ? 'alive' : 'deceased'}`}
+                    >
+                      {npc.name}
+                    </span>
+                    <Badge variant={npc.isAlive ? 'neutral' : 'harm'}>
+                      {npc.isAlive ? 'Alive' : 'Deceased'}
+                    </Badge>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          </details>
+        )}
+
+        {/* Director property chips */}
+        {properties.length > 0 && (
+          <details open>
+            <summary className="stat-label mb-2 cursor-pointer select-none">Known Properties</summary>
+            <section aria-label="Known properties" className="pt-1">
+              <div className="flex flex-wrap gap-2">
+                {properties.map(([key, value]) => (
+                  <div
+                    key={key}
+                    className="flex items-center gap-1 px-2 py-1 rounded bg-void-900 border border-void-700/50 text-xs"
+                    title={`${key}: ${value}`}
+                  >
+                    <span className="text-void-500 capitalize">
+                      {key.replace(/([A-Z])/g, ' $1').toLowerCase()}:
+                    </span>
+                    <span
+                      className={`font-mono ${
+                        value === true  ? 'text-heal-400' :
+                        value === false ? 'text-harm-400' :
+                        'text-arcane-300'
+                      }`}
+                    >
+                      {String(value)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </details>
         )}
 
         {/* Child locations */}
         {children.length > 0 && (
-          <section aria-label="Sub-locations">
-            <p className="stat-label mb-2">Sub-locations</p>
-            <ul className="flex flex-col gap-1.5 list-none p-0 m-0">
-              {children.map((child) => (
-                <li key={child.id}>
-                  <button
-                    type="button"
-                    onClick={() => onNavigateTo(child)}
-                    aria-label={`Navigate to ${child.name}, ${LOCATION_TYPE_LABEL[child.type]}`}
-                    className={[
-                      'w-full flex items-center gap-2 px-3 py-2 rounded-lg',
-                      'bg-void-900 border border-void-700/50 hover:border-arcane-700/40 transition-colors',
-                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-arcane-400',
-                    ].join(' ')}
-                  >
-                    <span aria-hidden>{LOCATION_ICON[child.type]}</span>
-                    <span className="text-void-300 text-sm flex-1 text-left">{child.name}</span>
-                    <span className="text-void-600 text-xs capitalize">{child.type}</span>
-                    {child.visited && <Badge variant="spirit">Visited</Badge>}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </section>
+          <details open>
+            <summary className="stat-label mb-2 cursor-pointer select-none">Sub-locations</summary>
+            <section aria-label="Sub-locations" className="pt-1">
+              <ul className="flex flex-col gap-1.5 list-none p-0 m-0">
+                {children.map((child) => (
+                  <li key={child.id}>
+                    <button
+                      type="button"
+                      onClick={() => onNavigateTo(child)}
+                      aria-label={`Navigate to ${child.name}, ${LOCATION_TYPE_LABEL[child.type]}`}
+                      className={[
+                        'w-full flex items-center gap-2 px-3 py-2 rounded-lg',
+                        'bg-void-900 border border-void-700/50 hover:border-arcane-700/40 transition-colors',
+                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-arcane-400',
+                      ].join(' ')}
+                    >
+                      <span aria-hidden>{LOCATION_ICON[child.type]}</span>
+                      <span className="text-void-300 text-sm flex-1 text-left">{child.name}</span>
+                      <span className="text-void-600 text-xs capitalize">{child.type}</span>
+                      {child.visited && <Badge variant="spirit">Visited</Badge>}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          </details>
         )}
 
       </div>

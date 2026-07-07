@@ -176,6 +176,17 @@ export interface LocationState {
   discovered: boolean
   /** Key-value properties the Director can set. e.g. { cleared: true, alertLevel: 'high' } */
   properties: Record<string, string | number | boolean>
+  /** Deeper background/history text, distinct from the scene-setting description. Optional — older locations won't have this. */
+  lore?: string
+  /** Items present at this location. Optional — older locations won't have this. */
+  items?: LocationItem[]
+}
+
+/** An item present at a Location, distinct from Character inventory or combat loot. */
+export interface LocationItem {
+  id: string
+  name: string
+  description?: string
 }
 
 // ── NPC World State ───────────────────────────────────────────────────────────
