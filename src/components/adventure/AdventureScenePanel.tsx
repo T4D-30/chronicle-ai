@@ -20,12 +20,16 @@
  * generation system, no per-location artwork field, and building one is
  * explicitly out of scope for this pass. Shows the location's own real
  * `description` text (when a current location resolves) inside a
- * stylized pixel-bordered frame, which is more honest than either a
- * blank box or a fabricated "generating image..." state that implies a
- * capability that doesn't exist.
+ * stylized frame, which is more honest than either a blank box or a
+ * fabricated "generating image..." state that implies a capability
+ * that doesn't exist.
+ *
+ * Adventure UI 3.0, Phase 1: replaced the flat pixel-bordered box with
+ * `.scene-viewport` (globals.css) — a layered-lighting frame with gold
+ * corner brackets, in the spirit of a classic CRPG dialogue/scene
+ * viewport. Presentation only: same data, same testids, same copy.
  */
 
-import { PixelPanel } from '@/components/pixel'
 import type { Campaign } from '@/lib/supabase'
 
 interface AdventureScenePanelProps {
@@ -43,41 +47,50 @@ export function AdventureScenePanel({ campaign, children }: AdventureScenePanelP
 
   return (
     <div className="flex flex-col h-full min-h-0" data-testid="adventure-scene-panel">
-      <div className="flex-shrink-0 px-4 pt-3 pb-1 flex items-baseline justify-between gap-2 flex-wrap">
-        <h1
-          className="font-display text-lg font-bold text-white truncate"
-          data-testid="scene-location-title"
-        >
-          {locationTitle}
-        </h1>
-        {worldState.worldTime && (
-          <p className="text-arcane-300 text-xs flex-shrink-0" data-testid="scene-time-line">
-            {worldState.worldTime}
-          </p>
-        )}
+      <div className="flex-shrink-0 px-4 pt-4 pb-2">
+        <div className="flex items-baseline justify-between gap-2 flex-wrap mb-2">
+          <h1
+            className="font-display text-xl font-bold text-gradient-arcane truncate"
+            data-testid="scene-location-title"
+          >
+            {locationTitle}
+          </h1>
+          {worldState.worldTime && (
+            <p
+              className="font-mono text-[10px] tracking-widest uppercase text-arcane-300/80 flex-shrink-0"
+              data-testid="scene-time-line"
+            >
+              {worldState.worldTime}
+            </p>
+          )}
+        </div>
+        <div
+          className="h-px bg-gradient-to-r from-arcane-700/60 via-arcane-800/20 to-transparent"
+          aria-hidden="true"
+        />
       </div>
 
-      <div className="flex-shrink-0 px-4 pb-2">
-        <PixelPanel
-          className="h-28 sm:h-36 flex items-center justify-center overflow-hidden relative"
+      <div className="flex-shrink-0 px-4 pb-3">
+        <div
+          className="scene-viewport h-36 sm:h-44 flex items-center justify-center"
           data-testid="scene-art-placeholder"
         >
-          <div
-            aria-hidden="true"
-            className="absolute inset-0 opacity-40"
-            style={{
-              background: 'radial-gradient(ellipse 70% 60% at 50% 30%, rgba(139,92,246,0.25) 0%, transparent 70%)',
-            }}
-          />
-          <div className="relative text-center px-4">
-            <span className="text-3xl block mb-1" aria-hidden="true">🏔️</span>
+          <div className="relative text-center px-6">
+            <span
+              className="text-4xl block mb-2 drop-shadow-[0_0_12px_rgba(243,207,77,0.25)]"
+              aria-hidden="true"
+            >
+              🏔️
+            </span>
             {currentLocation?.description ? (
-              <p className="text-void-400 text-xs line-clamp-2 max-w-sm">{currentLocation.description}</p>
+              <p className="text-void-300 text-sm font-body leading-relaxed line-clamp-2 max-w-sm">
+                {currentLocation.description}
+              </p>
             ) : (
-              <p className="text-void-600 text-xs">Scene art coming soon</p>
+              <p className="text-void-500 text-sm font-body">Scene art coming soon</p>
             )}
           </div>
-        </PixelPanel>
+        </div>
       </div>
 
       <div className="flex-1 min-h-0 flex flex-col">
