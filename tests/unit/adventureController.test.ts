@@ -1,12 +1,13 @@
 /**
- * adventureController Tests — first pass
+ * adventureController Tests
  *
  * Direct unit coverage for the Adventure Controller, isolated from React.
- * Scope for this pass: levelUpCharacter, loadAdventure, and buildCombatState.
- * runPlayerTurn and commitCombatResult are covered separately.
+ * Covers: levelUpCharacter, loadAdventure, buildCombatState, and
+ * commitCombatResult. runPlayerTurn is covered separately.
  */
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { setRng, resetRng } from '@/lib/engine'
+import { setRng, resetRng, isReadyToLevel, summariseCombatResult, makeCombatLogEntry } from '@/lib/engine'
+import type { CombatResult } from '@/lib/engine'
 import { DEFAULT_DIRECTOR_CONFIG, DEFAULT_WORLD_STATE } from '@/types/campaign'
 
 afterEach(() => resetRng())
@@ -19,6 +20,8 @@ const getResumableSessionMock = vi.fn()
 const startSessionMock        = vi.fn()
 const getRecentTurnsMock      = vi.fn()
 const updateCharacterMock     = vi.fn()
+const appendTurnMock          = vi.fn()
+const updateWorldStateMock    = vi.fn()
 
 vi.mock('@/lib/supabase', async () => {
   const actual = await vi.importActual<typeof import('@/lib/supabase')>('@/lib/supabase')
@@ -30,6 +33,8 @@ vi.mock('@/lib/supabase', async () => {
     startSession:        (...a: unknown[]) => startSessionMock(...a),
     getRecentTurns:      (...a: unknown[]) => getRecentTurnsMock(...a),
     updateCharacter:     (...a: unknown[]) => updateCharacterMock(...a),
+    appendTurn:          (...a: unknown[]) => appendTurnMock(...a),
+    updateWorldState:    (...a: unknown[]) => updateWorldStateMock(...a),
   }
 })
 
@@ -37,6 +42,7 @@ import {
   loadAdventure,
   levelUpCharacter,
   buildCombatState,
+  commitCombatResult,
 } from '@/lib/adventure/adventureController'
 
 // ── Fixtures ───────────────────────────────────────────────────────────────────
@@ -73,6 +79,20 @@ const ENEMY = {
   id: 'goblin-1', name: 'Goblin', isPlayer: false as const,
   maxHp: 7, currentHp: 7, armorClass: 12,
   attackBonus: 4, damageDie: 'd6' as const, damageBonus: 2, dexMod: 2,
+}
+
+function baseCombatResult(overrides: Partial<CombatResult> = {}): CombatResult {
+  return {
+    outcome: 'victory',
+    xpAwarded: 50,
+    loot: [],
+    enemiesDefeated: [],
+    rounds: 3,
+    finalPlayerHp: 20,
+    log: [makeCombatLogEntry(1, 'System', false, 'Combat begins.')],
+    endedAt: '2024-01-02T00:00:00Z',
+    ...overrides,
+  }
 }
 
 describe('levelUpCharacter', () => {
@@ -156,5 +176,101 @@ describe('buildCombatState', () => {
     const state = buildCombatState(wounded, [ENEMY])
 
     expect(state.playerCurrentHp).toBe(12)
+  })
+})
+
+describe('commitCombatResult', () => {
+  it('victory: merges loot into inventory, awards XP/HP, and reports readyToLevel', async () => {
+    const loot = [{ id: 'loot-1', name: 'Rusty Dagger', quantity: 1, goldValue: 5, description: 'A worn blade.' }]
+    const result = baseCombatResult({
+      outcome: 'victory',
+      xpAwarded: 9999, // deliberately large — forces isReadyToLevel true regardless of the XP table
+      loot,
+      enemiesDefeated: [ENEMY],
+      finalPlayerHp: 18,
+    })
+    const updatedCharacter = { ...CHARACTER, experience: CHARACTER.experience + result.xpAwarded }
+    updateCharacterMock.mockResolvedValueOnce(updatedCharacter)
+    const newTurn = { id: 'turn-1', sessionId: SESSION.id, turnNumber: 1, playerInput: '', aiNarration: '', diceRolls: [], mode: 'combat' as const, createdAt: '2024-01-02T00:00:00Z' }
+    appendTurnMock.mockResolvedValueOnce(newTurn)
+
+    const commitResult = await commitCombatResult({ character: CHARACTER, session: SESSION, campaign: CAMPAIGN, result })
+
+    expect(updateCharacterMock).toHaveBeenCalledWith('char-1', {
+      experience: CHARACTER.experience + result.xpAwarded,
+      currentHp: 18,
+      inventory: [{ id: 'loot-1', name: 'Rusty Dagger', quantity: 1, weight: 0, equipped: false, description: 'A worn blade.' }],
+    })
+    expect(appendTurnMock).toHaveBeenCalledWith(SESSION.id, {
+      playerInput: `[VICTORY] ${ENEMY.name}`,
+      aiNarration: summariseCombatResult(result),
+      diceRolls: [],
+      mode: 'combat',
+    })
+    expect(commitResult.updatedCharacter).toBe(updatedCharacter)
+    expect(commitResult.newTurn).toBe(newTurn)
+    expect(commitResult.xpAwarded).toBe(result.xpAwarded)
+    expect(commitResult.readyToLevel).toBe(isReadyToLevel(CHARACTER.experience + result.xpAwarded, CHARACTER.sheet.level))
+  })
+
+  it('defeat/fled: label the turn and fall back to "Combat ended." when nothing was defeated', async () => {
+    updateCharacterMock.mockResolvedValue(CHARACTER)
+    appendTurnMock.mockResolvedValue({ id: 'turn-1', sessionId: SESSION.id, turnNumber: 1, playerInput: '', aiNarration: '', diceRolls: [], mode: 'combat' as const, createdAt: '2024-01-02T00:00:00Z' })
+
+    const defeat = baseCombatResult({ outcome: 'defeat', enemiesDefeated: [] })
+    await commitCombatResult({ character: CHARACTER, session: SESSION, campaign: CAMPAIGN, result: defeat })
+    expect(appendTurnMock).toHaveBeenLastCalledWith(SESSION.id, expect.objectContaining({
+      playerInput: '[DEFEAT] Combat ended.',
+    }))
+
+    const fled = baseCombatResult({ outcome: 'fled', enemiesDefeated: [] })
+    await commitCombatResult({ character: CHARACTER, session: SESSION, campaign: CAMPAIGN, result: fled })
+    expect(appendTurnMock).toHaveBeenLastCalledWith(SESSION.id, expect.objectContaining({
+      playerInput: '[FLED] Combat ended.',
+    }))
+  })
+
+  it('applies world state updates only when the log is non-empty AND enemies were defeated', async () => {
+    updateCharacterMock.mockResolvedValue(CHARACTER)
+    appendTurnMock.mockResolvedValue({ id: 'turn-1', sessionId: SESSION.id, turnNumber: 1, playerInput: '', aiNarration: '', diceRolls: [], mode: 'combat' as const, createdAt: '2024-01-02T00:00:00Z' })
+    updateWorldStateMock.mockResolvedValue(CAMPAIGN)
+
+    // A pre-existing NPC matching the defeated enemy's id, so the merge in
+    // applyWorldStateUpdate() has something observable to flip to isAlive: false.
+    const campaignWithNpc = {
+      ...CAMPAIGN,
+      worldState: {
+        ...CAMPAIGN.worldState,
+        npcs: [{ id: ENEMY.id, name: ENEMY.name, locationId: null, isAlive: true, combatStats: null }],
+      },
+    }
+
+    // Case A: non-empty log + defeated enemies → world state IS updated,
+    // and the matching NPC's isAlive flips to false.
+    const withDefeats = baseCombatResult({
+      log: [makeCombatLogEntry(1, 'System', false, 'Combat begins.')],
+      enemiesDefeated: [ENEMY],
+    })
+    await commitCombatResult({ character: CHARACTER, session: SESSION, campaign: campaignWithNpc, result: withDefeats })
+    expect(updateWorldStateMock).toHaveBeenCalledWith(campaignWithNpc.id, expect.objectContaining({
+      npcs: [expect.objectContaining({ id: ENEMY.id, isAlive: false })],
+    }))
+    updateWorldStateMock.mockClear()
+
+    // Case B: empty log → world state is NOT updated, even with defeated enemies.
+    const emptyLog = baseCombatResult({ log: [], enemiesDefeated: [ENEMY] })
+    await commitCombatResult({ character: CHARACTER, session: SESSION, campaign: CAMPAIGN, result: emptyLog })
+    expect(updateWorldStateMock).not.toHaveBeenCalled()
+
+    // Case C: non-empty log but no defeated enemies → world state is NOT
+    // updated either, since npcUpdates would be an empty array. The gate is
+    // effectively "were enemies defeated", not "is there a log" — preserved
+    // as-is, not a behavior this test set is meant to fix.
+    const noDefeats = baseCombatResult({
+      log: [makeCombatLogEntry(1, 'System', false, 'Combat begins.')],
+      enemiesDefeated: [],
+    })
+    await commitCombatResult({ character: CHARACTER, session: SESSION, campaign: CAMPAIGN, result: noDefeats })
+    expect(updateWorldStateMock).not.toHaveBeenCalled()
   })
 })
