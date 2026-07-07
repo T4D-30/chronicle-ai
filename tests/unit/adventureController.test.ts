@@ -2,10 +2,10 @@
  * adventureController Tests
  *
  * Direct unit coverage for the Adventure Controller, isolated from React.
- * Covers: levelUpCharacter, loadAdventure, buildCombatState, and
- * commitCombatResult. runPlayerTurn is covered separately.
+ * Covers: levelUpCharacter, loadAdventure, buildCombatState,
+ * commitCombatResult, and runPlayerTurn.
  */
-import { describe, it, expect, vi, afterEach } from 'vitest'
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
 import { setRng, resetRng, isReadyToLevel, summariseCombatResult, makeCombatLogEntry } from '@/lib/engine'
 import type { CombatResult } from '@/lib/engine'
 import { DEFAULT_DIRECTOR_CONFIG, DEFAULT_WORLD_STATE } from '@/types/campaign'
@@ -14,27 +14,58 @@ afterEach(() => resetRng())
 
 // ── Mocks ──────────────────────────────────────────────────────────────────────
 
-const getCampaignMock         = vi.fn()
-const getCharacterMock        = vi.fn()
-const getResumableSessionMock = vi.fn()
-const startSessionMock        = vi.fn()
-const getRecentTurnsMock      = vi.fn()
-const updateCharacterMock     = vi.fn()
-const appendTurnMock          = vi.fn()
-const updateWorldStateMock    = vi.fn()
+const getCampaignMock          = vi.fn()
+const getCharacterMock         = vi.fn()
+const getResumableSessionMock  = vi.fn()
+const startSessionMock         = vi.fn()
+const getRecentTurnsMock       = vi.fn()
+const updateCharacterMock      = vi.fn()
+const appendTurnMock           = vi.fn()
+const updateWorldStateMock     = vi.fn()
+const updateDirectorConfigMock = vi.fn()
 
 vi.mock('@/lib/supabase', async () => {
   const actual = await vi.importActual<typeof import('@/lib/supabase')>('@/lib/supabase')
   return {
     ...actual,
-    getCampaign:         (...a: unknown[]) => getCampaignMock(...a),
-    getCharacter:        (...a: unknown[]) => getCharacterMock(...a),
-    getResumableSession: (...a: unknown[]) => getResumableSessionMock(...a),
-    startSession:        (...a: unknown[]) => startSessionMock(...a),
-    getRecentTurns:      (...a: unknown[]) => getRecentTurnsMock(...a),
-    updateCharacter:     (...a: unknown[]) => updateCharacterMock(...a),
-    appendTurn:          (...a: unknown[]) => appendTurnMock(...a),
-    updateWorldState:    (...a: unknown[]) => updateWorldStateMock(...a),
+    getCampaign:          (...a: unknown[]) => getCampaignMock(...a),
+    getCharacter:         (...a: unknown[]) => getCharacterMock(...a),
+    getResumableSession:  (...a: unknown[]) => getResumableSessionMock(...a),
+    startSession:         (...a: unknown[]) => startSessionMock(...a),
+    getRecentTurns:       (...a: unknown[]) => getRecentTurnsMock(...a),
+    updateCharacter:      (...a: unknown[]) => updateCharacterMock(...a),
+    appendTurn:           (...a: unknown[]) => appendTurnMock(...a),
+    updateWorldState:     (...a: unknown[]) => updateWorldStateMock(...a),
+    updateDirectorConfig: (...a: unknown[]) => updateDirectorConfigMock(...a),
+  }
+})
+
+// runPlayerTurn's document retrieval — defaults to no results; individual
+// tests override via retrieveMock.mockResolvedValue/mockRejectedValueOnce.
+const retrieveMock = vi.fn().mockResolvedValue([])
+vi.mock('@/lib/directorDocuments/fullTextRetriever', () => ({
+  getActiveDocumentRetriever: () => ({ name: 'Mock Retriever', retrieve: retrieveMock }),
+}))
+
+// callNarrateStreaming captures its request/callbacks so tests can fire
+// onDone/onError manually. buildNarrateRequest and parseDirectorResponse
+// stay real (importActual) — only the network-bound streaming call is stubbed.
+let capturedRequest: Record<string, unknown> | null = null
+let capturedCallbacks: {
+  onToken: (t: string) => void
+  onDone: (r: unknown) => void
+  onError: (e: unknown) => void
+} | null = null
+
+vi.mock('@/lib/ai', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/ai')>('@/lib/ai')
+  return {
+    ...actual,
+    callNarrateStreaming: (req: Record<string, unknown>, callbacks: typeof capturedCallbacks) => {
+      capturedRequest = req
+      capturedCallbacks = callbacks
+      return { abort: vi.fn() }
+    },
   }
 })
 
@@ -43,6 +74,7 @@ import {
   levelUpCharacter,
   buildCombatState,
   commitCombatResult,
+  runPlayerTurn,
 } from '@/lib/adventure/adventureController'
 
 // ── Fixtures ───────────────────────────────────────────────────────────────────
@@ -79,6 +111,19 @@ const ENEMY = {
   id: 'goblin-1', name: 'Goblin', isPlayer: false as const,
   maxHp: 7, currentHp: 7, armorClass: 12,
   attackBonus: 4, damageDie: 'd6' as const, damageBonus: 2, dexMod: 2,
+}
+
+function baseNarrateResponse(overrides: Record<string, unknown> = {}) {
+  return {
+    narration: 'The door creaks open.',
+    worldStateUpdates: {},
+    directorConfigUpdates: {},
+    suggestedActions: ['Enter', 'Wait'],
+    combatTriggered: false,
+    mapUpdate: null,
+    turnId: 'turn-1',
+    ...overrides,
+  }
 }
 
 function baseCombatResult(overrides: Partial<CombatResult> = {}): CombatResult {
@@ -272,5 +317,168 @@ describe('commitCombatResult', () => {
     })
     await commitCombatResult({ character: CHARACTER, session: SESSION, campaign: CAMPAIGN, result: noDefeats })
     expect(updateWorldStateMock).not.toHaveBeenCalled()
+  })
+})
+
+describe('runPlayerTurn', () => {
+  function makeCallbacks() {
+    return {
+      onToken: vi.fn(),
+      onStreamStart: vi.fn(),
+      onResult: vi.fn(),
+      onError: vi.fn(),
+    }
+  }
+
+  beforeEach(() => {
+    capturedRequest = null
+    capturedCallbacks = null
+    retrieveMock.mockReset().mockResolvedValue([])
+    updateWorldStateMock.mockReset()
+    updateDirectorConfigMock.mockReset()
+  })
+
+  it('degrades to an empty documentContext when the document retriever throws, without blocking the turn', async () => {
+    retrieveMock.mockRejectedValueOnce(new Error('retriever down'))
+    const callbacks = makeCallbacks()
+
+    runPlayerTurn(
+      { campaign: CAMPAIGN, character: CHARACTER, session: SESSION, recentTurns: [], playerInput: 'I look around.' },
+      callbacks,
+    )
+    await vi.waitFor(() => expect(capturedRequest).not.toBeNull())
+
+    // buildNarrateRequest only includes documentContext when non-empty (same
+    // conditional-spread pattern as checkResult) — an empty array from the
+    // failed retrieval means the key is omitted entirely, not present as [].
+    expect(capturedRequest).not.toHaveProperty('documentContext')
+    expect(callbacks.onError).not.toHaveBeenCalled()
+  })
+
+  it('omits checkResult from the narrate request for an unclassified (UNKNOWN) action', async () => {
+    const callbacks = makeCallbacks()
+
+    runPlayerTurn(
+      { campaign: CAMPAIGN, character: CHARACTER, session: SESSION, recentTurns: [], playerInput: 'I greet the innkeeper warmly.' },
+      callbacks,
+    )
+    await vi.waitFor(() => expect(capturedRequest).not.toBeNull())
+
+    expect(capturedRequest).not.toHaveProperty('checkResult')
+  })
+
+  it('includes a real checkResult for a classified (FINESSE) action', async () => {
+    setRng(() => 0.5) // mid-roll, deterministic
+    const callbacks = makeCallbacks()
+
+    runPlayerTurn(
+      { campaign: CAMPAIGN, character: CHARACTER, session: SESSION, recentTurns: [], playerInput: 'I sneak past the guards.' },
+      callbacks,
+    )
+    await vi.waitFor(() => expect(capturedRequest).not.toBeNull())
+
+    expect(capturedRequest).toHaveProperty('checkResult')
+    const checkResult = capturedRequest!.checkResult as Record<string, unknown>
+    expect(checkResult.category).toBe('FINESSE')
+    expect(checkResult.stat).toBe('DEX')
+  })
+
+  describe('persistence ordering', () => {
+    const campaignWithLoc = {
+      ...CAMPAIGN,
+      worldState: {
+        ...CAMPAIGN.worldState,
+        locations: [{ id: 'loc-1', name: 'The Vault', type: 'dungeon' as const, parentId: null, description: '', visited: true, discovered: true, properties: {} }],
+      },
+    }
+
+    it('persists only world state when only worldStateUpdates are present', async () => {
+      updateWorldStateMock.mockResolvedValueOnce({ ...campaignWithLoc, worldState: { ...campaignWithLoc.worldState, currentLocationId: 'loc-1' } })
+      const callbacks = makeCallbacks()
+
+      runPlayerTurn(
+        { campaign: campaignWithLoc, character: CHARACTER, session: SESSION, recentTurns: [], playerInput: 'I enter the vault.' },
+        callbacks,
+      )
+      await vi.waitFor(() => expect(capturedCallbacks).not.toBeNull())
+      capturedCallbacks!.onDone(baseNarrateResponse({ worldStateUpdates: { currentLocationId: 'loc-1' } }))
+      await vi.waitFor(() => expect(callbacks.onResult).toHaveBeenCalled())
+
+      expect(updateWorldStateMock).toHaveBeenCalledOnce()
+      expect(updateDirectorConfigMock).not.toHaveBeenCalled()
+    })
+
+    it('persists only director config when only directorConfigUpdates are present', async () => {
+      updateDirectorConfigMock.mockResolvedValueOnce(CAMPAIGN)
+      const callbacks = makeCallbacks()
+
+      runPlayerTurn(
+        { campaign: CAMPAIGN, character: CHARACTER, session: SESSION, recentTurns: [], playerInput: 'I ask the barkeep for work.' },
+        callbacks,
+      )
+      await vi.waitFor(() => expect(capturedCallbacks).not.toBeNull())
+      capturedCallbacks!.onDone(baseNarrateResponse({
+        directorConfigUpdates: { newThreads: [{ id: 't1', title: 'Find the missing shipment' }] },
+      }))
+      await vi.waitFor(() => expect(callbacks.onResult).toHaveBeenCalled())
+
+      expect(updateWorldStateMock).not.toHaveBeenCalled()
+      expect(updateDirectorConfigMock).toHaveBeenCalledOnce()
+    })
+
+    it('persists both updates from a single turn, applying directorConfig on top of the already-updated campaign', async () => {
+      const afterWorldUpdate = { ...campaignWithLoc, worldState: { ...campaignWithLoc.worldState, currentLocationId: 'loc-1' } }
+      updateWorldStateMock.mockResolvedValueOnce(afterWorldUpdate)
+      updateDirectorConfigMock.mockResolvedValueOnce(afterWorldUpdate)
+      const callbacks = makeCallbacks()
+
+      runPlayerTurn(
+        { campaign: campaignWithLoc, character: CHARACTER, session: SESSION, recentTurns: [], playerInput: 'I enter the vault and ask about work.' },
+        callbacks,
+      )
+      await vi.waitFor(() => expect(capturedCallbacks).not.toBeNull())
+      capturedCallbacks!.onDone(baseNarrateResponse({
+        worldStateUpdates: { currentLocationId: 'loc-1' },
+        directorConfigUpdates: { newThreads: [{ id: 't1', title: 'A round of drinks' }] },
+      }))
+      await vi.waitFor(() => expect(callbacks.onResult).toHaveBeenCalled())
+
+      expect(updateWorldStateMock).toHaveBeenCalledOnce()
+      expect(updateDirectorConfigMock).toHaveBeenCalledOnce()
+      // The director config call must operate on the campaign already
+      // updated by the world state call, not a stale pre-update snapshot.
+      const [campaignIdArg] = updateDirectorConfigMock.mock.calls[0]
+      expect(campaignIdArg).toBe(afterWorldUpdate.id)
+    })
+
+    it('persists neither update when the Director reports no world or config changes', async () => {
+      const callbacks = makeCallbacks()
+
+      runPlayerTurn(
+        { campaign: CAMPAIGN, character: CHARACTER, session: SESSION, recentTurns: [], playerInput: 'I look around.' },
+        callbacks,
+      )
+      await vi.waitFor(() => expect(capturedCallbacks).not.toBeNull())
+      capturedCallbacks!.onDone(baseNarrateResponse())
+      await vi.waitFor(() => expect(callbacks.onResult).toHaveBeenCalled())
+
+      expect(updateWorldStateMock).not.toHaveBeenCalled()
+      expect(updateDirectorConfigMock).not.toHaveBeenCalled()
+    })
+  })
+
+  it('calls onError when the narrate stream itself errors', async () => {
+    const callbacks = makeCallbacks()
+
+    runPlayerTurn(
+      { campaign: CAMPAIGN, character: CHARACTER, session: SESSION, recentTurns: [], playerInput: 'I look around.' },
+      callbacks,
+    )
+    await vi.waitFor(() => expect(capturedCallbacks).not.toBeNull())
+
+    const err = new Error('stream failed')
+    capturedCallbacks!.onError(err)
+
+    expect(callbacks.onError).toHaveBeenCalledWith(err)
   })
 })
