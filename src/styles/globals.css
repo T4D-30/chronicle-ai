@@ -100,6 +100,18 @@
     @apply chr-panel border-spirit-800/40;
   }
 
+  /* Hero panel — premium framed card for landing/login/signup.
+     Same family as chr-panel-arcane, with a stronger glow and warmer
+     border for a more cinematic, single-focal-point presentation. */
+  .chr-panel-hero {
+    @apply chr-panel-arcane rounded-xl;
+    box-shadow:
+      var(--tw-shadow-panel),
+      0 0 0 1px rgba(243, 207, 77, 0.12),
+      0 12px 48px rgba(5, 5, 16, 0.65),
+      0 0 60px rgba(243, 207, 77, 0.08);
+  }
+
   /* Lore text — narrative/flavour text style */
   .lore-text {
     @apply font-lore text-void-200 italic leading-relaxed;
@@ -155,6 +167,16 @@
 
   .glow-spirit {
     filter: drop-shadow(0 0 8px rgba(59, 202, 192, 0.4));
+  }
+
+  /* Cinematic backdrop — layered warm glow + vignette for the
+     landing/login/signup screens. Composes with AppShell's own
+     ambient glow; scoped per-page via CinematicBackdrop. */
+  .bg-cinematic {
+    background:
+      radial-gradient(ellipse 70% 50% at 50% -5%, rgba(244, 184, 32, 0.14) 0%, transparent 60%),
+      radial-gradient(ellipse 55% 40% at 88% 92%, rgba(59, 202, 192, 0.07) 0%, transparent 70%),
+      radial-gradient(ellipse 120% 90% at 50% 50%, transparent 45%, rgba(5, 5, 16, 0.75) 100%);
   }
 
   /* Screen-reader only with override — used by skip-link */

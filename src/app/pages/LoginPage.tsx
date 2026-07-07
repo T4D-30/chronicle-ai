@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Button, Input } from '@/components/ui'
 import { GoogleSignInButton } from '@/components/auth'
+import { CinematicBackdrop } from '@/components/layout/CinematicBackdrop'
+import { HeroPanel } from '@/components/layout/HeroPanel'
 import { authService } from '@/lib/supabase'
 
 export default function LoginPage() {
@@ -26,8 +28,9 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-4">
-      <div className="chr-panel-arcane w-full max-w-sm p-8">
+    <main className="relative flex min-h-screen items-center justify-center px-4 overflow-hidden bg-void-950">
+      <CinematicBackdrop fireflyCount={8} />
+      <HeroPanel className="relative z-10 w-full max-w-sm p-8 animate-fade-in">
         <div className="text-center mb-8">
           <h1 className="font-display text-3xl font-bold text-gradient-arcane mb-2">Welcome Back</h1>
           <p className="text-void-400 text-sm">Continue your chronicle</p>
@@ -53,7 +56,7 @@ export default function LoginPage() {
           New to the realm?{' '}
           <Link to="/signup" className="text-arcane-400 hover:text-arcane-300 transition-colors">Create an account</Link>
         </p>
-      </div>
+      </HeroPanel>
     </main>
   )
 }
