@@ -14,8 +14,6 @@ import {
   getCampaign,
   getCharacter,
   updateCharacter,
-  updateWorldState,
-  appendTurn,
   startSession,
   pauseSession,
   resumeSession,
@@ -25,20 +23,11 @@ import {
   ServiceError,
 } from '@/lib/supabase'
 import type { Campaign, CharacterRecord, GameSession, NarrativeTurn } from '@/lib/supabase'
-import {
-  applyWorldStateUpdate,
-  hasWorldStateChanges,
-} from '@/lib/engine/worldDispatcher'
 import { buildFallbackNarration } from '@/lib/ai'
 import type { DirectorResult } from '@/lib/ai'
 import type { CombatState, EnemyCombatant, CombatResult } from '@/lib/engine'
-import {
-  initCombat,
-  summariseCombatResult,
-  isReadyToLevel,
-  summariseCharacterAction,
-} from '@/lib/engine'
-import { runPlayerTurn } from '@/lib/adventure/adventureController'
+import { initCombat, summariseCharacterAction } from '@/lib/engine'
+import { runPlayerTurn, commitCombatResult as commitCombatResultToController } from '@/lib/adventure/adventureController'
 
 export type AdventureLoadStatus =
   | 'loading'
@@ -299,52 +288,13 @@ export function useAdventureSession(campaignId: string): [AdventureState, Advent
       const { character, session, campaign, turns } = snap
       if (!character || !session || !campaign) return
 
-      // 1. Persist XP + post-combat HP to character
-      const newXp = character.experience + result.xpAwarded
-      const newLevel = character.sheet.level
-      const levelUp = isReadyToLevel(newXp, newLevel)
-
-      // Add loot to existing inventory
-      const lootInventory = result.loot.map((l) => ({
-        id: l.id,
-        name: l.name,
-        quantity: l.quantity,
-        weight: 0,
-        equipped: false,
-        description: l.description,
-      }))
-      const updatedInventory = [...character.inventory, ...lootInventory]
-
-      const updatedCharacter = await updateCharacter(character.id, {
-        experience: newXp,
-        currentHp: result.finalPlayerHp,
-        inventory: updatedInventory,
-      })
-
-      // 2. Persist combat summary as a narrative turn (mode: 'combat')
-      const summaryText = summariseCombatResult(result)
-      const outcomeLabel =
-        result.outcome === 'victory' ? '[VICTORY]' :
-        result.outcome === 'defeat'  ? '[DEFEAT]'  : '[FLED]'
-
-      const newTurn = await appendTurn(session.id, {
-        playerInput: `${outcomeLabel} ${result.enemiesDefeated.map((e) => e.name).join(', ') || 'Combat ended.'}`,
-        aiNarration: summaryText,
-        diceRolls: [],
-        mode: 'combat',
-      })
-
-      // 3. Apply world state updates from the Director (enemies dead, etc.)
-      const worldUpdates: Record<string, unknown> = {
-        ...result.log.length > 0
-          ? { npcUpdates: result.enemiesDefeated.map((e) => ({ id: e.id, isAlive: false })) }
-          : {},
-      }
-      let updatedCampaign = campaign
-      if (hasWorldStateChanges(worldUpdates)) {
-        const newWorldState = applyWorldStateUpdate(campaign.worldState, worldUpdates)
-        updatedCampaign = await updateWorldState(campaign.id, newWorldState)
-      }
+      const {
+        updatedCharacter,
+        updatedCampaign,
+        newTurn,
+        readyToLevel,
+        xpAwarded,
+      } = await commitCombatResultToController({ character, session, campaign, result })
 
       setState((s) => ({
         ...s,
@@ -353,8 +303,8 @@ export function useAdventureSession(campaignId: string): [AdventureState, Advent
         campaign: updatedCampaign,
         combatState: null,
         lastCombatResult: result,
-        readyToLevel: levelUp,
-        lastXpGain: result.xpAwarded,
+        readyToLevel,
+        lastXpGain: xpAwarded,
         turns: [...turns, newTurn].slice(-20),
         session: {
           ...session,

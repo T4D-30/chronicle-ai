@@ -13,6 +13,8 @@
 import {
   updateWorldState,
   updateDirectorConfig,
+  updateCharacter,
+  appendTurn,
 } from '@/lib/supabase'
 import type { Campaign, CharacterRecord, GameSession, NarrativeTurn } from '@/lib/supabase'
 import {
@@ -33,8 +35,10 @@ import {
   parseAction,
   resolveCharacterAction,
   summariseCharacterAction,
+  summariseCombatResult,
+  isReadyToLevel,
 } from '@/lib/engine'
-import type { CombatState } from '@/lib/engine'
+import type { CombatState, CombatResult } from '@/lib/engine'
 import { getActiveDocumentRetriever } from '@/lib/directorDocuments/fullTextRetriever'
 
 export type CheckSummary = ReturnType<typeof summariseCharacterAction>
@@ -204,4 +208,86 @@ export function runPlayerTurn(ctx: TurnContext, callbacks: RunPlayerTurnCallback
 
     callbacks.onStreamStart(streamController)
   })()
+}
+
+export interface CombatCommitContext {
+  character: CharacterRecord
+  session: GameSession
+  campaign: Campaign
+  result: CombatResult
+}
+
+export interface CombatCommitResult {
+  updatedCharacter: CharacterRecord
+  updatedCampaign: Campaign
+  newTurn: NarrativeTurn
+  readyToLevel: boolean
+  xpAwarded: number
+}
+
+/**
+ * Persist a resolved combat encounter: award XP/loot/HP to the character,
+ * record the combat summary as a narrative turn, and apply any resulting
+ * world state updates (e.g. defeated NPCs).
+ *
+ * Extracted from useAdventureSession.ts's commitCombatResult(). Behavior is
+ * unchanged — this is a relocation, not a rewrite.
+ */
+export async function commitCombatResult(ctx: CombatCommitContext): Promise<CombatCommitResult> {
+  const { character, session, campaign, result } = ctx
+
+  // 1. Persist XP + post-combat HP to character
+  const newXp = character.experience + result.xpAwarded
+  const newLevel = character.sheet.level
+  const levelUp = isReadyToLevel(newXp, newLevel)
+
+  // Add loot to existing inventory
+  const lootInventory = result.loot.map((l) => ({
+    id: l.id,
+    name: l.name,
+    quantity: l.quantity,
+    weight: 0,
+    equipped: false,
+    description: l.description,
+  }))
+  const updatedInventory = [...character.inventory, ...lootInventory]
+
+  const updatedCharacter = await updateCharacter(character.id, {
+    experience: newXp,
+    currentHp: result.finalPlayerHp,
+    inventory: updatedInventory,
+  })
+
+  // 2. Persist combat summary as a narrative turn (mode: 'combat')
+  const summaryText = summariseCombatResult(result)
+  const outcomeLabel =
+    result.outcome === 'victory' ? '[VICTORY]' :
+    result.outcome === 'defeat'  ? '[DEFEAT]'  : '[FLED]'
+
+  const newTurn = await appendTurn(session.id, {
+    playerInput: `${outcomeLabel} ${result.enemiesDefeated.map((e) => e.name).join(', ') || 'Combat ended.'}`,
+    aiNarration: summaryText,
+    diceRolls: [],
+    mode: 'combat',
+  })
+
+  // 3. Apply world state updates from the Director (enemies dead, etc.)
+  const worldUpdates: Record<string, unknown> = {
+    ...result.log.length > 0
+      ? { npcUpdates: result.enemiesDefeated.map((e) => ({ id: e.id, isAlive: false })) }
+      : {},
+  }
+  let updatedCampaign = campaign
+  if (hasWorldStateChanges(worldUpdates)) {
+    const newWorldState = applyWorldStateUpdate(campaign.worldState, worldUpdates)
+    updatedCampaign = await updateWorldState(campaign.id, newWorldState)
+  }
+
+  return {
+    updatedCharacter,
+    updatedCampaign,
+    newTurn,
+    readyToLevel: levelUp,
+    xpAwarded: result.xpAwarded,
+  }
 }
