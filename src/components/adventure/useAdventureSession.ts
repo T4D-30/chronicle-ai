@@ -13,7 +13,6 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   getCampaign,
   getCharacter,
-  updateCharacter,
   startSession,
   pauseSession,
   resumeSession,
@@ -27,7 +26,11 @@ import { buildFallbackNarration } from '@/lib/ai'
 import type { DirectorResult } from '@/lib/ai'
 import type { CombatState, EnemyCombatant, CombatResult } from '@/lib/engine'
 import { initCombat, summariseCharacterAction } from '@/lib/engine'
-import { runPlayerTurn, commitCombatResult as commitCombatResultToController } from '@/lib/adventure/adventureController'
+import {
+  runPlayerTurn,
+  commitCombatResult as commitCombatResultToController,
+  levelUpCharacter as levelUpCharacterToController,
+} from '@/lib/adventure/adventureController'
 
 export type AdventureLoadStatus =
   | 'loading'
@@ -363,7 +366,7 @@ export function useAdventureSession(campaignId: string): [AdventureState, Advent
         setState((s) => ({ ...s, isActionInFlight: false }))
         return
       }
-      const updated = await updateCharacter(characterId, patch)
+      const updated = await levelUpCharacterToController(characterId, patch)
       setState((s) => ({
         ...s,
         character: updated,

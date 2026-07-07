@@ -291,3 +291,21 @@ export async function commitCombatResult(ctx: CombatCommitContext): Promise<Comb
     xpAwarded: result.xpAwarded,
   }
 }
+
+export interface LevelUpPatch {
+  level: number
+  currentHp: number
+}
+
+/**
+ * Persist a level-up: new level + recalculated HP.
+ *
+ * Extracted from useAdventureSession.ts's levelUpCharacter(). Behavior is
+ * unchanged — this is a relocation, not a rewrite.
+ */
+export async function levelUpCharacter(
+  characterId: string,
+  patch: LevelUpPatch,
+): Promise<CharacterRecord> {
+  return updateCharacter(characterId, patch)
+}
