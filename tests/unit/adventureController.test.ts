@@ -467,6 +467,120 @@ describe('runPlayerTurn', () => {
     })
   })
 
+  describe('world tick (Phase 12.1 Step 2)', () => {
+    function makeScheduledEvent(overrides: Record<string, unknown> = {}) {
+      return {
+        id: 'evt-1',
+        description: 'The bridge collapses.',
+        triggerAtTurn: 1,
+        triggered: false,
+        directorHint: 'Describe the bridge giving way.',
+        ...overrides,
+      }
+    }
+
+    it('persists the tick and reports firedEvents when a scheduled event is due', async () => {
+      const campaignWithEvent = {
+        ...CAMPAIGN,
+        worldState: { ...CAMPAIGN.worldState, scheduledEvents: [makeScheduledEvent({ triggerAtTurn: 1 })] },
+      }
+      const afterTick = {
+        ...campaignWithEvent,
+        worldState: {
+          ...campaignWithEvent.worldState,
+          scheduledEvents: [makeScheduledEvent({ triggerAtTurn: 1, triggered: true })],
+        },
+      }
+      updateWorldStateMock.mockResolvedValueOnce(afterTick)
+      const callbacks = makeCallbacks()
+
+      runPlayerTurn(
+        { campaign: campaignWithEvent, character: CHARACTER, session: SESSION, recentTurns: [], playerInput: 'I look around.' },
+        callbacks,
+      )
+      await vi.waitFor(() => expect(capturedCallbacks).not.toBeNull())
+      capturedCallbacks!.onDone(baseNarrateResponse())
+      await vi.waitFor(() => expect(callbacks.onResult).toHaveBeenCalled())
+
+      expect(updateWorldStateMock).toHaveBeenCalledOnce()
+      const [, worldStateArg] = updateWorldStateMock.mock.calls[0]
+      expect(worldStateArg.scheduledEvents[0].triggered).toBe(true)
+
+      const result = callbacks.onResult.mock.calls[0][0]
+      expect(result.firedEvents).toHaveLength(1)
+      expect(result.firedEvents[0].id).toBe('evt-1')
+    })
+
+    it('does not persist or report fired events when no scheduled event is due', async () => {
+      const campaignWithFutureEvent = {
+        ...CAMPAIGN,
+        worldState: { ...CAMPAIGN.worldState, scheduledEvents: [makeScheduledEvent({ triggerAtTurn: 100 })] },
+      }
+      const callbacks = makeCallbacks()
+
+      runPlayerTurn(
+        { campaign: campaignWithFutureEvent, character: CHARACTER, session: SESSION, recentTurns: [], playerInput: 'I look around.' },
+        callbacks,
+      )
+      await vi.waitFor(() => expect(capturedCallbacks).not.toBeNull())
+      capturedCallbacks!.onDone(baseNarrateResponse())
+      await vi.waitFor(() => expect(callbacks.onResult).toHaveBeenCalled())
+
+      expect(updateWorldStateMock).not.toHaveBeenCalled()
+      const result = callbacks.onResult.mock.calls[0][0]
+      expect(result.firedEvents).toEqual([])
+    })
+
+    it('ticks on top of the already-updated campaign when a Director world-state change also lands this turn', async () => {
+      const campaignWithLocAndEvent = {
+        ...CAMPAIGN,
+        worldState: {
+          ...CAMPAIGN.worldState,
+          locations: [{
+            id: 'loc-1', name: 'The Vault', type: 'dungeon' as const, parentId: null,
+            description: '', visited: true, discovered: true, properties: {},
+          }],
+          scheduledEvents: [makeScheduledEvent({ triggerAtTurn: 1 })],
+        },
+      }
+      const afterWorldUpdate = {
+        ...campaignWithLocAndEvent,
+        worldState: { ...campaignWithLocAndEvent.worldState, currentLocationId: 'loc-1' },
+      }
+      const afterTick = {
+        ...afterWorldUpdate,
+        worldState: {
+          ...afterWorldUpdate.worldState,
+          scheduledEvents: [makeScheduledEvent({ triggerAtTurn: 1, triggered: true })],
+        },
+      }
+      updateWorldStateMock
+        .mockResolvedValueOnce(afterWorldUpdate)
+        .mockResolvedValueOnce(afterTick)
+      const callbacks = makeCallbacks()
+
+      runPlayerTurn(
+        { campaign: campaignWithLocAndEvent, character: CHARACTER, session: SESSION, recentTurns: [], playerInput: 'I enter the vault.' },
+        callbacks,
+      )
+      await vi.waitFor(() => expect(capturedCallbacks).not.toBeNull())
+      capturedCallbacks!.onDone(baseNarrateResponse({ worldStateUpdates: { currentLocationId: 'loc-1' } }))
+      await vi.waitFor(() => expect(callbacks.onResult).toHaveBeenCalled())
+
+      expect(updateWorldStateMock).toHaveBeenCalledTimes(2)
+
+      // The tick's persisted worldState must carry forward the Director's
+      // currentLocationId change from the first call — proving it ticked
+      // on top of the already-updated worldState, not a stale pre-turn one.
+      const [, tickWorldStateArg] = updateWorldStateMock.mock.calls[1]
+      expect(tickWorldStateArg.currentLocationId).toBe('loc-1')
+      expect(tickWorldStateArg.scheduledEvents[0].triggered).toBe(true)
+
+      const result = callbacks.onResult.mock.calls[0][0]
+      expect(result.firedEvents).toHaveLength(1)
+    })
+  })
+
   it('calls onError when the narrate stream itself errors', async () => {
     const callbacks = makeCallbacks()
 

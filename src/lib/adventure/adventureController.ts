@@ -31,6 +31,8 @@ import {
   applyDirectorConfigUpdate,
   hasDirectorConfigChanges,
 } from '@/lib/engine/worldDispatcher'
+import { tickWorld } from '@/lib/world/worldTick'
+import type { WorldEvent } from '@/types/campaign'
 import {
   buildNarrateRequest,
   callNarrateStreaming,
@@ -66,6 +68,12 @@ export interface TurnResult {
   checkSummary: CheckSummary | null
   /** Non-null only when the Director signaled combat should begin. */
   combatState: CombatState | null
+  /**
+   * Scheduled world events that fired this turn's world tick (Phase 12.1
+   * Step 2). Empty when nothing was due — see worldTick.ts for why nothing
+   * currently schedules events, so this is empty in practice today.
+   */
+  firedEvents: WorldEvent[]
 }
 
 export interface RunPlayerTurnCallbacks {
@@ -182,6 +190,20 @@ export function runPlayerTurn(ctx: TurnContext, callbacks: RunPlayerTurnCallback
               updatedCampaign = await updateDirectorConfig(updatedCampaign.id, newDirectorConfig)
             }
 
+            // World tick (Phase 12.1 Step 2): resolve any already-scheduled
+            // events that are now due, using the turn just completed and
+            // the freshest worldState (post Director world/config updates
+            // above). Never fabricates an event — only resolves ones
+            // already present in scheduledEvents. Persists only when
+            // something actually fired, to avoid an empty write.
+            const completedTurnNumber = session.turnNumber + 1
+            const tick = tickWorld(updatedCampaign.worldState, completedTurnNumber)
+            let firedEvents: WorldEvent[] = []
+            if (tick.firedEvents.length > 0) {
+              updatedCampaign = await updateWorldState(updatedCampaign.id, tick.worldState)
+              firedEvents = tick.firedEvents
+            }
+
             // Combat entry when the Director signals it. Whether to apply
             // this (e.g. not clobbering an already-active combat) is a
             // React-state concern decided by the caller.
@@ -203,6 +225,7 @@ export function runPlayerTurn(ctx: TurnContext, callbacks: RunPlayerTurnCallback
               updatedCampaign,
               checkSummary,
               combatState,
+              firedEvents,
             })
           } catch (err) {
             callbacks.onError(err)
