@@ -20,12 +20,13 @@ import type { Campaign, CharacterRecord, GameSession, NarrativeTurn } from '@/li
 import { buildFallbackNarration } from '@/lib/ai'
 import type { DirectorResult } from '@/lib/ai'
 import type { CombatState, EnemyCombatant, CombatResult } from '@/lib/engine'
-import { initCombat, summariseCharacterAction } from '@/lib/engine'
+import { summariseCharacterAction } from '@/lib/engine'
 import {
   runPlayerTurn,
   commitCombatResult as commitCombatResultToController,
   levelUpCharacter as levelUpCharacterToController,
   loadAdventure as loadAdventureFromController,
+  buildCombatState,
 } from '@/lib/adventure/adventureController'
 
 export type AdventureLoadStatus =
@@ -317,13 +318,7 @@ export function useAdventureSession(campaignId: string): [AdventureState, Advent
   const startCombat = useCallback((enemies: EnemyCombatant[]) => {
     setState((s) => {
       if (!s.character) return s
-      const player = {
-        id: 'player',
-        name: s.character.sheet.name,
-        isPlayer: true as const,
-        sheet: { ...s.character.sheet, currentHp: s.character.sheet.currentHp },
-      }
-      return { ...s, combatState: initCombat(player, enemies) }
+      return { ...s, combatState: buildCombatState(s.character, enemies) }
     })
   }, [])
 

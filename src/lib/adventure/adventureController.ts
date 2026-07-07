@@ -43,7 +43,7 @@ import {
   summariseCombatResult,
   isReadyToLevel,
 } from '@/lib/engine'
-import type { CombatState, CombatResult } from '@/lib/engine'
+import type { CombatState, CombatResult, EnemyCombatant } from '@/lib/engine'
 import { getActiveDocumentRetriever } from '@/lib/directorDocuments/fullTextRetriever'
 
 export type CheckSummary = ReturnType<typeof summariseCharacterAction>
@@ -345,4 +345,21 @@ export async function loadAdventure(campaignId: string): Promise<LoadAdventureRe
   const turns = await getRecentTurns(session.id, 20)
 
   return { campaign, character, session, turns }
+}
+
+/**
+ * Build the initial CombatState for a manually-triggered encounter from the
+ * current character and the enemies involved.
+ *
+ * Extracted from useAdventureSession.ts's startCombat(). Behavior is
+ * unchanged — this is a relocation, not a rewrite.
+ */
+export function buildCombatState(character: CharacterRecord, enemies: EnemyCombatant[]): CombatState {
+  const player = {
+    id: 'player',
+    name: character.sheet.name,
+    isPlayer: true as const,
+    sheet: { ...character.sheet, currentHp: character.sheet.currentHp },
+  }
+  return initCombat(player, enemies)
 }
