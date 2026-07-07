@@ -10,12 +10,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import {
-  pauseSession,
-  resumeSession,
-  endSession,
-  ServiceError,
-} from '@/lib/supabase'
+import { ServiceError } from '@/lib/supabase'
 import type { Campaign, CharacterRecord, GameSession, NarrativeTurn } from '@/lib/supabase'
 import { buildFallbackNarration } from '@/lib/ai'
 import type { DirectorResult } from '@/lib/ai'
@@ -27,6 +22,9 @@ import {
   levelUpCharacter as levelUpCharacterToController,
   loadAdventure as loadAdventureFromController,
   buildCombatState,
+  pauseAdventureSession,
+  resumeAdventureSession,
+  endAdventureSession,
 } from '@/lib/adventure/adventureController'
 
 export type AdventureLoadStatus =
@@ -368,9 +366,9 @@ export function useAdventureSession(campaignId: string): [AdventureState, Advent
   }, [])
 
   const actions: AdventureActions = {
-    pause:        () => { if (!state.session) return Promise.resolve(); return withFlight(() => pauseSession(state.session!.id)) },
-    resume:       () => { if (!state.session) return Promise.resolve(); return withFlight(() => resumeSession(state.session!.id)) },
-    end:          () => { if (!state.session) return Promise.resolve(); return withFlight(() => endSession(state.session!.id)) },
+    pause:        () => { if (!state.session) return Promise.resolve(); return withFlight(() => pauseAdventureSession(state.session!.id)) },
+    resume:       () => { if (!state.session) return Promise.resolve(); return withFlight(() => resumeAdventureSession(state.session!.id)) },
+    end:          () => { if (!state.session) return Promise.resolve(); return withFlight(() => endAdventureSession(state.session!.id)) },
     reload:       load,
     submitAction,
     cancelStream,

@@ -20,6 +20,9 @@ import {
   getResumableSession,
   startSession,
   getRecentTurns,
+  pauseSession,
+  resumeSession,
+  endSession,
 } from '@/lib/supabase'
 import type { Campaign, CharacterRecord, GameSession, NarrativeTurn } from '@/lib/supabase'
 import {
@@ -362,4 +365,34 @@ export function buildCombatState(character: CharacterRecord, enemies: EnemyComba
     sheet: { ...character.sheet, currentHp: character.sheet.currentHp },
   }
   return initCombat(player, enemies)
+}
+
+/**
+ * Pause an in-progress session.
+ *
+ * Extracted from useAdventureSession.ts's pause action. Behavior is
+ * unchanged — this is a relocation, not a rewrite.
+ */
+export async function pauseAdventureSession(sessionId: string): Promise<GameSession> {
+  return pauseSession(sessionId)
+}
+
+/**
+ * Resume a paused session.
+ *
+ * Extracted from useAdventureSession.ts's resume action. Behavior is
+ * unchanged — this is a relocation, not a rewrite.
+ */
+export async function resumeAdventureSession(sessionId: string): Promise<GameSession> {
+  return resumeSession(sessionId)
+}
+
+/**
+ * End a session.
+ *
+ * Extracted from useAdventureSession.ts's end action. Behavior is
+ * unchanged — this is a relocation, not a rewrite.
+ */
+export async function endAdventureSession(sessionId: string): Promise<GameSession> {
+  return endSession(sessionId)
 }
