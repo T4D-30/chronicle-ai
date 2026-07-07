@@ -64,7 +64,7 @@ export function PartyStatusPanel({ character, turns, onViewJournal }: PartyStatu
   return (
     <div className="flex flex-col gap-3 h-full overflow-y-auto p-3" data-testid="party-status-panel">
       <PixelPanel className="p-3">
-        <p className="font-pixel-display text-[8px] text-arcane-400 mb-2 uppercase">Party</p>
+        <p className="font-mono text-[10px] tracking-widest text-arcane-400 mb-2 uppercase">Party</p>
         <div className="flex items-center gap-3">
           <div
             className="w-14 h-14 pixel-border overflow-hidden flex-shrink-0 bg-void-800 flex items-center justify-center pixel-crisp"
@@ -84,7 +84,7 @@ export function PartyStatusPanel({ character, turns, onViewJournal }: PartyStatu
           </div>
           <div className="min-w-0">
             <p className="font-display font-bold text-white truncate leading-tight">{sheet.name}</p>
-            <p className="font-pixel-body text-sm text-void-400 capitalize truncate">
+            <p className="font-body text-sm text-void-400 capitalize truncate">
               Lv {sheet.level} {sheet.ancestry} {sheet.archetype}
             </p>
           </div>
@@ -92,7 +92,7 @@ export function PartyStatusPanel({ character, turns, onViewJournal }: PartyStatu
 
         <div className="mt-3">
           <div className="flex items-center justify-between mb-1">
-            <span className="font-pixel-display text-[8px] text-void-400 uppercase">HP</span>
+            <span className="font-mono text-[10px] tracking-widest text-void-400 uppercase">HP</span>
             <span className={`font-mono text-sm ${hpColour}`}>
               {sheet.currentHp} / {sheet.maxHp}
             </span>
@@ -112,7 +112,7 @@ export function PartyStatusPanel({ character, turns, onViewJournal }: PartyStatu
 
         <div className="mt-2">
           <div className="flex items-center justify-between mb-1">
-            <span className="font-pixel-display text-[8px] text-void-400 uppercase">XP</span>
+            <span className="font-mono text-[10px] tracking-widest text-void-400 uppercase">XP</span>
             <span className="font-mono text-sm text-spirit-300">
               {isMaxLevel ? 'Max Level' : `${xpIntoLevel} / ${xpSpanForLevel}`}
             </span>
@@ -132,7 +132,7 @@ export function PartyStatusPanel({ character, turns, onViewJournal }: PartyStatu
       </PixelPanel>
 
       <PixelPanel className="p-3 flex-1 min-h-0 flex flex-col">
-        <p className="font-pixel-display text-[8px] text-spirit-400 mb-2 uppercase">Recent Events</p>
+        <p className="font-mono text-[10px] tracking-widest text-spirit-400 mb-2 uppercase">Recent Events</p>
         {recentTurns.length === 0 ? (
           <p className="text-void-600 text-xs" data-testid="recent-events-empty">
             Nothing has happened yet — take an action to begin.

@@ -81,7 +81,7 @@ export function AdventureLeftNav({
     >
       <Link to="/dashboard" className="flex items-center gap-2 px-1 py-1 group">
         <span className="text-xl" aria-hidden="true">🔥</span>
-        <span className="font-pixel-display text-[10px] text-gradient-arcane group-hover:opacity-80 transition-opacity">
+        <span className="font-display text-xs font-bold tracking-wide text-gradient-arcane group-hover:opacity-80 transition-opacity">
           CHRONICLE AI
         </span>
       </Link>
@@ -99,7 +99,7 @@ export function AdventureLeftNav({
               aria-current={isActive ? 'page' : undefined}
               className={[
                 'flex items-center gap-2.5 px-3 py-2 rounded text-left transition-colors',
-                'font-pixel-body text-sm',
+                'font-body text-sm font-medium',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-arcane-400',
                 isActive
                   ? 'bg-arcane-900/40 text-arcane-300 border-l-2 border-arcane-500'
@@ -115,7 +115,7 @@ export function AdventureLeftNav({
           to={`/characters/${campaign.characterId}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-2.5 px-3 py-2 rounded text-left transition-colors font-pixel-body text-sm text-void-400 hover:text-void-200 hover:bg-void-800/50 border-l-2 border-transparent"
+          className="flex items-center gap-2.5 px-3 py-2 rounded text-left transition-colors font-body text-sm font-medium text-void-400 hover:text-void-200 hover:bg-void-800/50 border-l-2 border-transparent"
         >
           <span className="text-base leading-none" aria-hidden="true">🎒</span>
           Inventory
@@ -129,7 +129,7 @@ export function AdventureLeftNav({
           type="button"
           disabled
           title="Settings are not available yet"
-          className="flex items-center gap-2.5 px-3 py-2 rounded text-left font-pixel-body text-sm text-void-700 cursor-not-allowed border-l-2 border-transparent"
+          className="flex items-center gap-2.5 px-3 py-2 rounded text-left font-body text-sm font-medium text-void-700 cursor-not-allowed border-l-2 border-transparent"
         >
           <span className="text-base leading-none" aria-hidden="true">⚙️</span>
           Settings
@@ -139,7 +139,7 @@ export function AdventureLeftNav({
       <div className="chr-divider" />
 
       <PixelPanel variant="arcane" className="p-3" data-testid="current-objective-card">
-        <p className="font-pixel-display text-[8px] text-arcane-400 mb-1.5 uppercase">Current Objective</p>
+        <p className="font-mono text-[10px] tracking-widest text-arcane-400 mb-1.5 uppercase">Current Objective</p>
         {currentObjective ? (
           <>
             <p className="text-void-100 text-sm font-semibold leading-snug">{currentObjective.title}</p>
@@ -151,8 +151,8 @@ export function AdventureLeftNav({
       </PixelPanel>
 
       <PixelPanel className="p-3" data-testid="world-status-card">
-        <p className="font-pixel-display text-[8px] text-spirit-400 mb-1.5 uppercase">World Status</p>
-        <div className="flex flex-col gap-1 font-pixel-body text-sm">
+        <p className="font-mono text-[10px] tracking-widest text-spirit-400 mb-1.5 uppercase">World Status</p>
+        <div className="flex flex-col gap-1 font-body text-sm">
           <div className="flex items-center justify-between">
             <span className="text-void-500">Turn</span>
             <span className="text-void-200 tabular-nums">{session.turnNumber}</span>

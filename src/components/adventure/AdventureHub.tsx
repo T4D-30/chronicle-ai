@@ -23,12 +23,12 @@
  */
 
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
-import { Button, Badge } from '@/components/ui'
+import { AdventureStatusBar } from './AdventureStatusBar'
 import { CharacterSidebar } from './CharacterSidebar'
 import { AdventureLeftNav } from './AdventureLeftNav'
 import { AdventureScenePanel } from './AdventureScenePanel'
 import { PartyStatusPanel } from './PartyStatusPanel'
+import { WorldStatusSidebar } from './WorldStatusSidebar'
 import { DicePanel } from './DicePanel'
 import { StoryPanel } from './panels/StoryPanel'
 import { JournalPanel } from './panels/JournalPanel'
@@ -38,7 +38,7 @@ import { CodexPanel } from './panels/CodexPanel'
 import { DebugPanel } from './panels/DebugPanel'
 import { CombatPanel } from './panels/CombatPanel'
 import { ActionBar } from './ActionBar'
-import { AmbientOverlay, PixelPanel, useAudio } from '@/components/pixel'
+import { AmbientOverlay, useAudio } from '@/components/pixel'
 import type { AmbienceKind } from '@/components/pixel'
 import { LevelUpModal } from '@/components/character/LevelUpModal'
 import type { AdventureState, AdventureActions } from './useAdventureSession'
@@ -127,81 +127,18 @@ export function AdventureHub({ state, actions }: AdventureHubProps) {
 
   return (
     <div className="fixed inset-0 flex flex-col bg-void-950 overflow-hidden" data-testid="adventure-hub">
-      {/* ── Status bar ──────────────────────────────────────────────── */}
-      <header
-        className="flex-shrink-0 flex items-center gap-3 px-4 py-2 border-b border-void-700/50 bg-void-900/80 backdrop-blur-sm"
-        data-testid="adventure-status-bar"
-      >
-        <Link
-          to={`/campaigns/${campaign.id}`}
-          className="text-void-500 hover:text-arcane-300 text-xs transition-colors flex-shrink-0"
-        >
-          ← {campaign.title}
-        </Link>
-
-        <div className="h-3 w-px bg-void-700" />
-
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          <Badge
-            variant={isSessionActive ? 'spirit' : isSessionPaused ? 'arcane' : 'neutral'}
-          >
-            {isSessionActive ? 'Live' : isSessionPaused ? 'Paused' : 'Ended'}
-          </Badge>
-          <span className="font-mono text-xs text-void-500">
-            Turn {session.turnNumber}
-          </span>
-          <span className="stat-label text-void-700 hidden sm:inline">
-            {campaign.tone} · {campaign.difficulty}
-          </span>
-        </div>
-
-        {/* Session controls */}
-        <div className="flex items-center gap-1.5 flex-shrink-0">
-          {saveConfirmed && (
-            <span
-              className="font-pixel-body text-sm text-heal-400 flex items-center gap-1 menu-enter"
-              role="status"
-              data-testid="save-confirmed"
-            >
-              <span aria-hidden="true">✓</span> Progress saved
-            </span>
-          )}
-          {isSessionActive && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => void handlePause()}
-              loading={state.isActionInFlight}
-            >
-              Pause
-            </Button>
-          )}
-          {isSessionPaused && (
-            <Button
-              type="button"
-              variant="arcane"
-              size="sm"
-              onClick={() => void actions.resume()}
-              loading={state.isActionInFlight}
-            >
-              Resume
-            </Button>
-          )}
-          {!isSessionDone && (
-            <Button
-              type="button"
-              variant="danger"
-              size="sm"
-              onClick={() => void actions.end()}
-              loading={state.isActionInFlight}
-              disabled={state.isActionInFlight}
-            >
-              End
-            </Button>
-          )}
-        </div>
-      </header>
+      <AdventureStatusBar
+        campaign={campaign}
+        session={session}
+        isSessionActive={isSessionActive}
+        isSessionPaused={isSessionPaused}
+        isSessionDone={isSessionDone}
+        saveConfirmed={saveConfirmed}
+        isActionInFlight={state.isActionInFlight}
+        onPause={() => void handlePause()}
+        onResume={() => void actions.resume()}
+        onEnd={() => void actions.end()}
+      />
 
       {state.error && (
         <div className="flex-shrink-0 px-4 py-2 bg-harm-600/20 border-b border-harm-600/30">
@@ -260,13 +197,20 @@ export function AdventureHub({ state, actions }: AdventureHubProps) {
           )}
         </main>
 
-        {/* Party/status panel — new in the redesign, desktop-only (lg+).
-            Deliberately additive: does NOT replace the existing character
-            sidebar (still reachable via the Character tab/nav item,
-            unchanged) — this is the always-visible at-a-glance summary
-            described in PartyStatusPanel's own header comment. */}
+        {/* Party/status panel — new in the redesign. Deliberately additive:
+            does NOT replace the existing character sidebar (still reachable
+            via the Character tab/nav item, unchanged) — this is the
+            always-visible at-a-glance summary described in
+            PartyStatusPanel's own header comment.
+
+            Phase 1 (Adventure UI 2.0) refinement: shown from `md` rather
+            than `lg` — previously every sidebar (left nav, party status,
+            character, world) appeared simultaneously at `lg`, so narrower
+            desktop/tablet widths lost all of them at once. Surfacing this
+            one first gives an intermediate step; left nav still gates at
+            `lg` since it needs the full 56-column width to stay legible. */}
         <aside
-          className="hidden lg:flex w-64 flex-col border-l border-void-700/50 bg-void-900/40 overflow-hidden flex-shrink-0"
+          className="hidden md:flex w-64 flex-col border-l border-void-700/50 bg-void-900/40 overflow-hidden flex-shrink-0"
           data-testid="adventure-party-status-sidebar"
         >
           <PartyStatusPanel
@@ -337,117 +281,6 @@ export function AdventureHub({ state, actions }: AdventureHubProps) {
           )
         })}
       </nav>
-    </div>
-  )
-}
-
-// ── World status sidebar (third column) ─────────────────────────────────────
-
-/**
- * Shows real WorldState signals only: discovered locations, known NPCs,
- * faction standings, the Director's free-text worldTime if set, and (as of
- * Phase 9.2) the player's current location, resolved honestly against
- * WorldState.locations — never guessed or defaulted.
- *
- * Deliberately does NOT show: weather, day/night cycle, NPC relationships,
- * or reputation scores — none of these exist as structured data yet.
- * Fabricating them here would violate Constitution Law 3 (character/world
- * values come from real state, never invented). These arrive with the
- * Phase 10 Living World foundation.
- */
-function WorldStatusSidebar({
-  campaign, session, combatState,
-}: {
-  campaign: NonNullable<AdventureState['campaign']>
-  session: NonNullable<AdventureState['session']>
-  combatState: AdventureState['combatState']
-}) {
-  const { worldState } = campaign
-  const discoveredCount = worldState.locations.filter((l) => l.discovered).length
-  const knownNpcs = worldState.npcs.filter((n) => n.isAlive)
-  const activeFactions = worldState.factions
-  // Resolve the real currentLocationId (Phase 9.2) against known locations.
-  // Falls back to nothing shown if the id doesn't resolve — never guesses.
-  const currentLocation = worldState.currentLocationId
-    ? worldState.locations.find((l) => l.id === worldState.currentLocationId)
-    : null
-
-  return (
-    <div className="flex flex-col gap-3 h-full overflow-y-auto p-3" data-testid="world-status-sidebar">
-      <PixelPanel className="p-3">
-        <p className="font-pixel-display text-[8px] text-arcane-400 mb-2 uppercase">World</p>
-        <div className="flex flex-col gap-1.5 font-pixel-body text-base">
-          <div className="flex items-center justify-between">
-            <span className="text-void-500">Turn</span>
-            <span className="text-void-200 tabular-nums">{session.turnNumber}</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-void-500">Tone</span>
-            <span className="text-void-200 capitalize">{campaign.tone}</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-void-500">Difficulty</span>
-            <span className="text-void-200 capitalize">{campaign.difficulty}</span>
-          </div>
-          {worldState.worldTime && (
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-void-500 flex-shrink-0">Time</span>
-              <span className="text-arcane-300 text-right truncate">{worldState.worldTime}</span>
-            </div>
-          )}
-          {currentLocation && (
-            <div className="flex items-center justify-between gap-2" data-testid="current-location-row">
-              <span className="text-void-500 flex-shrink-0">Location</span>
-              <span className="text-heal-400 text-right truncate">{currentLocation.name}</span>
-            </div>
-          )}
-        </div>
-      </PixelPanel>
-
-      <PixelPanel className="p-3">
-        <p className="font-pixel-display text-[8px] text-spirit-400 mb-2 uppercase">Status</p>
-        {combatState ? (
-          <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-harm-400 flex-shrink-0" aria-hidden="true" />
-            <span className="font-pixel-body text-base text-harm-300">In Combat</span>
-          </div>
-        ) : (
-          <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-heal-400 flex-shrink-0" aria-hidden="true" />
-            <span className="font-pixel-body text-base text-void-300">Exploring</span>
-          </div>
-        )}
-      </PixelPanel>
-
-      <PixelPanel className="p-3">
-        <p className="font-pixel-display text-[8px] text-arcane-400 mb-2 uppercase">Discovered</p>
-        <div className="flex items-center justify-between font-pixel-body text-base">
-          <span className="text-void-500">Locations</span>
-          <span className="text-void-200 tabular-nums">{discoveredCount}</span>
-        </div>
-        <div className="flex items-center justify-between font-pixel-body text-base">
-          <span className="text-void-500">Known NPCs</span>
-          <span className="text-void-200 tabular-nums">{knownNpcs.length}</span>
-        </div>
-      </PixelPanel>
-
-      {activeFactions.length > 0 && (
-        <PixelPanel className="p-3">
-          <p className="font-pixel-display text-[8px] text-spirit-400 mb-2 uppercase">Factions</p>
-          <div className="flex flex-col gap-1">
-            {activeFactions.slice(0, 4).map((f) => (
-              <div key={f.id} className="flex items-center justify-between font-pixel-body text-base">
-                <span className="text-void-400 truncate">{f.name}</span>
-                <span className="text-void-300 tabular-nums flex-shrink-0">{f.standing}</span>
-              </div>
-            ))}
-          </div>
-        </PixelPanel>
-      )}
-
-      <p className="text-void-700 text-[10px] mt-auto pt-2 border-t border-void-700/50">
-        Weather, day/night, and NPC relationships arrive with Phase 10.
-      </p>
     </div>
   )
 }
