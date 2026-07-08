@@ -89,6 +89,11 @@ export function AdventureLeftNav({
 
       <div className="chr-divider" />
 
+      {/* JRPG pause-menu row treatment (UI 2.0): a carved frame per item
+          (bronze border), a soft glow on hover, and the currently-open
+          panel gets a torch-lit border — the same torch-glow class the
+          "Current Objective" card's glow prop uses (box-shadow flicker),
+          reused here rather than inventing a second glow mechanism. */}
       <div className="flex flex-col gap-1">
         {NAV_ITEMS.map((item) => {
           const isActive = activePanel === item.id
@@ -99,12 +104,12 @@ export function AdventureLeftNav({
               onClick={() => onSelectPanel(item.id)}
               aria-current={isActive ? 'page' : undefined}
               className={[
-                'flex items-center gap-2.5 px-3 py-2 rounded text-left transition-colors',
-                'font-body text-sm font-medium',
+                'flex items-center gap-2.5 px-3 py-2 rounded-sm text-left transition-all',
+                'font-body text-sm font-medium border',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-arcane-400',
                 isActive
-                  ? 'bg-arcane-900/40 text-arcane-300 border-l-2 border-arcane-500'
-                  : 'text-void-400 hover:text-void-200 hover:bg-void-800/50 border-l-2 border-transparent',
+                  ? 'bg-panel-800 text-arcane-300 border-bronze-500 torch-glow'
+                  : 'bg-transparent text-void-400 border-transparent hover:text-arcane-200 hover:bg-panel-800/60 hover:border-bronze-800 hover:shadow-bronze',
               ].join(' ')}
             >
               <Icon name={item.icon} className="text-base leading-none" />
@@ -116,7 +121,7 @@ export function AdventureLeftNav({
           to={`/characters/${campaign.characterId}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-2.5 px-3 py-2 rounded text-left transition-colors font-body text-sm font-medium text-void-400 hover:text-void-200 hover:bg-void-800/50 border-l-2 border-transparent"
+          className="flex items-center gap-2.5 px-3 py-2 rounded-sm text-left transition-all font-body text-sm font-medium border border-transparent text-void-400 hover:text-arcane-200 hover:bg-panel-800/60 hover:border-bronze-800 hover:shadow-bronze"
         >
           <Icon name="inventory" className="text-base leading-none" />
           Inventory
@@ -130,7 +135,7 @@ export function AdventureLeftNav({
           type="button"
           disabled
           title="Settings are not available yet"
-          className="flex items-center gap-2.5 px-3 py-2 rounded text-left font-body text-sm font-medium text-void-700 cursor-not-allowed border-l-2 border-transparent"
+          className="flex items-center gap-2.5 px-3 py-2 rounded-sm text-left font-body text-sm font-medium border border-transparent text-void-700 cursor-not-allowed"
         >
           <Icon name="settings" className="text-base leading-none" />
           Settings
