@@ -37,6 +37,7 @@ import { StoryPanel } from './panels/StoryPanel'
 import { JournalPanel } from './panels/JournalPanel'
 import { QuestsPanel } from './panels/QuestsPanel'
 import { AtlasPanel } from './panels/AtlasPanel'
+import { AtlasMapPanel } from './panels/AtlasMapPanel'
 import { CodexPanel } from './panels/CodexPanel'
 import { DebugPanel } from './panels/DebugPanel'
 import { CombatPanel } from './panels/CombatPanel'
@@ -272,6 +273,7 @@ function ActivePanelContent({
 }) {
   const { campaign, character, turns, session } = state
   const [levelUpOpen, setLevelUpOpen] = useState(false)
+  const [atlasView, setAtlasView] = useState<'list' | 'map'>('list')
 
   if (!campaign || !character || !session) return null
 
@@ -358,8 +360,41 @@ function ActivePanelContent({
       )
     case 'atlas':
       return (
-        <div id="panel-atlas" role="tabpanel" className="h-full">
-          <AtlasPanel campaign={campaign} />
+        <div id="panel-atlas" role="tabpanel" className="h-full flex flex-col">
+          {/* List/Map toggle — Phase 15.3. AtlasPanel (search/filter/detail)
+              is untouched; AtlasMapPanel is a purely additive second view
+              over the same real WorldState.locations data. */}
+          <div className="flex-shrink-0 flex gap-1.5 px-3 pt-3" role="group" aria-label="Atlas view">
+            <Button
+              type="button"
+              variant={atlasView === 'list' ? 'arcane' : 'ghost'}
+              size="sm"
+              onClick={() => setAtlasView('list')}
+              aria-pressed={atlasView === 'list'}
+            >
+              List
+            </Button>
+            <Button
+              type="button"
+              variant={atlasView === 'map' ? 'arcane' : 'ghost'}
+              size="sm"
+              onClick={() => setAtlasView('map')}
+              aria-pressed={atlasView === 'map'}
+            >
+              Map
+            </Button>
+          </div>
+          <div className="flex-1 min-h-0">
+            {atlasView === 'list' ? (
+              <AtlasPanel campaign={campaign} />
+            ) : (
+              <AtlasMapPanel
+                campaign={campaign}
+                onSubmitAction={actions.submitAction}
+                isDisabled={state.narrationStatus === 'streaming' || state.isActionInFlight || session.status !== 'active'}
+              />
+            )}
+          </div>
         </div>
       )
     case 'codex':
