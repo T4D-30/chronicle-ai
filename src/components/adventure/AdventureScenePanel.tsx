@@ -93,7 +93,7 @@ export function AdventureScenePanel({ campaign, children }: AdventureScenePanelP
         >
           <div className="flex items-start justify-between gap-3">
             <span
-              className="text-4xl leading-none drop-shadow-[0_0_12px_rgba(243,207,77,0.25)]"
+              className="text-4xl leading-none drop-shadow-[0_0_12px_rgba(215,122,38,0.3)]"
               aria-hidden="true"
             >
               {biomeIcon}
