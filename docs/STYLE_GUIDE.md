@@ -33,7 +33,37 @@ The two registers (GBA warmth + dark fantasy depth) must coexist. Dark backgroun
 - `spirit-*` means "the system is informing you." Never narrative prose.
 - `harm-*` is exclusively for damage, errors, and negative conditions.
 - `heal-*` is exclusively for healing, successes, and positive conditions.
+- `warning-*` (`warning-400 #fb923c` / `warning-600 #ea580c`) is exclusively
+  for caution states that are not yet errors (e.g. "irreversible action,"
+  low-but-not-critical resources) — distinct from `arcane-*`, which means
+  "action available," not "be careful."
 - White text on void backgrounds only. No light mode.
+
+### Generic token names (Phase 15 design-system mapping)
+
+The design system is sometimes described in generic terms (Background,
+Surface, Panel, Border, Gold, Success, Danger, Muted, Highlight, Selected,
+Disabled). These are **not new tokens** — they already exist under the
+semantic names above. This table exists so nobody reinvents them:
+
+| Generic name | Existing token |
+|---|---|
+| Background | `void-950` |
+| Surface / Panel | `void-900` |
+| Border | `void-700` |
+| Gold | `arcane-400` / `arcane-300` |
+| Arcane | `arcane-*` |
+| Success | `heal-400` |
+| Danger | `harm-400` |
+| Warning | `warning-400` |
+| Muted | `void-400` |
+| Highlight | `arcane-300` |
+| Selected | `arcane-600` |
+| Disabled | `void-700` (border) + reduced opacity, per component |
+
+Because every component already reads these through Tailwind classes (not
+hardcoded hex values), a future theme only requires swapping the palette in
+`tailwind.config.ts` — no component changes needed.
 
 ### Battle Screen Color Additions
 

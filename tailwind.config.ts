@@ -60,6 +60,14 @@ const config: Config = {
           400: '#4ade80',
           600: '#16a34a',
         },
+        // Warning — distinct from arcane. arcane means "action available or
+        // important reward" (Style Guide semantic rule); warning means
+        // "caution," a different signal (e.g. low HP short of harm,
+        // irreversible-but-not-destructive confirmations).
+        warning: {
+          400: '#fb923c',
+          600: '#ea580c',
+        },
       },
       fontFamily: {
         display: ['"Cinzel"', 'Georgia', 'serif'],
