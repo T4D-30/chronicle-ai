@@ -16,7 +16,7 @@
 
 import { useMemo } from 'react'
 import { Badge } from '@/components/ui'
-import { PixelPanel, PixelCard } from '@/components/pixel'
+import { PixelPanel, PixelCard, Window } from '@/components/pixel'
 import type { Campaign } from '@/lib/supabase'
 import type { NpcMemoryEntry } from '@/types/campaign'
 
@@ -40,36 +40,30 @@ export function CodexPanel({ campaign }: CodexPanelProps) {
   const hasAny = knownNpcs.length > 0
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
-      <div className="flex-shrink-0 px-4 pt-4 pb-2">
-        <p className="font-pixel-display text-[10px] text-arcane-400 uppercase">Codex</p>
-      </div>
-
-      <div className="flex-1 overflow-y-auto min-h-0 px-4 pb-4" role="region" aria-label="Codex">
-        {!hasAny ? (
-          <div className="flex flex-col items-center justify-center h-full text-center">
-            <PixelPanel variant="arcane" className="p-6 max-w-sm">
-              <p className="lore-text text-void-400 text-sm mb-3">
-                "Knowledge is the adventurer's most reliable weapon."
-              </p>
-              <p className="text-void-600 text-xs">
-                NPCs you meet during play are recorded here — their
-                disposition toward you and what you've learned about them.
-                No one has been recorded yet.
-              </p>
-            </PixelPanel>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" role="list">
-            {knownNpcs.map((npc) => (
-              <div key={npc.id} role="listitem">
-                <NpcCard npc={npc} />
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
+    <Window title="Codex" icon="codex" regionLabel="Codex">
+      {!hasAny ? (
+        <div className="flex flex-col items-center justify-center h-full text-center">
+          <PixelPanel variant="arcane" className="p-6 max-w-sm">
+            <p className="lore-text text-void-400 text-sm mb-3">
+              "Knowledge is the adventurer's most reliable weapon."
+            </p>
+            <p className="text-void-600 text-xs">
+              NPCs you meet during play are recorded here — their
+              disposition toward you and what you've learned about them.
+              No one has been recorded yet.
+            </p>
+          </PixelPanel>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" role="list">
+          {knownNpcs.map((npc) => (
+            <div key={npc.id} role="listitem">
+              <NpcCard npc={npc} />
+            </div>
+          ))}
+        </div>
+      )}
+    </Window>
   )
 }
 
