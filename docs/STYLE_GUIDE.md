@@ -4,13 +4,30 @@
 
 ## Design Language
 
-**Aesthetic reference**: Premium Game Boy Advance / Nintendo DS fantasy RPG. Think Golden Sun, Fire Emblem: Sacred Stones, Final Fantasy Tactics Advance, Castlevania: Aria of Sorrow. Warm, immediate, visually structured. High contrast between UI chrome and content. Every pixel has a job.
+**Aesthetic reference (UI 2.0)**: Dark-fantasy pixel RPG HUD, not a GBA
+palette anymore. Think Octopath Traveler, Pokémon Mystery Dungeon, Sea of
+Stars, Darkest Dungeon's UI, Diablo II menus, old Zelda inventory screens.
+Warm, heavy, torchlit. The interface should read as a leather-bound
+adventure journal open by a campfire, never as a dashboard or productivity
+app. High contrast between UI chrome and content. Every pixel has a job.
 
 **Mechanical reference**: D&D 5e / Roll20. Character sheets, stat blocks, and dice results look familiar to anyone who has played at a digital table.
 
-**Palette Philosophy**: The void is the canvas — deep space backgrounds that make color pop. Arcane gold is action and reward. Spirit teal is the system communicating. Warm amber and pixel-crisp borders frame every game panel. These colors carry semantic meaning; they are never purely decorative.
+**Palette Philosophy**: `void` is the canvas — nearly-black navy/charcoal
+backgrounds that make color pop. `panel` is carved oak and worn stone —
+every game panel's surface, warmer and heavier than the background behind
+it. `bronze` is the frame — heavy borders and glowing gold corners holding
+each panel together. `arcane` is fire — action, reward, and warmth
+(hover states, selected tabs, CTAs, XP), painted in ember/copper/fire-gold
+rather than a cold amber. `spirit` is the system communicating. `mystic`
+is a narrow blue accent reserved for spell/magic-specific UI only — it is
+not a general highlight color. These colors carry semantic meaning; they
+are never purely decorative.
 
-The two registers (GBA warmth + dark fantasy depth) must coexist. Dark backgrounds. Bright, saturated panel borders. Pixel-adjacent corner treatments on UI chrome. Soft glow effects reserved for magical events.
+Every panel should feel lit from a torch: an inner shadow for depth, an
+outer shadow for separation, and a warm top highlight where the light
+would fall. Soft glow effects reserved for magical events and selected/
+active states — never neon, never flat color fields.
 
 ---
 
@@ -18,26 +35,39 @@ The two registers (GBA warmth + dark fantasy depth) must coexist. Dark backgroun
 
 | Token | Hex | Use |
 |-------|-----|-----|
-| `void-950` | `#050510` | Page background, deep UI shadow |
-| `void-900` | `#0a0a1a` | Panel backgrounds |
-| `void-700` | `#1e1e45` | Borders, dividers |
-| `void-400` | `#5c5c98` | Muted text, disabled labels |
-| `arcane-400` | `#f7cf4d` | Highlights, active state borders, CTA text, XP |
-| `arcane-600` | `#c27505` | CTA button backgrounds, selected state |
+| `void-950` | `#0a0a0f` | Page background — nearly-black navy |
+| `void-800` | `#141315` | Secondary background — charcoal stone |
+| `void-700` | `#1b1a1e` | Dividers, dark slate |
+| `void-400` | `#6b625a` | Muted text, disabled labels |
+| `panel-900` | `#1f1814` | Panel background — carved oak |
+| `panel-700` | `#2a201a` | Lifted/hover panel surface — worn stone |
+| `bronze-800` | `#4a3423` | Dark bronze — panel border, pressed-state inset |
+| `bronze-600` | `#7a5630` | Bronze — default panel/button border |
+| `bronze-400` | `#c89443` | Gold — header text, active border, corner glow |
+| `bronze-300` | `#e2b562` | Highlight — brightest corner glow, focus rings |
+| `arcane-300` | `#e8a74a` | Fire gold — highlight tier, XP, subheader text |
+| `arcane-400` | `#d77a26` | Ember — primary accent, CTA text, selected-tab glow |
+| `arcane-600` | `#a86932` | Copper — CTA/button hover glow |
+| `arcane-700` | `#b45a1a` | Burnt orange — deeper accent border/bg tint |
+| `mystic-400` | `#5e83d7` | Spell/magic-specific accent only — never a general CTA color |
 | `spirit-400` | `#3bcac0` | System feedback, secondary actions, MP/mana |
-| `harm-400` | `#f87171` | Damage numbers, error states, poison indicator |
-| `heal-400` | `#4ade80` | Healing numbers, success states, buffs |
+| `harm-400` | `#b33131` | Blood red — damage numbers, error states |
+| `harm-600` | `#7a1e1e` | Dark crimson — deeper danger tone, danger-button bg |
+| `heal-400` | `#5ea85b` | Nature green — healing numbers, success states, buffs |
 
 **Semantic rules — do not break these:**
-- `arcane-*` means "action available" or "important reward." Never decorative.
+- `arcane-*` means "action available" or "important reward." Never decorative. (UI 2.0: painted in fire/ember/copper tones, not amber-gold — the role is unchanged, only the hue.)
+- `bronze-*` is structural — panel/button borders, corner glow, header gold. Not a status or action signal.
+- `panel-*` is the carved-wood/stone surface every game panel sits on. Distinct from `void`, which is the cooler background behind the panels.
+- `mystic-*` is reserved for spell/magic-specific UI. Never a general highlight or CTA — use `arcane-*` for that.
 - `spirit-*` means "the system is informing you." Never narrative prose.
 - `harm-*` is exclusively for damage, errors, and negative conditions.
 - `heal-*` is exclusively for healing, successes, and positive conditions.
-- `warning-*` (`warning-400 #fb923c` / `warning-600 #ea580c`) is exclusively
-  for caution states that are not yet errors (e.g. "irreversible action,"
-  low-but-not-critical resources) — distinct from `arcane-*`, which means
-  "action available," not "be careful."
-- White text on void backgrounds only. No light mode.
+- `warning-*` (`warning-400 #a86932` / `warning-600 #7a4a1f`) is exclusively
+  for caution states that are not yet errors — a duller, darker register
+  than `arcane-*`'s brighter ember/fire-gold CTA tones, so caution doesn't
+  read identically to "action available" at a glance.
+- Warm parchment/ivory text on dark backgrounds only. No light mode.
 
 ### Generic token names (Phase 15 design-system mapping)
 
@@ -49,21 +79,23 @@ semantic names above. This table exists so nobody reinvents them:
 | Generic name | Existing token |
 |---|---|
 | Background | `void-950` |
-| Surface / Panel | `void-900` |
-| Border | `void-700` |
-| Gold | `arcane-400` / `arcane-300` |
+| Surface / Panel | `panel-900` |
+| Border | `bronze-600` |
+| Gold | `bronze-400` |
 | Arcane | `arcane-*` |
 | Success | `heal-400` |
 | Danger | `harm-400` |
 | Warning | `warning-400` |
 | Muted | `void-400` |
-| Highlight | `arcane-300` |
-| Selected | `arcane-600` |
-| Disabled | `void-700` (border) + reduced opacity, per component |
+| Highlight | `bronze-300` |
+| Selected | `arcane-400` |
+| Disabled | `bronze-800` (border) + reduced opacity, per component |
 
 Because every component already reads these through Tailwind classes (not
 hardcoded hex values), a future theme only requires swapping the palette in
-`tailwind.config.ts` — no component changes needed.
+`tailwind.config.ts` — no component changes needed. UI 2.0 is the first
+real exercise of that promise: the `Window`/`Icon`/`Typography`/`Button`
+component layer from Phase 15 needed zero API changes for this repaint.
 
 ### Battle Screen Color Additions
 
