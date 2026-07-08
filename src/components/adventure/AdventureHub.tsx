@@ -325,8 +325,9 @@ function ActivePanelContent({
                   <button
                     key={i}
                     type="button"
+                    disabled={state.narrationStatus === 'streaming' || state.isActionInFlight}
                     onClick={() => actions.submitAction(action)}
-                    className="px-3 py-1.5 rounded-full text-xs font-body border border-arcane-800/50 bg-arcane-900/20 text-arcane-300 hover:bg-arcane-900/40 hover:border-arcane-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-arcane-400"
+                    className="px-3 py-1.5 rounded-full text-xs font-body border border-arcane-800/50 bg-arcane-900/20 text-arcane-300 hover:bg-arcane-900/40 hover:border-arcane-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-arcane-400 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     {action}
                   </button>

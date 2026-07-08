@@ -114,6 +114,18 @@ const INITIAL_STATE: AdventureState = {
 export function useAdventureSession(campaignId: string): [AdventureState, AdventureActions] {
   const [state, setState] = useState<AdventureState>(INITIAL_STATE)
   const streamControllerRef = useRef<AbortController | null>(null)
+  /**
+   * Bumped on every submitAction()/cancelStream()/unmount. A stream's
+   * callbacks capture the id in effect at the time they were started and
+   * compare against this ref before touching state — this is how a
+   * superseded/cancelled/unmounted stream's late-arriving onToken/onResult/
+   * onError is recognized as stale and ignored, rather than being able to
+   * clobber a newer (or already-finished) turn's state. Without this, an
+   * older duplicate submission (e.g. a double-click) that finishes after a
+   * newer one already succeeded could overwrite a successful turn with a
+   * stale error banner.
+   */
+  const requestIdRef = useRef(0)
 
   // ── Load ──────────────────────────────────────────────────────────────────
 
@@ -187,28 +199,39 @@ export function useAdventureSession(campaignId: string): [AdventureState, Advent
     if (!campaign || !character || !session) return
     if (narrationStatus === 'streaming') return // already streaming
 
+    // Claim a new generation before starting the stream — any callback
+    // from a previous, now-superseded generation will no-op against this.
+    const requestId = ++requestIdRef.current
+    streamControllerRef.current?.abort()
+
     setState((s) => ({
       ...s,
       narrationStatus: 'streaming' as NarrationStatus,
+      isActionInFlight: true,
       streamingText: '',
       error: null,
       suggestedActions: [],
     }))
 
-    streamControllerRef.current?.abort()
     runPlayerTurn(
       { campaign, character, session, recentTurns: turns, playerInput: trimmedInput },
       {
         onToken: (token) => {
+          if (requestIdRef.current !== requestId) return
           setState((prev) => ({
             ...prev,
             streamingText: prev.streamingText + token,
           }))
         },
         onStreamStart: (controller) => {
+          if (requestIdRef.current !== requestId) {
+            controller.abort()
+            return
+          }
           streamControllerRef.current = controller
         },
         onResult: (result) => {
+          if (requestIdRef.current !== requestId) return
           setState((prev) => {
             const next = {
               ...prev,
@@ -233,6 +256,7 @@ export function useAdventureSession(campaignId: string): [AdventureState, Advent
           })
         },
         onError: (err) => {
+          if (requestIdRef.current !== requestId) return
           setState((prev) => ({
             ...prev,
             isActionInFlight: false,
@@ -246,6 +270,9 @@ export function useAdventureSession(campaignId: string): [AdventureState, Advent
   }, [])
 
   const cancelStream = useCallback(() => {
+    // Invalidate the in-flight generation so its callbacks can no longer
+    // apply a late result/error after the user has explicitly cancelled.
+    requestIdRef.current++
     streamControllerRef.current?.abort()
     streamControllerRef.current = null
     setState((s) => ({
@@ -257,7 +284,10 @@ export function useAdventureSession(campaignId: string): [AdventureState, Advent
 
   // Cleanup on unmount
   useEffect(() => {
-    return () => { streamControllerRef.current?.abort() }
+    return () => {
+      requestIdRef.current++
+      streamControllerRef.current?.abort()
+    }
   }, [])
 
   // ── Combat result persistence ───────────────────────────────────────────────
