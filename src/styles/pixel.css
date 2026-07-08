@@ -29,31 +29,32 @@
 
 /* ── Pixel borders ─────────────────────────────────────────────────────────── */
 
-/* Classic GBA dialog border: hard outer edge, inner highlight, corner notches */
+/* Classic GBA dialog border, repainted heavy-bronze for UI 2.0: hard outer
+   edge, inner highlight, corner notches — same mechanics, warm frame. */
 .pixel-border {
-  border: 2px solid #1e1e45;
+  border: 2px solid #4a3423; /* bronze-800 */
   box-shadow:
-    0 0 0 2px #050510,               /* outer dark frame */
-    inset 0 0 0 2px #0a0a1a,         /* inner shadow line */
-    inset 2px 2px 0 2px rgba(247, 207, 77, 0.08); /* torchlight top-left */
+    0 0 0 2px #0a0a0f,               /* outer dark frame — void-950 */
+    inset 0 0 0 2px #170f0b,         /* inner shadow line — panel-950 */
+    inset 2px 2px 0 2px rgba(226, 181, 98, 0.10); /* torchlight top-left — bronze highlight */
   border-radius: 0;                   /* pixel UIs have no rounded corners */
 }
 
 .pixel-border-arcane {
-  border: 2px solid #c27505;
+  border: 2px solid #a86932; /* arcane-600 — copper */
   box-shadow:
-    0 0 0 2px #050510,
-    inset 0 0 0 2px #3c1b05,
-    inset 2px 2px 0 2px rgba(247, 207, 77, 0.15);
+    0 0 0 2px #0a0a0f,
+    inset 0 0 0 2px #2b1608,         /* arcane-950 */
+    inset 2px 2px 0 2px rgba(215, 122, 38, 0.18); /* ember glow */
   border-radius: 0;
 }
 
 .pixel-border-harm {
-  border: 2px solid #dc2626;
+  border: 2px solid #7a1e1e; /* harm-600 — dark crimson */
   box-shadow:
-    0 0 0 2px #050510,
-    inset 0 0 0 2px #450a0a,
-    inset 2px 2px 0 2px rgba(248, 113, 113, 0.12);
+    0 0 0 2px #0a0a0f,
+    inset 0 0 0 2px #2a0e0e,
+    inset 2px 2px 0 2px rgba(179, 49, 49, 0.15); /* blood-red glow */
   border-radius: 0;
 }
 
@@ -70,10 +71,10 @@
 
 .pixel-btn {
   border-radius: 0;
-  border: 2px solid #1e1e45;
+  border: 2px solid #4a3423; /* bronze-800 — carved plaque frame */
   box-shadow:
-    0 3px 0 0 #050510,                /* hard drop for "raised key" feel */
-    inset 1px 1px 0 1px rgba(255, 255, 255, 0.06);
+    0 3px 0 0 #241810,                /* hard drop, wood-dark not black — bronze-900 */
+    inset 1px 1px 0 1px rgba(226, 181, 98, 0.08); /* warm top-left glint */
   transition: transform 80ms steps(2), box-shadow 80ms steps(2);
   transform: translateY(0);
 }
@@ -106,7 +107,7 @@
 }
 
 .torch-glow {
-  box-shadow: 0 0 24px 4px rgba(244, 184, 32, 0.12);
+  box-shadow: 0 0 24px 4px rgba(215, 122, 38, 0.16); /* ember glow, was amber */
   animation: torch-flicker 3.2s infinite steps(12);
 }
 
@@ -114,9 +115,9 @@
 
 .pixel-bar-track {
   border-radius: 0;
-  border: 2px solid #1e1e45;
+  border: 2px solid #4a3423; /* bronze-800 */
   box-shadow: inset 0 2px 0 0 rgba(0, 0, 0, 0.5);
-  background: #0a0a1a;
+  background: #170f0b; /* panel-950 */
   overflow: hidden;
 }
 

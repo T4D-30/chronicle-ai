@@ -14,10 +14,10 @@ import { cn } from '@/lib/cn'
 type PixelPanelVariant = 'default' | 'arcane' | 'harm' | 'spirit'
 
 const PANEL_VARIANTS: Record<PixelPanelVariant, string> = {
-  default: 'pixel-border bg-void-900',
-  arcane:  'pixel-border-arcane bg-void-900',
-  harm:    'pixel-border-harm bg-void-900',
-  spirit:  'pixel-border-spirit bg-void-900',
+  default: 'pixel-border bg-panel-900',
+  arcane:  'pixel-border-arcane bg-panel-900',
+  harm:    'pixel-border-harm bg-panel-900',
+  spirit:  'pixel-border-spirit bg-panel-900',
 }
 
 interface PixelPanelProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -166,9 +166,9 @@ export const PixelCard = forwardRef<HTMLDivElement, PixelCardProps>(
       className={cn(PANEL_VARIANTS[variant], 'flex flex-col', className)}
       {...props}
     >
-      <div className="flex items-center gap-1.5 px-2 py-1.5 border-b-2 border-void-700 bg-void-800">
+      <div className="flex items-center gap-1.5 px-2 py-1.5 border-b-2 border-bronze-800 bg-panel-800">
         {icon && <span aria-hidden="true" className="text-sm leading-none">{icon}</span>}
-        <span className="font-pixel-display text-[9px] text-arcane-300 uppercase truncate">
+        <span className="font-pixel-display text-[9px] text-bronze-400 uppercase truncate">
           {title}
         </span>
       </div>
@@ -176,7 +176,7 @@ export const PixelCard = forwardRef<HTMLDivElement, PixelCardProps>(
         {children}
       </div>
       {footer && (
-        <div className="px-2 py-1 border-t-2 border-void-700 bg-void-800 font-pixel-body text-sm text-void-400">
+        <div className="px-2 py-1 border-t-2 border-bronze-800 bg-panel-800 font-pixel-body text-sm text-void-400">
           {footer}
         </div>
       )}
