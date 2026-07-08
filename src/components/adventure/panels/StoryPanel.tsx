@@ -57,7 +57,7 @@ export function StoryPanel({
   }, [lastCheckResult, onClearCheckResult])
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex-1 min-h-0 flex flex-col">
       {/* Campaign header */}
       <div className="flex-shrink-0 px-4 pt-4 pb-2">
         <div className="chr-panel-spirit p-3 rounded-lg">
