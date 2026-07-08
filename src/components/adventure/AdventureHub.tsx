@@ -43,6 +43,7 @@ import { CombatPanel } from './panels/CombatPanel'
 import { ActionBar } from './ActionBar'
 import { AmbientOverlay, useAudio, Icon } from '@/components/pixel'
 import type { AmbienceKind, IconName } from '@/components/pixel'
+import { Button } from '@/components/ui'
 import { LevelUpModal } from '@/components/character/LevelUpModal'
 import type { AdventureState, AdventureActions } from './useAdventureSession'
 
@@ -295,15 +296,16 @@ function ActivePanelContent({
               <p className="stat-label text-void-600 mb-1.5">Suggested</p>
               <div className="flex gap-2 flex-wrap">
                 {state.suggestedActions.map((action, i) => (
-                  <button
+                  <Button
                     key={i}
                     type="button"
+                    variant="suggested"
                     disabled={state.narrationStatus === 'streaming' || state.isActionInFlight}
                     onClick={() => actions.submitAction(action)}
-                    className="px-3 py-1.5 rounded-full text-xs font-body border border-arcane-800/50 bg-arcane-900/20 text-arcane-300 hover:bg-arcane-900/40 hover:border-arcane-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-arcane-400 disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="pixel-sparkle"
                   >
                     {action}
-                  </button>
+                  </Button>
                 ))}
               </div>
             </div>

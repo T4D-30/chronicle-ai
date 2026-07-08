@@ -280,6 +280,29 @@
   animation: pixel-type 0.6s infinite steps(2);
 }
 
+/* ── Suggested-action sparkle (Phase 15.1) ─────────────────────────────────── */
+
+@keyframes pixel-sparkle {
+  0%, 100% { transform: scale(1); filter: brightness(1); }
+  50%      { transform: scale(1.05); filter: brightness(1.3); }
+}
+
+.pixel-sparkle:hover,
+.pixel-sparkle:focus-visible {
+  animation: pixel-sparkle 400ms steps(4);
+}
+
+/* ── Dialogue turn reveal (Phase 15.1) ─────────────────────────────────────── */
+
+@keyframes dialogue-reveal {
+  0%   { opacity: 0; transform: translateY(6px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.dialogue-reveal {
+  animation: dialogue-reveal 220ms steps(6) forwards;
+}
+
 /* ── XP gain popup (Phase 10.1) ────────────────────────────────────────────── */
 
 @keyframes xp-gain-float {
@@ -355,7 +378,10 @@
   .pixel-cursor::before,
   .xp-gain-popup,
   .level-up-burst,
-  .level-up-ray {
+  .level-up-ray,
+  .pixel-sparkle:hover,
+  .pixel-sparkle:focus-visible,
+  .dialogue-reveal {
     animation: none !important;
   }
   .pixel-bar-fill {

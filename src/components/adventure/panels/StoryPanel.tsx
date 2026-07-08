@@ -124,9 +124,9 @@ export function StoryPanel({
               <div className="chr-panel-spirit p-3 rounded-lg">
                 <div className="flex items-center gap-2">
                   <div className="flex gap-1" aria-hidden="true">
-                    <span className="w-1.5 h-1.5 rounded-full bg-arcane-400 animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <span className="w-1.5 h-1.5 rounded-full bg-arcane-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <span className="w-1.5 h-1.5 rounded-full bg-arcane-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                    <span className="pixel-type-dot" style={{ animationDelay: '0ms' }} />
+                    <span className="pixel-type-dot" style={{ animationDelay: '150ms' }} />
+                    <span className="pixel-type-dot" style={{ animationDelay: '300ms' }} />
                   </div>
                   <span className="stat-label text-arcane-500" role="status">The Director is narrating…</span>
                 </div>
