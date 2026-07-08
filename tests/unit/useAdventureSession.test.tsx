@@ -18,6 +18,7 @@ import { renderHook, waitFor, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { DEFAULT_DIRECTOR_CONFIG, DEFAULT_WORLD_STATE } from '@/types/campaign'
 import { setRng, resetRng } from '@/lib/engine'
+import { NarratorError } from '@/lib/ai'
 
 afterEach(() => resetRng())
 
@@ -377,6 +378,72 @@ describe('useAdventureSession — duplicate submission guard', () => {
 
     await waitFor(() => expect(result.current[0].narrationStatus).toBe('done'))
     expect(result.current[0].error).toBeNull()
+  })
+})
+
+describe('useAdventureSession — PARSE_ERROR diagnostic logging', () => {
+  it('logs requestId, turn, action, raw payload details, and staleness for a PARSE_ERROR', async () => {
+    const result = await setupReadyHook()
+
+    act(() => { result.current[1].submitAction('I search the ruins carefully.') })
+    await waitFor(() => expect(capturedCallbacks).not.toBeNull())
+
+    const parseError = new NarratorError('Failed to parse final response.', 'PARSE_ERROR', '{"narration": "The door creak')
+    act(() => { capturedCallbacks!.onError(parseError) })
+
+    await waitFor(() => expect(result.current[0].narrationStatus).toBe('error'))
+
+    expect(console.error).toHaveBeenCalledWith(
+      '[narrator] onError: Failed to parse final response',
+      expect.objectContaining({
+        requestId: 1,
+        turn: 1, // session.turnNumber (0) + 1
+        actionSubmitted: 'I search the ruins carefully.',
+        rawPayloadLength: parseError.rawPayload!.length,
+        rawPayloadPreview: parseError.rawPayload!.slice(0, 100),
+        onResultAlreadyFiredForThisRequest: false,
+        isActiveRequest: true,
+      }),
+    )
+  })
+
+  it('reports isActiveRequest: false and does not touch state for a stale (superseded) PARSE_ERROR', async () => {
+    const result = await setupReadyHook()
+
+    // First submission — captures the stale callbacks.
+    act(() => { result.current[1].submitAction('I look around.') })
+    await waitFor(() => expect(capturedCallbacks).not.toBeNull())
+    const staleCallbacks = capturedCallbacks!
+
+    // Superseded by cancel + a second submission, which claims a new requestId.
+    act(() => { result.current[1].cancelStream() })
+    act(() => { result.current[1].submitAction('I try something else.') })
+    await waitFor(() => expect(callNarrateStreamingCallCount).toBe(2))
+
+    // The first (now-stale) request's own callbacks still fire the PARSE_ERROR late.
+    const parseError = new NarratorError('Failed to parse final response.', 'PARSE_ERROR', '{"narration": "stale fragmen')
+    act(() => { staleCallbacks.onError(parseError) })
+
+    expect(console.error).toHaveBeenCalledWith(
+      '[narrator] onError: Failed to parse final response',
+      expect.objectContaining({ requestId: 1, isActiveRequest: false }),
+    )
+    // Stale error must not clobber the now-active second request's state.
+    expect(result.current[0].narrationStatus).not.toBe('error')
+  })
+
+  it('does not log the PARSE_ERROR diagnostic for other error codes', async () => {
+    const result = await setupReadyHook()
+
+    act(() => { result.current[1].submitAction('I look around.') })
+    await waitFor(() => expect(capturedCallbacks).not.toBeNull())
+    act(() => { capturedCallbacks!.onError(new NarratorError('Edge Function 500: boom', 'EDGE_FUNCTION_ERROR')) })
+
+    await waitFor(() => expect(result.current[0].narrationStatus).toBe('error'))
+    expect(console.error).not.toHaveBeenCalledWith(
+      '[narrator] onError: Failed to parse final response',
+      expect.anything(),
+    )
   })
 })
 

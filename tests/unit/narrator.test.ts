@@ -143,7 +143,7 @@ describe('callNarrateStreaming — final response detection', () => {
     expect(result).toEqual(VALID_FINAL_RESPONSE)
   })
 
-  it('reports PARSE_ERROR when the "[FINAL] " payload itself is malformed JSON', async () => {
+  it('reports PARSE_ERROR when the "[FINAL] " payload itself is malformed JSON, carrying the raw offending payload', async () => {
     mockStreamingFetch([
       'data: [FINAL] {not valid json\n\n',
       'data: [DONE]\n\n',
@@ -152,7 +152,7 @@ describe('callNarrateStreaming — final response detection', () => {
     const { result, error } = await runStreaming(VALID_REQUEST)
 
     expect(result).toBeUndefined()
-    expect(error).toMatchObject({ code: 'PARSE_ERROR' })
+    expect(error).toMatchObject({ code: 'PARSE_ERROR', rawPayload: '{not valid json' })
   })
 
   it('reports EDGE_FUNCTION_ERROR on a "[ERROR]" line and stops processing', async () => {

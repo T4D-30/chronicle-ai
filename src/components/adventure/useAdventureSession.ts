@@ -12,7 +12,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ServiceError } from '@/lib/supabase'
 import type { Campaign, CharacterRecord, GameSession, NarrativeTurn } from '@/lib/supabase'
-import { buildFallbackNarration } from '@/lib/ai'
+import { buildFallbackNarration, NarratorError } from '@/lib/ai'
 import type { DirectorResult } from '@/lib/ai'
 import type { CombatState, EnemyCombatant, CombatResult } from '@/lib/engine'
 import { summariseCharacterAction } from '@/lib/engine'
@@ -233,6 +233,13 @@ export function useAdventureSession(campaignId: string): [AdventureState, Advent
         suggestedActions: [],
       }))
 
+      // Tracks whether onResult has already fired for this exact requestId —
+      // read by the PARSE_ERROR diagnostic below. Per narrator.ts's control
+      // flow, onResult and onError should be mutually exclusive for a single
+      // generation; this flag lets that invariant be verified from real
+      // callback traffic rather than trusted from static reading alone.
+      let onResultFiredForThisRequest = false
+
       runPlayerTurn(
         { campaign, character, session, recentTurns: turns, playerInput: trimmedInput },
         {
@@ -251,6 +258,7 @@ export function useAdventureSession(campaignId: string): [AdventureState, Advent
             streamControllerRef.current = controller
           },
           onResult: (result) => {
+            onResultFiredForThisRequest = true
             if (requestIdRef.current !== requestId) return
             submissionInFlightRef.current = false
             setState((prev) => {
@@ -282,7 +290,21 @@ export function useAdventureSession(campaignId: string): [AdventureState, Advent
             })
           },
           onError: (err) => {
-            if (requestIdRef.current !== requestId) return
+            const isStale = requestIdRef.current !== requestId
+
+            if (err instanceof NarratorError && err.code === 'PARSE_ERROR') {
+              console.error('[narrator] onError: Failed to parse final response', {
+                requestId,
+                turn: session.turnNumber + 1,
+                actionSubmitted: trimmedInput,
+                rawPayloadLength: err.rawPayload?.length ?? 0,
+                rawPayloadPreview: err.rawPayload?.slice(0, 100) ?? '',
+                onResultAlreadyFiredForThisRequest: onResultFiredForThisRequest,
+                isActiveRequest: !isStale,
+              })
+            }
+
+            if (isStale) return
             submissionInFlightRef.current = false
             setState((prev) => ({
               ...prev,

@@ -32,6 +32,14 @@ export class NarratorError extends Error {
       | 'STREAM_ABORTED'
       | 'PARSE_ERROR'
       | 'EDGE_FUNCTION_ERROR',
+    /**
+     * The raw, unparsed payload that caused a PARSE_ERROR, if any. Only set
+     * at the '[FINAL] ' parse-failure site — carries the offending text up
+     * to the caller so it can be logged with request-level context (which
+     * narrator.ts itself has no knowledge of) without re-plumbing a
+     * separate callback just for diagnostics.
+     */
+    public readonly rawPayload?: string,
   ) {
     super(message)
     this.name = 'NarratorError'
@@ -200,7 +208,7 @@ export function callNarrateStreaming(
             try {
               finalResponse = JSON.parse(finalPayload) as NarrateResponse
             } catch {
-              callbacks.onError(new NarratorError('Failed to parse final response.', 'PARSE_ERROR'))
+              callbacks.onError(new NarratorError('Failed to parse final response.', 'PARSE_ERROR', finalPayload))
               return
             }
             continue
