@@ -223,15 +223,38 @@ export interface FactionState {
 
 // ── World Events ──────────────────────────────────────────────────────────────
 
+/** Who/what scheduled a WorldEvent. Phase 12.1 Step 3. */
+export type ScheduledEventSource = 'director' | 'world' | 'quest' | 'npc' | 'faction' | 'system'
+
 export interface WorldEvent {
   id: string
   description: string
-  /** Turn number at which this event triggers. */
+  /**
+   * Turn number at which this event triggers. This is the sole "when does
+   * it fire" field — tickWorld.ts (src/lib/world/worldTick.ts) compares
+   * this against the current turn. There is no separate "dueTurn" field;
+   * keep both concepts mapped onto this one field to avoid two sources of
+   * truth for firing time.
+   */
   triggerAtTurn: number
-  /** Whether the event has already fired. */
+  /** Whether the event has already fired. Only tickWorld() may set this true. */
   triggered: boolean
   /** What the Director should do when this fires (prompt hint). */
   directorHint: string
+  /**
+   * Free-text categorization, e.g. 'caravan-return', 'festival-start'.
+   * Optional — Phase 12.1 Step 3 scheduling metadata; older/simpler events
+   * won't have this.
+   */
+  type?: string
+  /** Short label distinct from the full description. Optional. */
+  title?: string
+  /** Turn number this event was scheduled on. Optional, informational only — not read by tickWorld. */
+  createdTurn?: number
+  /** Who/what scheduled this event. Optional — defaults to 'director' via worldEventScheduler.ts. */
+  source?: ScheduledEventSource
+  /** Arbitrary structured data for whatever narrates/consumes this event when it fires. Optional. */
+  payload?: Record<string, unknown>
 }
 
 // ── Campaign Domain Object ─────────────────────────────────────────────────────

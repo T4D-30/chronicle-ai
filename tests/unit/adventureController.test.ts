@@ -581,6 +581,140 @@ describe('runPlayerTurn', () => {
     })
   })
 
+  describe('Director-scheduled events (Phase 12.1 Step 3)', () => {
+    it('persists a Director-scheduled future event without firing it this turn', async () => {
+      const afterSchedule = {
+        ...CAMPAIGN,
+        worldState: {
+          ...CAMPAIGN.worldState,
+          scheduledEvents: [
+            { id: 'evt-1', description: 'A caravan returns.', triggerAtTurn: 10, triggered: false, directorHint: '', source: 'director' as const },
+          ],
+        },
+      }
+      updateWorldStateMock.mockResolvedValueOnce(afterSchedule)
+      const callbacks = makeCallbacks()
+
+      runPlayerTurn(
+        { campaign: CAMPAIGN, character: CHARACTER, session: SESSION, recentTurns: [], playerInput: 'I speak with the merchant.' },
+        callbacks,
+      )
+      await vi.waitFor(() => expect(capturedCallbacks).not.toBeNull())
+      capturedCallbacks!.onDone(baseNarrateResponse({
+        worldStateUpdates: {
+          scheduledEventsToAdd: [{ id: 'evt-1', description: 'A caravan returns.', triggerAtTurn: 10 }],
+        },
+      }))
+      await vi.waitFor(() => expect(callbacks.onResult).toHaveBeenCalled())
+
+      // Only one write: the schedule-add. SESSION.turnNumber is 0, so the
+      // completed turn is 1 — triggerAtTurn 10 is not due, so the tick
+      // step finds nothing to fire and never writes a second time.
+      expect(updateWorldStateMock).toHaveBeenCalledOnce()
+
+      const result = callbacks.onResult.mock.calls[0][0]
+      expect(result.firedEvents).toEqual([])
+      expect(result.updatedCampaign.worldState.scheduledEvents[0]).toMatchObject({
+        id: 'evt-1', triggerAtTurn: 10, triggered: false,
+      })
+    })
+
+    it('fires a Director-scheduled event within the same turn when its triggerAtTurn is due', async () => {
+      const afterSchedule = {
+        ...CAMPAIGN,
+        worldState: {
+          ...CAMPAIGN.worldState,
+          scheduledEvents: [
+            { id: 'evt-1', description: 'The bridge repairs complete.', triggerAtTurn: 1, triggered: false, directorHint: '', source: 'director' as const },
+          ],
+        },
+      }
+      const afterTick = {
+        ...afterSchedule,
+        worldState: {
+          ...afterSchedule.worldState,
+          scheduledEvents: [
+            { ...afterSchedule.worldState.scheduledEvents[0], triggered: true },
+          ],
+        },
+      }
+      updateWorldStateMock
+        .mockResolvedValueOnce(afterSchedule)
+        .mockResolvedValueOnce(afterTick)
+      const callbacks = makeCallbacks()
+
+      runPlayerTurn(
+        { campaign: CAMPAIGN, character: CHARACTER, session: SESSION, recentTurns: [], playerInput: 'I wait by the bridge.' },
+        callbacks,
+      )
+      await vi.waitFor(() => expect(capturedCallbacks).not.toBeNull())
+      // SESSION.turnNumber is 0, so this completed turn is 1 — scheduling
+      // an event due exactly at turn 1 makes it fire on this same turn.
+      capturedCallbacks!.onDone(baseNarrateResponse({
+        worldStateUpdates: {
+          scheduledEventsToAdd: [{ id: 'evt-1', description: 'The bridge repairs complete.', triggerAtTurn: 1 }],
+        },
+      }))
+      await vi.waitFor(() => expect(callbacks.onResult).toHaveBeenCalled())
+
+      expect(updateWorldStateMock).toHaveBeenCalledTimes(2)
+      const result = callbacks.onResult.mock.calls[0][0]
+      expect(result.firedEvents).toHaveLength(1)
+      expect(result.firedEvents[0].id).toBe('evt-1')
+      expect(result.updatedCampaign.worldState.scheduledEvents[0].triggered).toBe(true)
+    })
+
+    it('supports multiple scheduled events, firing only the ones that are due', async () => {
+      const afterSchedule = {
+        ...CAMPAIGN,
+        worldState: {
+          ...CAMPAIGN.worldState,
+          scheduledEvents: [
+            { id: 'evt-due', description: 'A patrol reaches the village.', triggerAtTurn: 1, triggered: false, directorHint: '', source: 'director' as const },
+            { id: 'evt-future', description: 'A festival begins.', triggerAtTurn: 50, triggered: false, directorHint: '', source: 'director' as const },
+          ],
+        },
+      }
+      const afterTick = {
+        ...afterSchedule,
+        worldState: {
+          ...afterSchedule.worldState,
+          scheduledEvents: [
+            { ...afterSchedule.worldState.scheduledEvents[0], triggered: true },
+            afterSchedule.worldState.scheduledEvents[1],
+          ],
+        },
+      }
+      updateWorldStateMock
+        .mockResolvedValueOnce(afterSchedule)
+        .mockResolvedValueOnce(afterTick)
+      const callbacks = makeCallbacks()
+
+      runPlayerTurn(
+        { campaign: CAMPAIGN, character: CHARACTER, session: SESSION, recentTurns: [], playerInput: 'I look toward the road.' },
+        callbacks,
+      )
+      await vi.waitFor(() => expect(capturedCallbacks).not.toBeNull())
+      capturedCallbacks!.onDone(baseNarrateResponse({
+        worldStateUpdates: {
+          scheduledEventsToAdd: [
+            { id: 'evt-due', description: 'A patrol reaches the village.', triggerAtTurn: 1 },
+            { id: 'evt-future', description: 'A festival begins.', triggerAtTurn: 50 },
+          ],
+        },
+      }))
+      await vi.waitFor(() => expect(callbacks.onResult).toHaveBeenCalled())
+
+      const result = callbacks.onResult.mock.calls[0][0]
+      expect(result.firedEvents).toHaveLength(1)
+      expect(result.firedEvents[0].id).toBe('evt-due')
+
+      const [resolvedDue, resolvedFuture] = result.updatedCampaign.worldState.scheduledEvents
+      expect(resolvedDue.triggered).toBe(true)
+      expect(resolvedFuture.triggered).toBe(false)
+    })
+  })
+
   it('calls onError when the narrate stream itself errors', async () => {
     const callbacks = makeCallbacks()
 
