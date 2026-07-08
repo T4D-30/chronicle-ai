@@ -47,7 +47,7 @@ const BUTTON_VARIANTS: Record<PixelButtonVariant, string> = {
   arcane:  'bg-arcane-600 text-void-950 border-arcane-700',
   harm:    'bg-harm-600 text-white border-red-900',
   spirit:  'bg-spirit-600 text-void-950 border-spirit-800',
-  neutral: 'bg-void-800 text-void-200 border-void-700',
+  neutral: 'bg-panel-800 text-void-200 border-bronze-800',
 }
 
 interface PixelButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {

@@ -86,7 +86,8 @@
 .pixel-btn:active:not(:disabled) {
   transform: translateY(3px);
   box-shadow:
-    0 0 0 0 #050510,
+    0 0 0 0 #0a0a0f,
+    inset 0 2px 4px rgba(36, 24, 16, 0.55), /* dark bronze inset — "pressed" feel */
     inset 1px 1px 0 1px rgba(0, 0, 0, 0.2);
 }
 

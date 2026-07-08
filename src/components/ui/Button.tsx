@@ -38,14 +38,26 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant
   size?:    ButtonSize
   loading?: boolean
+  /** Burning-ember border treatment for the active/current item in a menu
+   *  or tab-like button group (UI 2.0's "Selected" button state) —
+   *  composable with any variant, independent of hover/pressed styling. */
+  selected?: boolean
 }
 
+/**
+ * UI 2.0 repaint — carved-wooden-plaque button language:
+ *   Normal   → dark walnut (`panel` family)
+ *   Hover    → copper glow (`arcane` family)
+ *   Pressed  → dark bronze inset (`bronze` family)
+ *   Selected → burning ember border (see the `selected` prop above)
+ *   Danger   → deep crimson (`harm`, already warm via the token repaint)
+ */
 const variantClasses: Record<ButtonVariant, string> = {
   arcane: [
-    'bg-arcane-600 hover:bg-arcane-500 active:bg-arcane-700',
-    'text-void-950 font-semibold',
-    'border border-arcane-500/50',
-    'shadow-arcane hover:shadow-arcane',
+    'bg-panel-700 hover:bg-arcane-600 active:bg-bronze-800',
+    'text-bronze-300 hover:text-void-950 font-semibold',
+    'border border-bronze-600/70 hover:border-arcane-300 active:border-bronze-900',
+    'hover:shadow-arcane',
   ].join(' '),
   spirit: [
     'bg-spirit-700 hover:bg-spirit-600 active:bg-spirit-800',
@@ -54,33 +66,35 @@ const variantClasses: Record<ButtonVariant, string> = {
     'shadow-spirit hover:shadow-spirit',
   ].join(' '),
   ghost: [
-    'bg-transparent hover:bg-void-800 active:bg-void-700',
+    'bg-transparent hover:bg-panel-800 active:bg-panel-700',
     'text-void-200 hover:text-white',
-    'border border-void-700/50 hover:border-void-600',
+    'border border-bronze-800/50 hover:border-bronze-600',
   ].join(' '),
   danger: [
     'bg-harm-600 hover:bg-harm-400/80 active:bg-harm-600',
     'text-white font-semibold',
     'border border-harm-400/30',
   ].join(' '),
-  // Verbatim from AdventureLeftNav.tsx's inactive nav-row treatment.
-  // Active/selected highlighting stays a call-site concern for now (no
-  // generic "selected" concept exists on Button yet).
+  // Verbatim from AdventureLeftNav.tsx's inactive nav-row treatment, warmed
+  // for UI 2.0. Full carved-frame + torch-lit-selected treatment lands in
+  // the Sidebar milestone — this is the button-level color pass only.
   navigation: [
     'justify-start text-left rounded',
     'font-body text-sm font-medium',
-    'bg-transparent text-void-400 hover:text-void-200 hover:bg-void-800/50',
+    'bg-transparent text-void-400 hover:text-arcane-200 hover:bg-panel-800/60',
     'border border-transparent border-l-2',
   ].join(' '),
   // Flat, full-width selectable menu row (inventory lists, spell lists,
   // future WorldSmith menus) — distinct from `ghost`'s centered pill shape.
   menuAction: [
     'justify-start text-left',
-    'bg-void-900 hover:bg-void-800 active:bg-void-950',
+    'bg-panel-900 hover:bg-panel-800 active:bg-panel-950',
     'text-void-200 hover:text-white font-body font-semibold',
-    'border border-void-700/50 hover:border-void-600',
+    'border border-bronze-800/50 hover:border-bronze-600',
   ].join(' '),
-  // Verbatim from AdventureHub.tsx's suggested-action chips.
+  // Verbatim from AdventureHub.tsx's suggested-action chips — already
+  // reads as fire/ember via the token repaint (arcane-300 text, arcane-600
+  // hover border), no further change needed here.
   suggested: [
     'rounded-full px-3 py-1.5 text-xs font-body',
     'border border-arcane-800/50 bg-arcane-900/20 text-arcane-300',
@@ -89,7 +103,7 @@ const variantClasses: Record<ButtonVariant, string> = {
   // Compact square icon-only button, reusing the pixel-btn raised-key feel.
   iconOnly: [
     'w-9 h-9 p-0 rounded',
-    'pixel-btn bg-void-900 border-void-700 text-void-400 hover:text-void-200',
+    'pixel-btn bg-panel-900 border-bronze-800 text-void-300 hover:text-arcane-300',
   ].join(' '),
 }
 
@@ -100,7 +114,7 @@ const sizeClasses: Record<ButtonSize, string> = {
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = 'arcane', size = 'md', loading = false, disabled, children, ...props }, ref) => {
+  ({ className, variant = 'arcane', size = 'md', loading = false, selected = false, disabled, children, ...props }, ref) => {
     return (
       <button
         ref={ref}
@@ -117,6 +131,9 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           // per-size rounded/padding defaults below.
           sizeClasses[size],
           variantClasses[variant],
+          // Burning-ember border — applied last so it wins over the
+          // variant's own border color while `selected` is true.
+          selected && 'border-arcane-400 shadow-arcane',
           className,
         )}
         {...props}
