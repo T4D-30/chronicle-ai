@@ -20,14 +20,16 @@ import { useState } from 'react'
 import { PartyStatusPanel } from './PartyStatusPanel'
 import { CharacterSidebar } from './CharacterSidebar'
 import { WorldStatusSidebar } from './WorldStatusSidebar'
+import { Icon } from '@/components/pixel'
+import type { IconName } from '@/components/pixel'
 import type { AdventureState } from './useAdventureSession'
 
 type SidebarTab = 'status' | 'character' | 'world'
 
-const TABS: Array<{ id: SidebarTab; label: string; icon: string }> = [
-  { id: 'status',    label: 'Status',    icon: '📊' },
-  { id: 'character', label: 'Character', icon: '⚔️' },
-  { id: 'world',     label: 'World',     icon: '🌍' },
+const TABS: Array<{ id: SidebarTab; label: string; icon: IconName }> = [
+  { id: 'status',    label: 'Status',    icon: 'status' },
+  { id: 'character', label: 'Character', icon: 'character' },
+  { id: 'world',     label: 'World',     icon: 'world' },
 ]
 
 interface AdventureRightSidebarProps {
@@ -81,7 +83,7 @@ export function AdventureRightSidebar({
                   : 'text-void-500 hover:text-void-300',
               ].join(' ')}
             >
-              <span className="text-sm leading-none" aria-hidden="true">{tab.icon}</span>
+              <Icon name={tab.icon} className="text-sm leading-none" />
               {tab.label}
             </button>
           )

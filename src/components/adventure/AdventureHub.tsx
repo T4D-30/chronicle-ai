@@ -41,8 +41,8 @@ import { CodexPanel } from './panels/CodexPanel'
 import { DebugPanel } from './panels/DebugPanel'
 import { CombatPanel } from './panels/CombatPanel'
 import { ActionBar } from './ActionBar'
-import { AmbientOverlay, useAudio } from '@/components/pixel'
-import type { AmbienceKind } from '@/components/pixel'
+import { AmbientOverlay, useAudio, Icon } from '@/components/pixel'
+import type { AmbienceKind, IconName } from '@/components/pixel'
 import { LevelUpModal } from '@/components/character/LevelUpModal'
 import type { AdventureState, AdventureActions } from './useAdventureSession'
 
@@ -58,16 +58,16 @@ export type AdventurePanel =
 
 const DEBUG_ENABLED = import.meta.env.VITE_ENABLE_DEBUG_PANEL === 'true'
 
-const TAB_DEFS: Array<{ id: AdventurePanel; label: string; icon: string }> = [
-  { id: 'story',     label: 'Story',     icon: '📖' },
-  { id: 'character', label: 'Character', icon: '⚔️' },
-  { id: 'dice',      label: 'Dice',      icon: '🎲' },
-  { id: 'journal',   label: 'Journal',   icon: '📜' },
-  { id: 'quests',    label: 'Quests',    icon: '🗺️' },
-  { id: 'atlas',     label: 'Atlas',     icon: '🌍' },
-  { id: 'codex',     label: 'Codex',     icon: '📚' },
+const TAB_DEFS: Array<{ id: AdventurePanel; label: string; icon: IconName }> = [
+  { id: 'story',     label: 'Story',     icon: 'story' },
+  { id: 'character', label: 'Character', icon: 'character' },
+  { id: 'dice',      label: 'Dice',      icon: 'dice' },
+  { id: 'journal',   label: 'Journal',   icon: 'journal' },
+  { id: 'quests',    label: 'Quests',    icon: 'questsMap' },
+  { id: 'atlas',     label: 'Atlas',     icon: 'world' },
+  { id: 'codex',     label: 'Codex',     icon: 'codex' },
   // Debug tab only shown when VITE_ENABLE_DEBUG_PANEL=true
-  ...(DEBUG_ENABLED ? [{ id: 'debug' as AdventurePanel, label: 'Debug', icon: '🔧' }] : []),
+  ...(DEBUG_ENABLED ? [{ id: 'debug' as AdventurePanel, label: 'Debug', icon: 'debug' as IconName }] : []),
 ]
 
 interface AdventureHubProps {
@@ -248,9 +248,7 @@ export function AdventureHub({ state, actions }: AdventureHubProps) {
                   : 'text-void-500 hover:text-void-300',
               ].join(' ')}
             >
-              <span className="text-base leading-none" role="img" aria-hidden="true">
-                {tab.icon}
-              </span>
+              <Icon name={tab.icon} className="text-base leading-none" role="img" />
               <span className="hidden sm:inline">{tab.label}</span>
             </button>
           )

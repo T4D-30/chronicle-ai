@@ -30,16 +30,17 @@
 
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui'
-import { PixelPanel } from '@/components/pixel'
+import { PixelPanel, Icon } from '@/components/pixel'
+import type { IconName } from '@/components/pixel'
 import type { AdventurePanel } from './AdventureHub'
 import type { Campaign, GameSession } from '@/lib/supabase'
 
-const NAV_ITEMS: Array<{ id: AdventurePanel; label: string; icon: string }> = [
-  { id: 'story',     label: 'Home',      icon: '🏠' },
-  { id: 'character', label: 'Characters',icon: '⚔️' },
-  { id: 'journal',   label: 'Journal',   icon: '📜' },
-  { id: 'quests',    label: 'Quests',    icon: '🗺️' },
-  { id: 'codex',     label: 'Codex',     icon: '📚' },
+const NAV_ITEMS: Array<{ id: AdventurePanel; label: string; icon: IconName }> = [
+  { id: 'story',     label: 'Home',      icon: 'home' },
+  { id: 'character', label: 'Characters',icon: 'character' },
+  { id: 'journal',   label: 'Journal',   icon: 'journal' },
+  { id: 'quests',    label: 'Quests',    icon: 'questsMap' },
+  { id: 'codex',     label: 'Codex',     icon: 'codex' },
 ]
 
 interface AdventureLeftNavProps {
@@ -80,7 +81,7 @@ export function AdventureLeftNav({
       aria-label="Adventure navigation"
     >
       <Link to="/dashboard" className="flex items-center gap-2 px-1 py-1 group">
-        <span className="text-xl" aria-hidden="true">🔥</span>
+        <Icon name="brand" className="text-xl" />
         <span className="font-display text-xs font-bold tracking-wide text-gradient-arcane group-hover:opacity-80 transition-opacity">
           CHRONICLE AI
         </span>
@@ -106,7 +107,7 @@ export function AdventureLeftNav({
                   : 'text-void-400 hover:text-void-200 hover:bg-void-800/50 border-l-2 border-transparent',
               ].join(' ')}
             >
-              <span className="text-base leading-none" aria-hidden="true">{item.icon}</span>
+              <Icon name={item.icon} className="text-base leading-none" />
               {item.label}
             </button>
           )
@@ -117,7 +118,7 @@ export function AdventureLeftNav({
           rel="noopener noreferrer"
           className="flex items-center gap-2.5 px-3 py-2 rounded text-left transition-colors font-body text-sm font-medium text-void-400 hover:text-void-200 hover:bg-void-800/50 border-l-2 border-transparent"
         >
-          <span className="text-base leading-none" aria-hidden="true">🎒</span>
+          <Icon name="inventory" className="text-base leading-none" />
           Inventory
         </Link>
         {/* No settings page exists anywhere in the app yet (confirmed —
@@ -131,7 +132,7 @@ export function AdventureLeftNav({
           title="Settings are not available yet"
           className="flex items-center gap-2.5 px-3 py-2 rounded text-left font-body text-sm font-medium text-void-700 cursor-not-allowed border-l-2 border-transparent"
         >
-          <span className="text-base leading-none" aria-hidden="true">⚙️</span>
+          <Icon name="settings" className="text-base leading-none" />
           Settings
         </button>
       </div>
