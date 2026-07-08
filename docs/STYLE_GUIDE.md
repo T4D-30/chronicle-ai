@@ -297,4 +297,47 @@ export function BattleScreen({ session, character, enemies }: BattleScreenProps)
 
 ---
 
-*Last updated: Phase 1.2*
+## Chronicle Design System (Phase 15.1)
+
+Reusable component layer built on top of everything above — new screens
+(including a future WorldSmith module) should reach for these first
+instead of hand-rolling panel/button/icon/text markup.
+
+### Components
+
+| Component | File | Purpose |
+|---|---|---|
+| `Window` | `src/components/pixel/Window.tsx` | Shared title-bar + scrollable body + optional footer. Use for any new panel that needs a header. |
+| `Icon` | `src/components/pixel/Icon.tsx` | Named registry over the emoji glyphs already used as icons (`<Icon name="dice" />`). See the file for the full `IconName` list. A real SVG pixel-icon set can swap in later behind the same API. |
+| `Typography` | `src/components/pixel/Typography.tsx` | `LargeTitle`, `LocationTitle`, `SectionHeader`, `NpcName`, `Dialogue`, `StoryText`, `SystemText`, `StatLabel`, `TinyLabel` — named wrappers over the Text Hierarchy above. |
+| `Button` variants | `src/components/ui/Button.tsx` | Adds `navigation`, `menuAction`, `suggested`, `iconOnly` to the existing `arcane`/`spirit`/`ghost`/`danger` set — see the file's own header comment for the full role-to-variant mapping. |
+| `locationIcons` | `src/components/adventure/locationIcons.ts` | Shared `LOCATION_ICON`/`LOCATION_TYPE_LABEL` maps (single source of truth for AtlasPanel and AdventureScenePanel). |
+| Animations | `src/styles/pixel.css` | `pixel-type-dot` (typing indicator), `pixel-sparkle` (hover/focus flourish), `dialogue-reveal` (turn-block entrance) — all reduced-motion safe (see the kill-list at the bottom of that file; add new animations there too). |
+
+### Deferred (not migrated in Phase 15)
+
+These exist so the next contributor doesn't assume they were missed —
+they were deliberately left alone to keep each Phase 15 commit small and
+avoid destabilizing large, heavily-tested surfaces in one pass:
+
+- **`Window` migration**: `AtlasPanel`, `CombatPanel`, `DicePanel`,
+  `CharacterSidebar` still hand-roll their own headers (83/25/18/18
+  tests respectively — a real retrofit risk for a single phase).
+- **`Icon` migration**: `AtlasPanel`'s `LOCATION_ICON` consumers,
+  `QuestsPanel`'s `STATUS_META`, `CodexPanel`'s alive/dead glyphs, and
+  `ActionBar`'s weapon/spell/item submenu icons still use raw emoji
+  literals directly.
+- **Real SVG pixel-icon asset set**: `Icon` centralizes existing emoji;
+  it does not introduce new artwork or an asset pipeline.
+- **Weather / mood fields**: still do not exist on `WorldState` — the
+  scene panel and header only show real fields (location, region,
+  worldTime, turn, tone, difficulty) and reserve visually-labeled space
+  for when Phase 10 (Living World) adds them for real.
+- **Living Atlas** (tile canvas, fog of war, DM/player map layers):
+  `AtlasMapPanel` (Phase 15.3) is a static room-grid placeholder
+  establishing the mental model only — the full system is the
+  Constitution's separate, larger Phase 6.
+
+---
+
+*Last updated: Phase 15.1*
