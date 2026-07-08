@@ -48,31 +48,33 @@ export function AdventureScenePanel({ campaign, children }: AdventureScenePanelP
   return (
     <div className="flex flex-col h-full min-h-0" data-testid="adventure-scene-panel">
       <div className="flex-shrink-0 px-4 pt-4 pb-2">
-        <div className="flex items-baseline justify-between gap-2 flex-wrap mb-2">
-          <h1
-            className="font-display text-xl font-bold text-gradient-arcane truncate"
-            data-testid="scene-location-title"
-          >
-            {locationTitle}
-          </h1>
-          {worldState.worldTime && (
-            <p
-              className="font-mono text-[10px] tracking-widest uppercase text-arcane-300/80 flex-shrink-0"
-              data-testid="scene-time-line"
+        <div className="max-w-3xl mx-auto w-full">
+          <div className="flex items-baseline justify-between gap-2 flex-wrap mb-2">
+            <h1
+              className="font-display text-xl font-bold text-gradient-arcane truncate"
+              data-testid="scene-location-title"
             >
-              {worldState.worldTime}
-            </p>
-          )}
+              {locationTitle}
+            </h1>
+            {worldState.worldTime && (
+              <p
+                className="font-mono text-[10px] tracking-widest uppercase text-arcane-300/80 flex-shrink-0"
+                data-testid="scene-time-line"
+              >
+                {worldState.worldTime}
+              </p>
+            )}
+          </div>
+          <div
+            className="h-px bg-gradient-to-r from-arcane-700/60 via-arcane-800/20 to-transparent"
+            aria-hidden="true"
+          />
         </div>
-        <div
-          className="h-px bg-gradient-to-r from-arcane-700/60 via-arcane-800/20 to-transparent"
-          aria-hidden="true"
-        />
       </div>
 
       <div className="flex-shrink-0 px-4 pb-3">
         <div
-          className="scene-viewport h-36 sm:h-44 flex items-center justify-center"
+          className="scene-viewport h-36 sm:h-44 flex items-center justify-center max-w-3xl mx-auto"
           data-testid="scene-art-placeholder"
         >
           <div className="relative text-center px-6">

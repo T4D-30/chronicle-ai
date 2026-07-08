@@ -170,7 +170,7 @@ function ExploreInput({
   handleKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void
 }) {
   return (
-    <div className="flex flex-col gap-0">
+    <div className="flex flex-col gap-0 max-w-3xl mx-auto w-full">
       {/* Quick-access shortcut buttons */}
       <div
         className="px-3 py-2 flex gap-1.5 flex-wrap"

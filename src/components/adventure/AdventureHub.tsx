@@ -4,19 +4,23 @@
  * The permanent in-game shell. This is the layout that every future gameplay
  * feature will live inside — not a transient session page.
  *
- * Layout (Constitution exploration mode spec):
- *   ┌─────────────────────────────────────────┐
- *   │  Status Bar (campaign, session, session) │
- *   ├────────────────────────┬────────────────┤
- *   │  Main panel area       │  Character     │
- *   │  (Story / Dice / etc)  │  Sidebar       │
- *   │                        │  (desktop only)│
- *   ├────────────────────────┴────────────────┤
- *   │  Bottom tab nav (always visible)        │
- *   └─────────────────────────────────────────┘
+ * Layout (Phase 14.1 layout refinement — at most 3 columns at any breakpoint):
+ *   ┌───────────────────────────────────────────────┐
+ *   │  Status Bar (campaign, session, session)       │
+ *   ├─────────┬───────────────────────┬─────────────┤
+ *   │  Left   │  Main panel area      │  Right       │
+ *   │  nav    │  (Story / Dice / etc) │  sidebar     │
+ *   │ (lg+)   │  wider story column   │  (tabbed,    │
+ *   │         │                       │   md+)       │
+ *   ├─────────┴───────────────────────┴─────────────┤
+ *   │  Bottom tab nav (always visible)               │
+ *   └─────────────────────────────────────────────────┘
  *
- * On mobile the character sidebar is the "Character" tab in the bottom nav.
- * On desktop it is always-visible on the right.
+ * The right sidebar (AdventureRightSidebar) consolidates what used to be
+ * three separate always-visible columns (party status, character detail,
+ * world status) behind tabs — see that component's header comment. On
+ * mobile/tablet (below `md`) all of it remains reachable via the bottom
+ * tab nav's Character tab, unchanged.
  *
  * Constitution Law 1: the bottom tab nav is ALWAYS visible.
  * Constitution Law 3: character values come from the engine, never prose.
@@ -27,8 +31,7 @@ import { AdventureStatusBar } from './AdventureStatusBar'
 import { CharacterSidebar } from './CharacterSidebar'
 import { AdventureLeftNav } from './AdventureLeftNav'
 import { AdventureScenePanel } from './AdventureScenePanel'
-import { PartyStatusPanel } from './PartyStatusPanel'
-import { WorldStatusSidebar } from './WorldStatusSidebar'
+import { AdventureRightSidebar } from './AdventureRightSidebar'
 import { DicePanel } from './DicePanel'
 import { StoryPanel } from './panels/StoryPanel'
 import { JournalPanel } from './panels/JournalPanel'
@@ -197,53 +200,25 @@ export function AdventureHub({ state, actions }: AdventureHubProps) {
           )}
         </main>
 
-        {/* Party/status panel — new in the redesign. Deliberately additive:
-            does NOT replace the existing character sidebar (still reachable
-            via the Character tab/nav item, unchanged) — this is the
-            always-visible at-a-glance summary described in
-            PartyStatusPanel's own header comment.
-
-            Phase 1 (Adventure UI 2.0) refinement: shown from `md` rather
-            than `lg` — previously every sidebar (left nav, party status,
-            character, world) appeared simultaneously at `lg`, so narrower
-            desktop/tablet widths lost all of them at once. Surfacing this
-            one first gives an intermediate step; left nav still gates at
-            `lg` since it needs the full 56-column width to stay legible. */}
+        {/* Right sidebar — Phase 14.1: consolidates the party-status,
+            character-detail, and world-status columns into one tabbed
+            column so the hub never shows more than 3 main columns at once
+            (left nav / story / this sidebar). Shown from `md` so tablet
+            widths get it too; the story column keeps the rest of the
+            width for readability. Everything it shows remains reachable
+            on mobile via the Character tab in the bottom nav, unchanged. */}
         <aside
-          className="hidden md:flex w-64 flex-col border-l border-void-700/50 bg-void-900/40 overflow-hidden flex-shrink-0"
-          data-testid="adventure-party-status-sidebar"
+          className="hidden md:flex w-72 flex-col border-l border-void-700/50 bg-void-900/40 overflow-hidden flex-shrink-0"
+          data-testid="adventure-right-sidebar-wrapper"
         >
-          <PartyStatusPanel
+          <AdventureRightSidebar
+            campaign={campaign}
             character={character}
+            session={session}
             turns={state.turns}
+            combatState={combatState}
             onViewJournal={() => setActivePanel('journal')}
           />
-        </aside>
-
-        {/* Character sidebar — detailed stat block, xl+ screens only (bumped
-            up from lg so the redesign's 3-column layout — left nav /
-            center / party-status — is the primary lg+ experience; this
-            detailed sidebar remains fully reachable at any breakpoint via
-            the Character tab/nav item, unchanged). */}
-        <aside
-          className="hidden xl:flex w-64 flex-col border-l border-void-700/50 bg-void-900/40 overflow-hidden"
-          data-testid="adventure-character-sidebar"
-        >
-          <CharacterSidebar character={character} />
-        </aside>
-
-        {/* World status sidebar — fourth column, xl+ screens only (unchanged
-            breakpoint). Additive: shows only real, currently-available
-            world-state signals. Fields the Constitution would require
-            (weather, time-of-day, active events, NPC relationships) are
-            Phase 10 Living World work and are NOT fabricated here — see
-            WorldStatusSidebar for what is and isn't shown and why. */}
-        <aside
-          className="hidden xl:flex w-60 flex-col border-l border-void-700/50 bg-void-900/40 overflow-hidden"
-          data-testid="adventure-world-sidebar"
-          aria-label="World status"
-        >
-          <WorldStatusSidebar campaign={campaign} session={session} combatState={combatState} />
         </aside>
       </div>
 
@@ -318,7 +293,7 @@ function ActivePanelContent({
           />
           {/* Suggested action chips above the input bar */}
           {state.suggestedActions.length > 0 && state.narrationStatus !== 'streaming' && (
-            <div className="flex-shrink-0 px-4 pb-1 pt-2">
+            <div className="flex-shrink-0 px-4 pb-1 pt-2 max-w-3xl mx-auto w-full">
               <p className="stat-label text-void-600 mb-1.5">Suggested</p>
               <div className="flex gap-2 flex-wrap">
                 {state.suggestedActions.map((action, i) => (

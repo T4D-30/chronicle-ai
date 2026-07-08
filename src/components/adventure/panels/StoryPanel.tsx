@@ -60,7 +60,7 @@ export function StoryPanel({
     <div className="flex-1 min-h-0 flex flex-col">
       {/* Campaign header */}
       <div className="flex-shrink-0 px-4 pt-4 pb-2">
-        <div className="chr-panel-spirit p-3 rounded-lg">
+        <div className="chr-panel-spirit p-3 rounded-lg max-w-3xl mx-auto w-full">
           <p className="stat-label text-spirit-400 mb-0.5">{campaign.title.toUpperCase()}</p>
           {campaign.description && (
             <p className="text-void-400 text-xs line-clamp-1">{campaign.description}</p>
@@ -68,10 +68,14 @@ export function StoryPanel({
         </div>
       </div>
 
-      {/* Turn history + streaming */}
+      {/* Turn history + streaming — capped to a comfortable reading width
+          (max-w-3xl) even though the story column itself is wider now
+          (Phase 14.1); unconstrained line length on a wide desktop column
+          hurts readability, so the extra width becomes breathing room
+          around a centered reading column instead of longer lines. */}
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto min-h-0 px-4 py-2 flex flex-col gap-3"
+        className="flex-1 overflow-y-auto min-h-0 px-4 py-2"
         data-testid="story-scroll"
       >
         {turns.length === 0 && !streamingText && !isStreaming ? (
@@ -89,7 +93,7 @@ export function StoryPanel({
             </div>
           </div>
         ) : (
-          <>
+          <div className="flex flex-col gap-3 max-w-3xl mx-auto w-full">
             {turns.map((turn) => <TurnBlock key={turn.id} turn={turn} />)}
 
             {/* Resolved dice check for the most recent action — Phase 10.1 */}
@@ -128,7 +132,7 @@ export function StoryPanel({
                 </div>
               </div>
             )}
-          </>
+          </div>
         )}
       </div>
     </div>
