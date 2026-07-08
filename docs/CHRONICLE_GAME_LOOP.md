@@ -367,6 +367,7 @@ Voice is planned but deferred until the core engine is stable:
 | Director Document Upload completed: storage, service layer, modular full-text retrieval, upload/management UI, Director prompt integration | 10.3 | ✅ Complete — 1753/1753 unit tests, 85/85 integration tests (real Postgres, real ranked search). Only real text extraction remains deferred across all three upload pipelines — see `docs/KNOWN_LIMITATIONS.md`. |
 | Director Document real text extraction: TXT/Markdown/PDF/DOCX, all client-side (pdfjs-dist, mammoth), FullTextRetriever/service layer/upload UI unchanged | 10.4 | ✅ Complete — 1773/1773 unit tests, 85/85 integration tests (unchanged, no persistence touched). Character/Campaign Import extraction remains deferred (needs real OCR/Vision credentials, separate future pass). |
 | Google Authentication: OAuth flow, callback handling, session persistence, automatic profile provisioning, logout, error handling — code-complete and tested | 10.5 | ✅ Complete — 1857/1857 unit tests, 98/98 integration tests (real Postgres, real RLS). Live Google OAuth handshake not run — needs real Google Cloud + Supabase dashboard credentials this environment cannot provide; see `docs/DEPLOYMENT.md`. |
+| Adventure Hub UI Redesign: 3-column pixel-art dashboard (left nav / center scene / right party status), additive over the unmodified engine/Director/session state | 11 | ✅ Complete — 1995/1995 unit tests (65 new). No persistence/schema/service code touched — UI layer only. Bottom tab nav (mobile/tablet) fully intact; every existing gameplay action verified unchanged. |
 | Director Intelligence (remaining Bible rules: never-refuse, location-weight narration, between-scenes voice, structured complications) | 10 (spec'd) | 🔲 Planned — see `docs/specs/PHASE_10_DIRECTOR_INTELLIGENCE.md` |
 | Living World (WorldClock, scheduled events) | 11 (spec'd) | 🔲 Planned — see `docs/specs/PHASE_11_LIVING_WORLD.md` |
 | Creator Tools (structured campaign definition) | 12 (spec'd) | 🔲 Planned — see `docs/specs/PHASE_12_CREATOR_TOOLS.md` |
@@ -378,4 +379,4 @@ Voice is planned but deferred until the core engine is stable:
 
 ---
 
-*Last updated: Phase 10.5 — Google Authentication*
+*Last updated: Phase 11 — Adventure Hub UI Redesign*

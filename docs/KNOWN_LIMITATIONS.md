@@ -3,7 +3,7 @@
 Honest accounting of what works, what's partial, and what's not built.
 Written for public alpha testers and anyone evaluating the codebase.
 Nothing here is aspirational — every claim is checked against the actual
-code, kept current through Phase 10.5.
+code, kept current through Phase 11.
 
 ---
 
@@ -40,6 +40,7 @@ code, kept current through Phase 10.5.
 | Exploration dice checks | The roll itself, the modifier pipeline, and the Director's obligation to narrate the exact result are all real and enforced | Which actions warrant a check is decided by keyword matching (`classifyAction` in `intent.ts`), not by the AI understanding intent — a cleverly-phrased action might dodge a check it should trigger, or an innocuous phrase might trigger one it shouldn't. This is a Phase 1.1-era heuristic, unchanged by this phase; only its *wiring* into exploration turns is new |
 | Director Document retrieval | Real Postgres full-text search (`ts_rank`/`ts_headline`), verified end-to-end including RLS across users. Fails open — a retrieval error never blocks a turn. Documents ARE genuinely indexed now (Phase 10.4 real extraction). | Full-text search is keyword-based, not semantic — a query that doesn't share vocabulary with a relevant document won't find it even if the concepts are related. A document only becomes searchable if extraction actually succeeds — a scanned/image-only PDF or a corrupt file stays unindexed, surfaced to the player as an honest warning, not a silent failure. |
 | Google Sign-In | Fully code-complete and tested (Phase 10.5): OAuth button, callback handling, session restoration, automatic profile provisioning (verified against real Postgres — no duplicate profiles across repeated logins, RLS applies identically to email/password and Google-provisioned profiles), logout, and error handling (cancellation, network failure, expired/stalled session) | The live round-trip through an actual Google OAuth consent screen has never been run — this environment has no Google Cloud project or Supabase dashboard access to create one. Every piece of code up to that boundary is built and tested against mocks/a real local database; only the final live handshake is unverified. See `docs/DEPLOYMENT.md`'s "Google OAuth Setup" section for the exact manual configuration a real deploy needs. |
+| Adventure Hub (3-column redesign) | Left nav, center scene panel, and party status panel are real, additive UI reusing genuine data (real objectives, real world state, real XP/HP, real turn history) — verified not to touch any engine/Director/persistence logic (Phase 11) | Scene art is an honest placeholder (a location's real description text, or a generic message) — there is no image-generation system. Settings is a disabled placeholder — no settings page exists anywhere in the app yet. "Party" reflects Chronicle AI's actual single-character design; there is no multiplayer roster to display. |
 
 ---
 
@@ -99,4 +100,4 @@ noise rather than patched around.
 
 ---
 
-*Last updated: Phase 10.5 — Google Authentication*
+*Last updated: Phase 11 — Adventure Hub UI Redesign*

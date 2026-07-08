@@ -176,6 +176,17 @@ export interface LocationState {
   discovered: boolean
   /** Key-value properties the Director can set. e.g. { cleared: true, alertLevel: 'high' } */
   properties: Record<string, string | number | boolean>
+  /** Deeper background/history text, distinct from the scene-setting description. Optional — older locations won't have this. */
+  lore?: string
+  /** Items present at this location. Optional — older locations won't have this. */
+  items?: LocationItem[]
+}
+
+/** An item present at a Location, distinct from Character inventory or combat loot. */
+export interface LocationItem {
+  id: string
+  name: string
+  description?: string
 }
 
 // ── NPC World State ───────────────────────────────────────────────────────────
@@ -212,15 +223,38 @@ export interface FactionState {
 
 // ── World Events ──────────────────────────────────────────────────────────────
 
+/** Who/what scheduled a WorldEvent. Phase 12.1 Step 3. */
+export type ScheduledEventSource = 'director' | 'world' | 'quest' | 'npc' | 'faction' | 'system'
+
 export interface WorldEvent {
   id: string
   description: string
-  /** Turn number at which this event triggers. */
+  /**
+   * Turn number at which this event triggers. This is the sole "when does
+   * it fire" field — tickWorld.ts (src/lib/world/worldTick.ts) compares
+   * this against the current turn. There is no separate "dueTurn" field;
+   * keep both concepts mapped onto this one field to avoid two sources of
+   * truth for firing time.
+   */
   triggerAtTurn: number
-  /** Whether the event has already fired. */
+  /** Whether the event has already fired. Only tickWorld() may set this true. */
   triggered: boolean
   /** What the Director should do when this fires (prompt hint). */
   directorHint: string
+  /**
+   * Free-text categorization, e.g. 'caravan-return', 'festival-start'.
+   * Optional — Phase 12.1 Step 3 scheduling metadata; older/simpler events
+   * won't have this.
+   */
+  type?: string
+  /** Short label distinct from the full description. Optional. */
+  title?: string
+  /** Turn number this event was scheduled on. Optional, informational only — not read by tickWorld. */
+  createdTurn?: number
+  /** Who/what scheduled this event. Optional — defaults to 'director' via worldEventScheduler.ts. */
+  source?: ScheduledEventSource
+  /** Arbitrary structured data for whatever narrates/consumes this event when it fires. Optional. */
+  payload?: Record<string, unknown>
 }
 
 // ── Campaign Domain Object ─────────────────────────────────────────────────────

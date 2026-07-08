@@ -68,6 +68,101 @@ describe('hasWorldStateChanges', () => {
   })
 })
 
+// ─── Phase 12.1 Step 3 — scheduledEventsToAdd (World Event Scheduler) ─────────
+
+describe('applyWorldStateUpdate — scheduledEventsToAdd', () => {
+  it('adds a new scheduled event, forcing triggered to false', () => {
+    const next = applyWorldStateUpdate(DEFAULT_WORLD_STATE, {
+      scheduledEventsToAdd: [
+        { id: 'evt-1', description: 'A caravan returns.', triggerAtTurn: 10, triggered: true },
+      ],
+    })
+    expect(next.scheduledEvents).toHaveLength(1)
+    expect(next.scheduledEvents[0]).toMatchObject({
+      id: 'evt-1', description: 'A caravan returns.', triggerAtTurn: 10, triggered: false,
+    })
+  })
+
+  it('preserves existing scheduled events', () => {
+    const withEvent = {
+      ...DEFAULT_WORLD_STATE,
+      scheduledEvents: [
+        { id: 'evt-existing', description: 'Existing event.', triggerAtTurn: 3, triggered: false, directorHint: '' },
+      ],
+    }
+    const next = applyWorldStateUpdate(withEvent, {
+      scheduledEventsToAdd: [{ id: 'evt-new', description: 'A storm arrives.', triggerAtTurn: 8 }],
+    })
+    expect(next.scheduledEvents).toHaveLength(2)
+    expect(next.scheduledEvents.map((e) => e.id)).toEqual(['evt-existing', 'evt-new'])
+  })
+
+  it('does not duplicate a scheduled event with an id that already exists', () => {
+    const withEvent = {
+      ...DEFAULT_WORLD_STATE,
+      scheduledEvents: [
+        { id: 'evt-1', description: 'Original.', triggerAtTurn: 5, triggered: false, directorHint: '' },
+      ],
+    }
+    const next = applyWorldStateUpdate(withEvent, {
+      scheduledEventsToAdd: [{ id: 'evt-1', description: 'Duplicate attempt.', triggerAtTurn: 99 }],
+    })
+    expect(next.scheduledEvents).toHaveLength(1)
+    expect(next.scheduledEvents[0].description).toBe('Original.')
+  })
+
+  it('supports multiple new scheduled events in one patch', () => {
+    const next = applyWorldStateUpdate(DEFAULT_WORLD_STATE, {
+      scheduledEventsToAdd: [
+        { id: 'evt-1', description: 'A caravan returns.', triggerAtTurn: 10 },
+        { id: 'evt-2', description: 'A festival begins.', triggerAtTurn: 15 },
+      ],
+    })
+    expect(next.scheduledEvents).toHaveLength(2)
+  })
+
+  it('ignores an entry missing a required id, description, or valid triggerAtTurn', () => {
+    const next = applyWorldStateUpdate(DEFAULT_WORLD_STATE, {
+      scheduledEventsToAdd: [
+        { id: '', description: 'No id.', triggerAtTurn: 5 },
+        { id: 'evt-2', description: '', triggerAtTurn: 5 },
+        { id: 'evt-3', description: 'Bad turn.', triggerAtTurn: 'soon' },
+      ] as unknown as Array<{ id: string; description: string; triggerAtTurn: number }>,
+    })
+    expect(next.scheduledEvents).toHaveLength(0)
+  })
+
+  it('carries through optional scheduling metadata (type, title, source, payload)', () => {
+    const next = applyWorldStateUpdate(DEFAULT_WORLD_STATE, {
+      scheduledEventsToAdd: [{
+        id: 'evt-1', description: 'A festival begins.', triggerAtTurn: 10,
+        type: 'festival-start', title: 'Harvest Festival', source: 'world', payload: { locationId: 'loc-1' },
+      }],
+    })
+    expect(next.scheduledEvents[0]).toMatchObject({
+      type: 'festival-start', title: 'Harvest Festival', source: 'world', payload: { locationId: 'loc-1' },
+    })
+  })
+
+  it('does not mutate the original world state', () => {
+    const original = { ...DEFAULT_WORLD_STATE, scheduledEvents: [] }
+    applyWorldStateUpdate(original, {
+      scheduledEventsToAdd: [{ id: 'evt-1', description: 'A caravan returns.', triggerAtTurn: 10 }],
+    })
+    expect(original.scheduledEvents).toHaveLength(0)
+  })
+
+  it('hasWorldStateChanges returns true when scheduledEventsToAdd is non-empty', () => {
+    expect(hasWorldStateChanges({
+      scheduledEventsToAdd: [{ id: 'evt-1', description: 'X', triggerAtTurn: 1 }],
+    })).toBe(true)
+  })
+
+  it('hasWorldStateChanges returns false when scheduledEventsToAdd is an empty array', () => {
+    expect(hasWorldStateChanges({ scheduledEventsToAdd: [] })).toBe(false)
+  })
+})
+
 // ─── Phase 9.2 — currentLocationId ─────────────────────────────────────────────
 
 describe('applyWorldStateUpdate — currentLocationId', () => {

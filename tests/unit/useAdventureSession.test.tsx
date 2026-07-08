@@ -18,6 +18,7 @@ import { renderHook, waitFor, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { DEFAULT_DIRECTOR_CONFIG, DEFAULT_WORLD_STATE } from '@/types/campaign'
 import { setRng, resetRng } from '@/lib/engine'
+import { NarratorError } from '@/lib/ai'
 
 afterEach(() => resetRng())
 
@@ -61,12 +62,18 @@ let capturedCallbacks: {
   onError: (e: unknown) => void
 } | null = null
 let capturedRequest: Record<string, unknown> | null = null
+// Counts every real invocation of callNarrateStreaming — the source of
+// truth for "did a duplicate submission actually start a second stream,"
+// distinct from capturedCallbacks/capturedRequest which only ever hold the
+// most recent call's values.
+let callNarrateStreamingCallCount = 0
 
 vi.mock('@/lib/ai', async () => {
   const actual = await vi.importActual<typeof import('@/lib/ai')>('@/lib/ai')
   return {
     ...actual,
     callNarrateStreaming: (req: Record<string, unknown>, callbacks: typeof capturedCallbacks) => {
+      callNarrateStreamingCallCount++
       capturedRequest = req
       capturedCallbacks = callbacks
       return { abort: vi.fn() }
@@ -123,6 +130,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   capturedCallbacks = null
   capturedRequest = null
+  callNarrateStreamingCallCount = 0
   getCampaignMock.mockResolvedValue(CAMPAIGN)
   getCharacterMock.mockResolvedValue(CHARACTER)
   getResumableSessionMock.mockResolvedValue(SESSION)
@@ -286,6 +294,156 @@ describe('useAdventureSession — submitAction persistence ordering', () => {
     await waitFor(() => expect(result.current[0].narrationStatus).toBe('error'))
     // Turn count must not have advanced on failure — no partial commit.
     expect(result.current[0].turns).toHaveLength(0)
+  })
+})
+
+describe('useAdventureSession — duplicate submission guard', () => {
+  it('a second submitAction call before the first has started streaming does not start a second stream', async () => {
+    const result = await setupReadyHook()
+
+    act(() => {
+      result.current[1].submitAction('I look around.')
+      result.current[1].submitAction('I look around.')
+    })
+    await waitFor(() => expect(capturedCallbacks).not.toBeNull())
+
+    expect(callNarrateStreamingCallCount).toBe(1)
+  })
+
+  it('a second submitAction call while already streaming does not start a second stream', async () => {
+    const result = await setupReadyHook()
+
+    act(() => { result.current[1].submitAction('I look around.') })
+    await waitFor(() => expect(result.current[0].narrationStatus).toBe('streaming'))
+
+    act(() => { result.current[1].submitAction('I check my inventory.') })
+
+    expect(callNarrateStreamingCallCount).toBe(1)
+  })
+
+  it('releases the guard on a successful turn, allowing the next submission through', async () => {
+    const result = await setupReadyHook()
+
+    act(() => { result.current[1].submitAction('I look around.') })
+    await waitFor(() => expect(capturedCallbacks).not.toBeNull())
+    await act(async () => {
+      capturedCallbacks!.onDone(baseNarrateResponse())
+      await Promise.resolve()
+    })
+    await waitFor(() => expect(result.current[0].narrationStatus).toBe('done'))
+
+    act(() => { result.current[1].submitAction('I check my inventory.') })
+    await waitFor(() => expect(callNarrateStreamingCallCount).toBe(2))
+  })
+
+  it('releases the guard on a failed turn, allowing a retry', async () => {
+    const result = await setupReadyHook()
+
+    act(() => { result.current[1].submitAction('I look around.') })
+    await waitFor(() => expect(capturedCallbacks).not.toBeNull())
+    act(() => { capturedCallbacks!.onError(new Error('Failed to parse final response.')) })
+    await waitFor(() => expect(result.current[0].narrationStatus).toBe('error'))
+
+    act(() => { result.current[1].submitAction('I try again.') })
+    await waitFor(() => expect(callNarrateStreamingCallCount).toBe(2))
+  })
+
+  it('releases the guard on cancelStream, allowing an immediate new submission', async () => {
+    const result = await setupReadyHook()
+
+    act(() => { result.current[1].submitAction('I look around.') })
+    await waitFor(() => expect(result.current[0].narrationStatus).toBe('streaming'))
+
+    act(() => { result.current[1].cancelStream() })
+    await waitFor(() => expect(result.current[0].narrationStatus).toBe('idle'))
+
+    act(() => { result.current[1].submitAction('I try something else.') })
+    await waitFor(() => expect(callNarrateStreamingCallCount).toBe(2))
+  })
+
+  it('a successful turn explicitly clears a stale error banner left by an earlier failed turn', async () => {
+    const result = await setupReadyHook()
+
+    act(() => { result.current[1].submitAction('I look around.') })
+    await waitFor(() => expect(capturedCallbacks).not.toBeNull())
+    act(() => { capturedCallbacks!.onError(new Error('Failed to parse final response.')) })
+    await waitFor(() => expect(result.current[0].error).toBeTruthy())
+
+    act(() => { result.current[1].submitAction('I try again.') })
+    await waitFor(() => expect(callNarrateStreamingCallCount).toBe(2))
+    await act(async () => {
+      capturedCallbacks!.onDone(baseNarrateResponse())
+      await Promise.resolve()
+    })
+
+    await waitFor(() => expect(result.current[0].narrationStatus).toBe('done'))
+    expect(result.current[0].error).toBeNull()
+  })
+})
+
+describe('useAdventureSession — PARSE_ERROR diagnostic logging', () => {
+  it('logs requestId, turn, action, raw payload details, and staleness for a PARSE_ERROR', async () => {
+    const result = await setupReadyHook()
+
+    act(() => { result.current[1].submitAction('I search the ruins carefully.') })
+    await waitFor(() => expect(capturedCallbacks).not.toBeNull())
+
+    const parseError = new NarratorError('Failed to parse final response.', 'PARSE_ERROR', '{"narration": "The door creak')
+    act(() => { capturedCallbacks!.onError(parseError) })
+
+    await waitFor(() => expect(result.current[0].narrationStatus).toBe('error'))
+
+    expect(console.error).toHaveBeenCalledWith(
+      '[narrator] onError: Failed to parse final response',
+      expect.objectContaining({
+        requestId: 1,
+        turn: 1, // session.turnNumber (0) + 1
+        actionSubmitted: 'I search the ruins carefully.',
+        rawPayloadLength: parseError.rawPayload!.length,
+        rawPayloadPreview: parseError.rawPayload!.slice(0, 100),
+        onResultAlreadyFiredForThisRequest: false,
+        isActiveRequest: true,
+      }),
+    )
+  })
+
+  it('reports isActiveRequest: false and does not touch state for a stale (superseded) PARSE_ERROR', async () => {
+    const result = await setupReadyHook()
+
+    // First submission — captures the stale callbacks.
+    act(() => { result.current[1].submitAction('I look around.') })
+    await waitFor(() => expect(capturedCallbacks).not.toBeNull())
+    const staleCallbacks = capturedCallbacks!
+
+    // Superseded by cancel + a second submission, which claims a new requestId.
+    act(() => { result.current[1].cancelStream() })
+    act(() => { result.current[1].submitAction('I try something else.') })
+    await waitFor(() => expect(callNarrateStreamingCallCount).toBe(2))
+
+    // The first (now-stale) request's own callbacks still fire the PARSE_ERROR late.
+    const parseError = new NarratorError('Failed to parse final response.', 'PARSE_ERROR', '{"narration": "stale fragmen')
+    act(() => { staleCallbacks.onError(parseError) })
+
+    expect(console.error).toHaveBeenCalledWith(
+      '[narrator] onError: Failed to parse final response',
+      expect.objectContaining({ requestId: 1, isActiveRequest: false }),
+    )
+    // Stale error must not clobber the now-active second request's state.
+    expect(result.current[0].narrationStatus).not.toBe('error')
+  })
+
+  it('does not log the PARSE_ERROR diagnostic for other error codes', async () => {
+    const result = await setupReadyHook()
+
+    act(() => { result.current[1].submitAction('I look around.') })
+    await waitFor(() => expect(capturedCallbacks).not.toBeNull())
+    act(() => { capturedCallbacks!.onError(new NarratorError('Edge Function 500: boom', 'EDGE_FUNCTION_ERROR')) })
+
+    await waitFor(() => expect(result.current[0].narrationStatus).toBe('error'))
+    expect(console.error).not.toHaveBeenCalledWith(
+      '[narrator] onError: Failed to parse final response',
+      expect.anything(),
+    )
   })
 })
 

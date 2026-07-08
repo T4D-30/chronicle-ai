@@ -8,9 +8,13 @@
  *
  * Streaming protocol:
  *   Content-Type: text/event-stream
- *   Events: data: <token>\n\n   (each streamed token)
- *           data: [DONE]\n\n   (stream complete signal)
- *           data: [ERROR] <message>\n\n (stream error signal)
+ *   Events: data: <token>\n\n            (each streamed token — raw OpenAI
+ *             delta fragments; may themselves contain '{' since the full
+ *             completion is JSON, so tokens must NOT be sniffed for '{')
+ *           data: [FINAL] <json>\n\n     (the one authoritative final
+ *             NarrateResponse, sent once after streaming completes)
+ *           data: [DONE]\n\n             (stream complete signal)
+ *           data: [ERROR] <message>\n\n  (stream error signal)
  *
  * Non-streaming: Content-Type: application/json — NarrateResponse shape.
  */
@@ -28,6 +32,14 @@ export class NarratorError extends Error {
       | 'STREAM_ABORTED'
       | 'PARSE_ERROR'
       | 'EDGE_FUNCTION_ERROR',
+    /**
+     * The raw, unparsed payload that caused a PARSE_ERROR, if any. Only set
+     * at the '[FINAL] ' parse-failure site — carries the offending text up
+     * to the caller so it can be logged with request-level context (which
+     * narrator.ts itself has no knowledge of) without re-plumbing a
+     * separate callback just for diagnostics.
+     */
+    public readonly rawPayload?: string,
   ) {
     super(message)
     this.name = 'NarratorError'
@@ -188,12 +200,15 @@ export function callNarrateStreaming(
             return
           }
 
-          // Final event: full JSON response
-          if (payload.startsWith('{')) {
+          // Final event: full JSON response, explicitly marked — never
+          // inferred from payload shape, since ordinary streamed tokens can
+          // also start with '{' (nested objects in the JSON being streamed).
+          if (payload.startsWith('[FINAL] ')) {
+            const finalPayload = payload.slice(8)
             try {
-              finalResponse = JSON.parse(payload) as NarrateResponse
+              finalResponse = JSON.parse(finalPayload) as NarrateResponse
             } catch {
-              callbacks.onError(new NarratorError('Failed to parse final response.', 'PARSE_ERROR'))
+              callbacks.onError(new NarratorError('Failed to parse final response.', 'PARSE_ERROR', finalPayload))
               return
             }
             continue

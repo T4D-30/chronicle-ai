@@ -558,6 +558,133 @@ describe('AtlasPanel — child locations', () => {
   })
 })
 
+// ── Lore ──────────────────────────────────────────────────────────────────────
+
+describe('AtlasPanel — lore', () => {
+  it('renders lore text when present', async () => {
+    const user = userEvent.setup()
+    render_(makeCampaign({ locations: [loc({ lore: "Built atop an ancient dragon's lair." })] }))
+    await user.click(screen.getByTestId('location-card-loc-1'))
+    expect(screen.getByText(/Built atop an ancient dragon/i)).toBeInTheDocument()
+  })
+
+  it('shows fallback text when lore is absent', async () => {
+    const user = userEvent.setup()
+    render_(makeCampaign({ locations: [loc()] }))
+    await user.click(screen.getByTestId('location-card-loc-1'))
+    expect(screen.getByText(/No lore recorded yet/i)).toBeInTheDocument()
+  })
+
+  it('renders lore inside an accessible section', async () => {
+    const user = userEvent.setup()
+    render_(makeCampaign({ locations: [loc({ lore: 'Old lore.' })] }))
+    await user.click(screen.getByTestId('location-card-loc-1'))
+    expect(screen.getByRole('region', { name: /^Lore$/i })).toBeInTheDocument()
+  })
+})
+
+// ── Items ─────────────────────────────────────────────────────────────────────
+
+describe('AtlasPanel — items', () => {
+  it('renders item names when present', async () => {
+    const user = userEvent.setup()
+    render_(makeCampaign({ locations: [loc({ items: [{ id: 'i1', name: 'Rusty Key' }] })] }))
+    await user.click(screen.getByTestId('location-card-loc-1'))
+    expect(screen.getByText('Rusty Key')).toBeInTheDocument()
+  })
+
+  it('renders item description when provided', async () => {
+    const user = userEvent.setup()
+    render_(makeCampaign({
+      locations: [loc({ items: [{ id: 'i1', name: 'Rusty Key', description: 'Opens the west door.' }] })],
+    }))
+    await user.click(screen.getByTestId('location-card-loc-1'))
+    expect(screen.getByText('Opens the west door.')).toBeInTheDocument()
+  })
+
+  it('renders multiple items', async () => {
+    const user = userEvent.setup()
+    render_(makeCampaign({
+      locations: [loc({ items: [{ id: 'i1', name: 'Rusty Key' }, { id: 'i2', name: 'Silver Coin' }] })],
+    }))
+    await user.click(screen.getByTestId('location-card-loc-1'))
+    expect(screen.getByText('Rusty Key')).toBeInTheDocument()
+    expect(screen.getByText('Silver Coin')).toBeInTheDocument()
+  })
+
+  it('does not show Items section when items are absent', async () => {
+    const user = userEvent.setup()
+    render_(makeCampaign({ locations: [loc()] }))
+    await user.click(screen.getByTestId('location-card-loc-1'))
+    expect(screen.queryByText('Items Here')).not.toBeInTheDocument()
+  })
+
+  it('does not show Items section when items is an empty array', async () => {
+    const user = userEvent.setup()
+    render_(makeCampaign({ locations: [loc({ items: [] })] }))
+    await user.click(screen.getByTestId('location-card-loc-1'))
+    expect(screen.queryByText('Items Here')).not.toBeInTheDocument()
+  })
+})
+
+// ── Collapsible sections ──────────────────────────────────────────────────────
+
+describe('AtlasPanel — collapsible sections', () => {
+  it('all sections default to open', async () => {
+    const user = userEvent.setup()
+    render_(makeCampaign({
+      locations: [loc({ lore: 'Old lore.', items: [{ id: 'i1', name: 'Rusty Key' }], properties: { cleared: true } })],
+      npcs: [npc()],
+    }))
+    await user.click(screen.getByTestId('location-card-loc-1'))
+
+    expect(screen.getByText('Description').closest('details')).toHaveAttribute('open')
+    expect(screen.getByText('Lore').closest('details')).toHaveAttribute('open')
+    expect(screen.getByText('Items Here').closest('details')).toHaveAttribute('open')
+    expect(screen.getByText('NPCs Here').closest('details')).toHaveAttribute('open')
+    expect(screen.getByText('Known Properties').closest('details')).toHaveAttribute('open')
+  })
+
+  it('collapsing one section does not affect siblings', async () => {
+    const user = userEvent.setup()
+    render_(makeCampaign({ locations: [loc({ lore: 'Old lore.' })] }))
+    await user.click(screen.getByTestId('location-card-loc-1'))
+
+    await user.click(screen.getByText('Description'))
+
+    expect(screen.getByText('Description').closest('details')).not.toHaveAttribute('open')
+    expect(screen.getByText('Lore').closest('details')).toHaveAttribute('open')
+  })
+
+  it('a collapsed section can be re-expanded', async () => {
+    const user = userEvent.setup()
+    render_(makeCampaign({ locations: [loc()] }))
+    await user.click(screen.getByTestId('location-card-loc-1'))
+
+    const summary = screen.getByText('Description')
+    await user.click(summary)
+    expect(summary.closest('details')).not.toHaveAttribute('open')
+
+    await user.click(summary)
+    expect(summary.closest('details')).toHaveAttribute('open')
+  })
+
+  it('sections reset to open when navigating to a different location', async () => {
+    const user = userEvent.setup()
+    const parent = loc({ id: 'p1', name: 'Keep', type: 'dungeon' })
+    const child  = loc({ id: 'c1', name: 'Vault', type: 'room', parentId: 'p1' })
+    render_(makeCampaign({ locations: [parent, child] }))
+    await user.click(screen.getByTestId('location-card-p1'))
+
+    await user.click(screen.getByText('Description'))
+    expect(screen.getByText('Description').closest('details')).not.toHaveAttribute('open')
+
+    await user.click(screen.getByRole('button', { name: /Navigate to Vault/i }))
+
+    expect(screen.getByText('Description').closest('details')).toHaveAttribute('open')
+  })
+})
+
 // ── Keyboard accessibility ────────────────────────────────────────────────────
 
 describe('AtlasPanel — keyboard accessibility', () => {

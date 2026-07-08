@@ -95,7 +95,7 @@ interface NarrateRequest {
 
 // ─── Prompt builder (server-side) ────────────────────────────────────────────
 
-function buildSystemPrompt(req: NarrateRequest): string {
+function buildSystemPrompt(req: NarrateRequest, currentTurnNumber: number): string {
   const { directorConfig: cfg, character: char, worldContext: ctx, checkResult, documentContext } = req
 
   const toneGuide: Record<string, string> = {
@@ -146,6 +146,7 @@ HP: ${char.currentHp}/${char.maxHp} | AC: ${char.armorClass} | Prof: +${char.pro
 STR ${char.str}(${char.strMod >= 0 ? '+' : ''}${char.strMod}) DEX ${char.dex}(${char.dexMod >= 0 ? '+' : ''}${char.dexMod}) CON ${char.con}(${char.conMod >= 0 ? '+' : ''}${char.conMod}) INT ${char.int}(${char.intMod >= 0 ? '+' : ''}${char.intMod}) WIS ${char.wis}(${char.wisMod >= 0 ? '+' : ''}${char.wisMod}) CHA ${char.cha}(${char.chaMod >= 0 ? '+' : ''}${char.chaMod})
 
 ## WORLD STATE
+TURN: ${currentTurnNumber}
 ${ctx.worldTime ? `TIME: ${ctx.worldTime}\n` : ''}${ctx.currentLocation ? `LOCATION: ${ctx.currentLocation}\n` : ''}${ctx.activeNpcs.length > 0 ? `NPCs PRESENT: ${ctx.activeNpcs.map(n => n.name).join(', ')}\n` : ''}${questDigest ? `ACTIVE QUESTS: ${questDigest}\n` : ''}${npcDigest ? `KNOWN NPCs (disposition, facts): ${npcDigest}\n` : ''}
 ${checkResult ? `## THIS TURN'S CHECK (already resolved — narrate this exact result, do not invent a different one)
 ${checkResult.category} check, ${checkResult.stat}, DC ${checkResult.dc}, rolled ${checkResult.total} → ${checkResult.outcomeLabel} (${checkResult.isSuccess ? 'success' : 'failure'})
@@ -195,6 +196,31 @@ These are locked design decisions. Never violate them.
   to its id (existing or newly added via newLocations in the same response).
   Only set it when the narration actually places the player somewhere —
   never guess or default it.
+- SCHEDULING FUTURE EVENTS: when the player's action establishes a clear
+  future consequence — something that will predictably happen after a
+  number of turns, like a caravan due back, a festival that will begin, a
+  patrol due to arrive, crops finishing growth, a storm moving in, or
+  repairs completing — record it via scheduledEventsToAdd. Only do this
+  when the narration has genuinely established that consequence; never
+  invent one just to populate this field, and never use it for something
+  that should happen immediately (narrate that directly instead — this is
+  only for things that have not happened yet).
+  - triggerAtTurn must be an absolute turn number: the current TURN (see
+    WORLD STATE above) plus however many turns until it happens. Never use
+    a relative phrase like "in 5 turns" as the value — if it is turn 12 and
+    something happens in 5 turns, triggerAtTurn is 17.
+  - Give each event a short, stable, descriptive id (same slug convention
+    as newThreads, e.g. "caravan-return" or "harvest-festival"). If you
+    reference the same future event again on a later turn, reuse its exact
+    id rather than inventing a new one — this is how duplicate scheduling
+    is avoided, so choose ids that describe the event itself, not the turn
+    or moment you're narrating.
+  - Only "id", "description", and "triggerAtTurn" are required. Add "type"
+    or "title" only if a short category or label is genuinely useful for
+    later reference. Add "directorHint" when a brief reminder of what to
+    narrate would help your future self when this fires. Add "payload"
+    only when there is real structured data worth carrying forward (e.g. an
+    NPC or location id involved) — omit it otherwise.
 - When a quest-worthy goal emerges (a request, a mystery, a clear objective),
   add it via newThreads. When a quest concludes, update it via threadUpdates
   with status "resolved" or "abandoned". Do not invent quests that didn't
@@ -210,7 +236,8 @@ These are locked design decisions. Never violate them.
   "worldStateUpdates": {
     "currentLocationId": "<location id, only if the player moved — omit otherwise>",
     "newLocations": [],
-    "npcUpdates": []
+    "npcUpdates": [],
+    "scheduledEventsToAdd": [{ "id": "<short-slug>", "description": "<what happens when it fires>", "triggerAtTurn": <absolute turn number>, "source": "director" }]
   },
   "directorConfigUpdates": {
     "newThreads": [{ "id": "<short-slug>", "title": "<quest title>", "description": "<1 sentence>" }],
@@ -316,7 +343,12 @@ Deno.serve(async (req: Request) => {
     }
 
     // 4. Build prompt
-    const systemPrompt = buildSystemPrompt(body)
+    // The turn about to complete — same value the client independently
+    // computes as session.turnNumber + 1 (see adventureController.ts's
+    // runPlayerTurn). Passed into the prompt so the Director can compute
+    // an absolute triggerAtTurn for any scheduledEventsToAdd it emits.
+    const currentTurnNumber = (sessionRow.turn_number ?? 0) + 1
+    const systemPrompt = buildSystemPrompt(body, currentTurnNumber)
     const userMessage = buildUserMessage(body)
 
     // 5. Call OpenAI
@@ -371,7 +403,7 @@ Deno.serve(async (req: Request) => {
           const narration = parsed.narration ?? fullNarration
 
           // 6. Persist turn
-          const nextTurn = (sessionRow.turn_number ?? 0) + 1
+          const nextTurn = currentTurnNumber
           const { data: turnRow } = await serviceClient
             .from('narrative_turns')
             .insert({
@@ -390,7 +422,9 @@ Deno.serve(async (req: Request) => {
             .update({ turn_number: nextTurn })
             .eq('id', body.sessionId)
 
-          // Final event — full response JSON
+          // Final event — full response JSON, explicitly marked so the
+          // client never has to guess based on payload shape (regular
+          // streamed tokens can themselves start with '{').
           const finalResponse = {
             narration,
             worldStateUpdates: parsed.worldStateUpdates ?? {},
@@ -400,7 +434,7 @@ Deno.serve(async (req: Request) => {
             mapUpdate: null,
             turnId: turnRow?.id ?? '',
           }
-          await write(JSON.stringify(finalResponse))
+          await write(`[FINAL] ${JSON.stringify(finalResponse)}`)
           await write('[DONE]')
         } catch (err) {
           await write(`[ERROR] ${err instanceof Error ? err.message : 'Unknown error'}`)
@@ -447,7 +481,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const narration = parsed.narration ?? rawText
-    const nextTurn = (sessionRow.turn_number ?? 0) + 1
+    const nextTurn = currentTurnNumber
 
     const { data: turnRow } = await serviceClient
       .from('narrative_turns')

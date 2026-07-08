@@ -4,7 +4,7 @@
  * Tests the route wrapper: loading state, no_character state,
  * error state with retry, and the ready → AdventureHub render.
  */
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -192,7 +192,12 @@ describe('AdventurePage — ready state', () => {
   it('shows the campaign title in the status bar', async () => {
     renderPage()
     await waitFor(() => expect(screen.getByTestId('adventure-hub')).toBeInTheDocument())
-    expect(screen.getByText(/The Shattered Throne/)).toBeInTheDocument()
+    // Scoped to the status bar: as of the Adventure Hub redesign, the
+    // campaign title can also legitimately appear in the new
+    // AdventureScenePanel's location title (see AdventureHub.test.tsx's
+    // own equivalent fix for the full rationale).
+    const statusBar = screen.getByTestId('adventure-status-bar')
+    expect(within(statusBar).getByText(/The Shattered Throne/)).toBeInTheDocument()
   })
 
   it('shows the character name in the character sidebar', async () => {

@@ -16,8 +16,9 @@
  * existed but were previously unpopulated — see ROADMAP.md Phase 9.2.
  */
 
-import type { WorldState, LocationState, DirectorConfig } from '@/types/campaign'
+import type { WorldState, LocationState, DirectorConfig, WorldEvent } from '@/types/campaign'
 import type { PlotThread, NpcMemoryEntry } from '@/types/campaign'
+import { createScheduledWorldEvent, mergeScheduledEvents } from '@/lib/world/worldEventScheduler'
 
 /** The partial update the Director returns in `worldStateUpdates`. */
 export interface WorldStateUpdate {
@@ -31,6 +32,14 @@ export interface WorldStateUpdate {
   currentLocationId?: string
   /** Arbitrary key-value tags (door states, alert levels, etc.) — stored in a separate field in Phase 3 stretch. */
   tags?: Record<string, string | number | boolean>
+  /**
+   * New future events for the Director to schedule (Phase 12.1 Step 3).
+   * These never fire immediately — they're merged into
+   * WorldState.scheduledEvents with `triggered: false` and only
+   * tickWorld() (src/lib/world/worldTick.ts) may later fire them.
+   * See src/lib/world/worldEventScheduler.ts for the merge/creation logic.
+   */
+  scheduledEventsToAdd?: Array<Partial<WorldEvent> & { id: string; description: string; triggerAtTurn: number }>
 }
 
 /**
@@ -107,6 +116,33 @@ export function applyWorldStateUpdate(
     next = { ...next, npcs: updatedNpcs }
   }
 
+  // Schedule new future events (Phase 12.1 Step 3). Never fires anything —
+  // createScheduledWorldEvent() always sets triggered: false; only
+  // tickWorld() may later flip it. Malformed entries (missing id,
+  // description, or a finite triggerAtTurn) are silently dropped, same
+  // convention as newLocations above.
+  if (Array.isArray(patch.scheduledEventsToAdd) && patch.scheduledEventsToAdd.length > 0) {
+    const validEntries = patch.scheduledEventsToAdd.filter(
+      (e): e is Partial<WorldEvent> & { id: string; description: string; triggerAtTurn: number } =>
+        Boolean(e.id && e.description && typeof e.triggerAtTurn === 'number' && Number.isFinite(e.triggerAtTurn)),
+    )
+    const newEvents = validEntries.map((e) => createScheduledWorldEvent({
+      id: e.id,
+      description: e.description,
+      triggerAtTurn: e.triggerAtTurn,
+      type: e.type,
+      title: e.title,
+      createdTurn: e.createdTurn,
+      source: e.source,
+      payload: e.payload,
+      directorHint: e.directorHint,
+    }))
+    const mergedEvents = mergeScheduledEvents(current.scheduledEvents, newEvents)
+    if (mergedEvents !== current.scheduledEvents) {
+      next = { ...next, scheduledEvents: mergedEvents }
+    }
+  }
+
   return next
 }
 
@@ -120,7 +156,8 @@ export function hasWorldStateChanges(update: Record<string, unknown>): boolean {
     patch.worldTime ||
     patch.currentLocationId ||
     (Array.isArray(patch.newLocations) && patch.newLocations.length > 0) ||
-    (Array.isArray(patch.npcUpdates) && patch.npcUpdates.length > 0),
+    (Array.isArray(patch.npcUpdates) && patch.npcUpdates.length > 0) ||
+    (Array.isArray(patch.scheduledEventsToAdd) && patch.scheduledEventsToAdd.length > 0),
   )
 }
 
