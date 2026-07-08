@@ -422,7 +422,9 @@ Deno.serve(async (req: Request) => {
             .update({ turn_number: nextTurn })
             .eq('id', body.sessionId)
 
-          // Final event — full response JSON
+          // Final event — full response JSON, explicitly marked so the
+          // client never has to guess based on payload shape (regular
+          // streamed tokens can themselves start with '{').
           const finalResponse = {
             narration,
             worldStateUpdates: parsed.worldStateUpdates ?? {},
@@ -432,7 +434,7 @@ Deno.serve(async (req: Request) => {
             mapUpdate: null,
             turnId: turnRow?.id ?? '',
           }
-          await write(JSON.stringify(finalResponse))
+          await write(`[FINAL] ${JSON.stringify(finalResponse)}`)
           await write('[DONE]')
         } catch (err) {
           await write(`[ERROR] ${err instanceof Error ? err.message : 'Unknown error'}`)

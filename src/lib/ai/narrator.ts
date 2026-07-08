@@ -8,9 +8,13 @@
  *
  * Streaming protocol:
  *   Content-Type: text/event-stream
- *   Events: data: <token>\n\n   (each streamed token)
- *           data: [DONE]\n\n   (stream complete signal)
- *           data: [ERROR] <message>\n\n (stream error signal)
+ *   Events: data: <token>\n\n            (each streamed token — raw OpenAI
+ *             delta fragments; may themselves contain '{' since the full
+ *             completion is JSON, so tokens must NOT be sniffed for '{')
+ *           data: [FINAL] <json>\n\n     (the one authoritative final
+ *             NarrateResponse, sent once after streaming completes)
+ *           data: [DONE]\n\n             (stream complete signal)
+ *           data: [ERROR] <message>\n\n  (stream error signal)
  *
  * Non-streaming: Content-Type: application/json — NarrateResponse shape.
  */
@@ -188,10 +192,13 @@ export function callNarrateStreaming(
             return
           }
 
-          // Final event: full JSON response
-          if (payload.startsWith('{')) {
+          // Final event: full JSON response, explicitly marked — never
+          // inferred from payload shape, since ordinary streamed tokens can
+          // also start with '{' (nested objects in the JSON being streamed).
+          if (payload.startsWith('[FINAL] ')) {
+            const finalPayload = payload.slice(8)
             try {
-              finalResponse = JSON.parse(payload) as NarrateResponse
+              finalResponse = JSON.parse(finalPayload) as NarrateResponse
             } catch {
               callbacks.onError(new NarratorError('Failed to parse final response.', 'PARSE_ERROR'))
               return
