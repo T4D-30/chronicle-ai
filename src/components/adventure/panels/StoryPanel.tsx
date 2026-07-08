@@ -12,7 +12,7 @@ import { useEffect, useRef } from 'react'
 import type { Campaign, NarrativeTurn } from '@/lib/supabase'
 import type { NarrationStatus } from '../useAdventureSession'
 import type { summariseCharacterAction } from '@/lib/engine'
-import { PixelPanel } from '@/components/pixel'
+import { PixelPanel, StoryText } from '@/components/pixel'
 
 interface StoryPanelProps {
   campaign: Campaign
@@ -112,10 +112,10 @@ export function StoryPanel({
                     Cancel
                   </button>
                 </div>
-                <p className="lore-text text-sm">
+                <StoryText className="text-sm">
                   {streamingText}
                   <span className="animate-pulse text-arcane-400" aria-hidden="true">▋</span>
-                </p>
+                </StoryText>
               </div>
             )}
 
@@ -154,7 +154,7 @@ function TurnBlock({ turn }: { turn: NarrativeTurn }) {
         </div>
       )}
       {turn.aiNarration && (
-        <p className="lore-text text-sm pl-8 text-void-200">{turn.aiNarration}</p>
+        <StoryText className="text-sm pl-8 text-void-200">{turn.aiNarration}</StoryText>
       )}
       <div className="pl-8">
         <span className="stat-label text-void-700">Turn {turn.turnNumber}</span>

@@ -30,6 +30,7 @@
  * viewport. Presentation only: same data, same testids, same copy.
  */
 
+import { LocationTitle } from '@/components/pixel'
 import type { Campaign } from '@/lib/supabase'
 
 interface AdventureScenePanelProps {
@@ -50,12 +51,9 @@ export function AdventureScenePanel({ campaign, children }: AdventureScenePanelP
       <div className="flex-shrink-0 px-4 pt-4 pb-2">
         <div className="max-w-3xl mx-auto w-full">
           <div className="flex items-baseline justify-between gap-2 flex-wrap mb-2">
-            <h1
-              className="font-display text-xl font-bold text-gradient-arcane truncate"
-              data-testid="scene-location-title"
-            >
+            <LocationTitle data-testid="scene-location-title">
               {locationTitle}
-            </h1>
+            </LocationTitle>
             {worldState.worldTime && (
               <p
                 className="font-mono text-[10px] tracking-widest uppercase text-arcane-300/80 flex-shrink-0"
