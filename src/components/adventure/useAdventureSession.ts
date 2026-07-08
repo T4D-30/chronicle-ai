@@ -126,6 +126,17 @@ export function useAdventureSession(campaignId: string): [AdventureState, Advent
    * stale error banner.
    */
   const requestIdRef = useRef(0)
+  /**
+   * Synchronous re-entrancy guard for submitAction. Checked and set in the
+   * same tick as the call — before any `await` — so a rapid double-click
+   * (Send button, or a suggested-action chip) cannot have both invocations
+   * pass the guard before either commits state. The old guard read
+   * `narrationStatus` through an awaited setState snapshot, leaving a real
+   * window where two near-simultaneous calls could both observe 'idle'.
+   * Cleared only when the in-flight request finishes (onResult), errors
+   * (onError), is cancelled (cancelStream), or the hook unmounts.
+   */
+  const submissionInFlightRef = useRef(false)
 
   // ── Load ──────────────────────────────────────────────────────────────────
 
@@ -175,104 +186,123 @@ export function useAdventureSession(campaignId: string): [AdventureState, Advent
 
   // ── Action submission (full turn loop) ────────────────────────────────────
 
-  const submitAction = useCallback(async (input: string) => {
+  const submitAction = useCallback((input: string) => {
     const trimmedInput = input.trim()
     if (!trimmedInput) return
 
-    // Snapshot current state synchronously before any awaits — same
-    // established pattern as commitCombatResult() above. Needed here
-    // because the controller's document-retrieval step is a real async
-    // step before the request can be built.
-    const snap = await new Promise<{
-      campaign: Campaign | null
-      character: CharacterRecord | null
-      session: GameSession | null
-      turns: NarrativeTurn[]
-      narrationStatus: NarrationStatus
-    }>((res) => {
-      setState((s) => {
-        res({ campaign: s.campaign, character: s.character, session: s.session, turns: s.turns, narrationStatus: s.narrationStatus })
-        return s
+    // Synchronous re-entrancy guard — set before any `await`, so a second
+    // invocation arriving in the same tick (double-click) sees this true
+    // and returns immediately, rather than racing an async state snapshot.
+    if (submissionInFlightRef.current) return
+    submissionInFlightRef.current = true
+
+    void (async () => {
+      // Snapshot current state synchronously before any awaits — same
+      // established pattern as commitCombatResult() above. Needed here
+      // because the controller's document-retrieval step is a real async
+      // step before the request can be built. Re-entrancy is already ruled
+      // out by the ref above, so this snapshot only needs the data itself.
+      const snap = await new Promise<{
+        campaign: Campaign | null
+        character: CharacterRecord | null
+        session: GameSession | null
+        turns: NarrativeTurn[]
+      }>((res) => {
+        setState((s) => {
+          res({ campaign: s.campaign, character: s.character, session: s.session, turns: s.turns })
+          return s
+        })
       })
-    })
-    const { campaign, character, session, turns, narrationStatus } = snap
-    if (!campaign || !character || !session) return
-    if (narrationStatus === 'streaming') return // already streaming
+      const { campaign, character, session, turns } = snap
+      if (!campaign || !character || !session) {
+        submissionInFlightRef.current = false
+        return
+      }
 
-    // Claim a new generation before starting the stream — any callback
-    // from a previous, now-superseded generation will no-op against this.
-    const requestId = ++requestIdRef.current
-    streamControllerRef.current?.abort()
+      // Claim a new generation before starting the stream — any callback
+      // from a previous, now-superseded generation will no-op against this.
+      const requestId = ++requestIdRef.current
+      streamControllerRef.current?.abort()
 
-    setState((s) => ({
-      ...s,
-      narrationStatus: 'streaming' as NarrationStatus,
-      isActionInFlight: true,
-      streamingText: '',
-      error: null,
-      suggestedActions: [],
-    }))
+      setState((s) => ({
+        ...s,
+        narrationStatus: 'streaming' as NarrationStatus,
+        isActionInFlight: true,
+        streamingText: '',
+        error: null,
+        suggestedActions: [],
+      }))
 
-    runPlayerTurn(
-      { campaign, character, session, recentTurns: turns, playerInput: trimmedInput },
-      {
-        onToken: (token) => {
-          if (requestIdRef.current !== requestId) return
-          setState((prev) => ({
-            ...prev,
-            streamingText: prev.streamingText + token,
-          }))
-        },
-        onStreamStart: (controller) => {
-          if (requestIdRef.current !== requestId) {
-            controller.abort()
-            return
-          }
-          streamControllerRef.current = controller
-        },
-        onResult: (result) => {
-          if (requestIdRef.current !== requestId) return
-          setState((prev) => {
-            const next = {
+      runPlayerTurn(
+        { campaign, character, session, recentTurns: turns, playerInput: trimmedInput },
+        {
+          onToken: (token) => {
+            if (requestIdRef.current !== requestId) return
+            setState((prev) => ({
+              ...prev,
+              streamingText: prev.streamingText + token,
+            }))
+          },
+          onStreamStart: (controller) => {
+            if (requestIdRef.current !== requestId) {
+              controller.abort()
+              return
+            }
+            streamControllerRef.current = controller
+          },
+          onResult: (result) => {
+            if (requestIdRef.current !== requestId) return
+            submissionInFlightRef.current = false
+            setState((prev) => {
+              const next = {
+                ...prev,
+                isActionInFlight: false,
+                narrationStatus: 'done' as NarrationStatus,
+                streamingText: '',
+                // Explicitly cleared here (not just relied upon from the
+                // reset at submission start) — a successful turn always
+                // wins over any error state, including one left behind by
+                // a distinct earlier request that failed independently.
+                error: null,
+                suggestedActions: result.directorResult.suggestedActions,
+                lastDirectorResult: result.directorResult,
+                campaign: result.updatedCampaign ?? prev.campaign,
+                turns: [...prev.turns, result.turn].slice(-20),
+                session: prev.session
+                  ? { ...prev.session, turnNumber: prev.session.turnNumber + 1 }
+                  : prev.session,
+                lastCheckResult: result.checkSummary,
+              }
+              // Auto-enter combat when the Director signaled it, unless
+              // already in combat.
+              if (result.combatState && !next.combatState) {
+                next.combatState = result.combatState
+              }
+              return next
+            })
+          },
+          onError: (err) => {
+            if (requestIdRef.current !== requestId) return
+            submissionInFlightRef.current = false
+            setState((prev) => ({
               ...prev,
               isActionInFlight: false,
-              narrationStatus: 'done' as NarrationStatus,
+              narrationStatus: 'error',
               streamingText: '',
-              suggestedActions: result.directorResult.suggestedActions,
-              lastDirectorResult: result.directorResult,
-              campaign: result.updatedCampaign ?? prev.campaign,
-              turns: [...prev.turns, result.turn].slice(-20),
-              session: prev.session
-                ? { ...prev.session, turnNumber: prev.session.turnNumber + 1 }
-                : prev.session,
-              lastCheckResult: result.checkSummary,
-            }
-            // Auto-enter combat when the Director signaled it, unless
-            // already in combat.
-            if (result.combatState && !next.combatState) {
-              next.combatState = result.combatState
-            }
-            return next
-          })
+              error: buildFallbackNarration(err),
+            }))
+          },
         },
-        onError: (err) => {
-          if (requestIdRef.current !== requestId) return
-          setState((prev) => ({
-            ...prev,
-            isActionInFlight: false,
-            narrationStatus: 'error',
-            streamingText: '',
-            error: buildFallbackNarration(err),
-          }))
-        },
-      },
-    )
+      )
+    })()
   }, [])
 
   const cancelStream = useCallback(() => {
     // Invalidate the in-flight generation so its callbacks can no longer
-    // apply a late result/error after the user has explicitly cancelled.
+    // apply a late result/error after the user has explicitly cancelled,
+    // and release the re-entrancy guard so a new submission can start.
     requestIdRef.current++
+    submissionInFlightRef.current = false
     streamControllerRef.current?.abort()
     streamControllerRef.current = null
     setState((s) => ({
@@ -286,6 +316,7 @@ export function useAdventureSession(campaignId: string): [AdventureState, Advent
   useEffect(() => {
     return () => {
       requestIdRef.current++
+      submissionInFlightRef.current = false
       streamControllerRef.current?.abort()
     }
   }, [])
