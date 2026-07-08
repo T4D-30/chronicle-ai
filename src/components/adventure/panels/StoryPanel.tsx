@@ -93,7 +93,7 @@ export function StoryPanel({
             </div>
           </div>
         ) : (
-          <div className="flex flex-col gap-3 max-w-3xl mx-auto w-full">
+          <div className="flex flex-col gap-5 max-w-3xl mx-auto w-full">
             {turns.map((turn) => <TurnBlock key={turn.id} turn={turn} />)}
 
             {/* Resolved dice check for the most recent action — Phase 10.1 */}
@@ -139,9 +139,17 @@ export function StoryPanel({
   )
 }
 
+/**
+ * Dialogue-box treatment (Phase 15.2): player input and AI narration each
+ * get their own bordered box (chr-panel-arcane / chr-panel-spirit — the
+ * same "player-actionable vs read-only system" distinction those classes
+ * already carry elsewhere) instead of bare paragraph text, closer to how
+ * RPG dialogue boxes separate speakers. dialogue-reveal (pixel.css) gives
+ * each turn a brief fade/rise on mount, reduced-motion safe.
+ */
 function TurnBlock({ turn }: { turn: NarrativeTurn }) {
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2 dialogue-reveal">
       {turn.playerInput && (
         <div className="flex items-start gap-2">
           <span
@@ -150,11 +158,17 @@ function TurnBlock({ turn }: { turn: NarrativeTurn }) {
           >
             <span className="text-arcane-400 text-xs">⚔</span>
           </span>
-          <p className="text-arcane-200 text-sm font-body leading-relaxed">{turn.playerInput}</p>
+          <p className="chr-panel-arcane px-3 py-2 rounded-lg text-arcane-200 text-sm font-body leading-relaxed">
+            {turn.playerInput}
+          </p>
         </div>
       )}
       {turn.aiNarration && (
-        <StoryText className="text-sm pl-8 text-void-200">{turn.aiNarration}</StoryText>
+        <div className="pl-8">
+          <StoryText className="chr-panel-spirit block px-3 py-2.5 rounded-lg text-sm text-void-200">
+            {turn.aiNarration}
+          </StoryText>
+        </div>
       )}
       <div className="pl-8">
         <span className="stat-label text-void-700">Turn {turn.turnNumber}</span>

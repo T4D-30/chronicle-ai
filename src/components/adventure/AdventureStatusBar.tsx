@@ -16,6 +16,7 @@
 import { Link } from 'react-router-dom'
 import { Button, Badge } from '@/components/ui'
 import type { Campaign, GameSession } from '@/lib/supabase'
+import type { LocationState } from '@/types/campaign'
 
 interface AdventureStatusBarProps {
   campaign: Campaign
@@ -30,6 +31,31 @@ interface AdventureStatusBarProps {
   onEnd: () => void
 }
 
+/**
+ * Walks the real `parentId` chain (WorldState.locations) up from the
+ * current location looking for the nearest ancestor whose `type` is
+ * literally 'region' — the Constitution's own hierarchy is
+ * world → region → town → building → floor → encounter zone, so "region"
+ * here means that specific tier, not just "any parent." Returns null
+ * (rendered as nothing) rather than guessing when no region-typed
+ * ancestor exists — same honesty rule every other real-data field here
+ * already follows (see WorldStatusSidebar, AdventureScenePanel).
+ */
+function findRegionAncestor(
+  locationId: string | null,
+  locations: LocationState[],
+): LocationState | null {
+  const visited = new Set<string>()
+  let current = locationId ? locations.find((l) => l.id === locationId) ?? null : null
+  while (current) {
+    if (current.type === 'region') return current
+    if (!current.parentId || visited.has(current.id)) return null
+    visited.add(current.id)
+    current = locations.find((l) => l.id === current!.parentId) ?? null
+  }
+  return null
+}
+
 export function AdventureStatusBar({
   campaign,
   session,
@@ -42,6 +68,8 @@ export function AdventureStatusBar({
   onResume,
   onEnd,
 }: AdventureStatusBarProps) {
+  const region = findRegionAncestor(campaign.worldState.currentLocationId, campaign.worldState.locations)
+
   return (
     <header
       className="flex-shrink-0 flex items-center gap-3 px-4 py-2 border-b border-void-700/50 bg-void-900/80 backdrop-blur-sm"
@@ -65,6 +93,11 @@ export function AdventureStatusBar({
         <span className="font-mono text-xs text-void-500">
           Turn {session.turnNumber}
         </span>
+        {region && (
+          <span className="stat-label text-arcane-500 hidden md:inline" data-testid="status-bar-region">
+            {region.name}
+          </span>
+        )}
         <span className="stat-label text-void-700 hidden sm:inline">
           {campaign.tone} · {campaign.difficulty}
         </span>
