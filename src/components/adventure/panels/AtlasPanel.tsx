@@ -24,30 +24,9 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { Badge } from '@/components/ui'
+import { LOCATION_ICON, LOCATION_TYPE_LABEL } from '../locationIcons'
 import type { Campaign } from '@/lib/supabase'
 import type { LocationState, LocationType, NpcWorldState } from '@/types/campaign'
-
-// ─── Type metadata ────────────────────────────────────────────────────────────
-
-const LOCATION_ICON: Record<LocationType, string> = {
-  region:   '🗺',
-  town:     '🏘',
-  dungeon:  '🏰',
-  building: '🏛',
-  floor:    '⬛',
-  room:     '🚪',
-  outdoor:  '🌲',
-}
-
-const LOCATION_TYPE_LABEL: Record<LocationType, string> = {
-  region:   'Region',
-  town:     'Town',
-  dungeon:  'Dungeon',
-  building: 'Building',
-  floor:    'Floor',
-  room:     'Room',
-  outdoor:  'Outdoor',
-}
 
 const TYPE_ORDER: LocationType[] = [
   'region', 'outdoor', 'town', 'dungeon', 'building', 'floor', 'room',

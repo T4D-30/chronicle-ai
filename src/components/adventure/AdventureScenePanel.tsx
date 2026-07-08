@@ -1,36 +1,42 @@
 /**
- * AdventureScenePanel — Phase 11.5 (Adventure Hub redesign)
+ * AdventureScenePanel — Phase 11.5, redesigned Phase 15.2/15.4
  *
- * The center column's new chrome: location title, a time line, and a
- * scene-art placeholder, wrapping the EXISTING StoryPanel/ActionBar
- * (rendered as `children` — this component never reimplements narration,
- * suggested actions, or the action bar; it only adds framing around them).
+ * The center column's chrome: location title, a time line, and the scene
+ * viewport, wrapping the EXISTING StoryPanel/ActionBar (rendered as
+ * `children` — this component never reimplements narration, suggested
+ * actions, or the action bar; it only adds framing around them).
  *
  * LOCATION TITLE / TIME LINE: reuses the exact same currentLocationId
  * resolution AdventureHub's WorldStatusSidebar already performs — never
  * a second, differently-implemented lookup. Falls back to the campaign
  * title when no current location has been set yet (a fresh campaign's
- * honest starting state), never a fabricated location name. The time
- * line shows worldState.worldTime only when the Director has actually
- * set it — there is no weather field anywhere in this codebase's data
- * model (confirmed: LocationState/WorldState have no such field), so
- * this line never mentions weather.
+ * honest starting state), never a fabricated location name.
  *
- * SCENE ART PLACEHOLDER: genuinely a placeholder — there is no image
- * generation system, no per-location artwork field, and building one is
- * explicitly out of scope for this pass. Shows the location's own real
- * `description` text (when a current location resolves) inside a
- * stylized frame, which is more honest than either a blank box or a
- * fabricated "generating image..." state that implies a capability
- * that doesn't exist.
- *
- * Adventure UI 3.0, Phase 1: replaced the flat pixel-bordered box with
- * `.scene-viewport` (globals.css) — a layered-lighting frame with gold
- * corner brackets, in the spirit of a classic CRPG dialogue/scene
- * viewport. Presentation only: same data, same testids, same copy.
+ * SCENE VIEWPORT (Phase 15.2/15.4 "signature panel" pass): still
+ * genuinely a placeholder — there is no image generation system, no
+ * per-location artwork field. What changed is *how much real information*
+ * the placeholder honestly shows while waiting for artwork:
+ *   - a biome icon derived from the location's real `type` (via the
+ *     shared LOCATION_ICON map — same source AtlasPanel uses, see
+ *     ./locationIcons.ts), replacing the old generic 🏔️ for every location
+ *   - a "Music: —" row: an honest empty slot, not a fabricated track name
+ *   - nearby NPCs / nearby locations counts, computed from real WorldState
+ *     data (npcs at this exact locationId; sibling locations sharing this
+ *     location's parentId) — shown only when the count is greater than
+ *     zero, never a fabricated "0 nearby"
+ *   - a single generic note that more atmospheric detail (lighting,
+ *     ambience, artwork) arrives in a future update. It deliberately does
+ *     NOT name "weather" or "mood" specifically — those fields do not
+ *     exist on WorldState today (confirmed: no such fields anywhere in
+ *     src/types/campaign.ts), and AdventureScenePanel.test.tsx explicitly
+ *     asserts the panel never mentions weather. When Phase 10 (Living
+ *     World) adds real fields, they render in this same reserved space —
+ *     the layout doesn't need to change shape.
+ * Same testids, same fallback copy ("Scene art coming soon") as before.
  */
 
-import { LocationTitle } from '@/components/pixel'
+import { LocationTitle, Icon } from '@/components/pixel'
+import { LOCATION_ICON } from './locationIcons'
 import type { Campaign } from '@/lib/supabase'
 
 interface AdventureScenePanelProps {
@@ -45,6 +51,16 @@ export function AdventureScenePanel({ campaign, children }: AdventureScenePanelP
     : null
 
   const locationTitle = currentLocation?.name ?? campaign.title
+  const biomeIcon = currentLocation ? LOCATION_ICON[currentLocation.type] : '🏔️'
+
+  const nearbyNpcCount = currentLocation
+    ? worldState.npcs.filter((n) => n.locationId === currentLocation.id && n.isAlive).length
+    : 0
+  const nearbyLocationCount = currentLocation
+    ? worldState.locations.filter(
+        (l) => l.id !== currentLocation.id && l.parentId === currentLocation.parentId && l.discovered,
+      ).length
+    : 0
 
   return (
     <div className="flex flex-col h-full min-h-0" data-testid="adventure-scene-panel">
@@ -72,23 +88,50 @@ export function AdventureScenePanel({ campaign, children }: AdventureScenePanelP
 
       <div className="flex-shrink-0 px-4 pb-3">
         <div
-          className="scene-viewport h-36 sm:h-44 flex items-center justify-center max-w-3xl mx-auto"
+          className="scene-viewport h-40 sm:h-48 flex flex-col justify-between p-4 max-w-3xl mx-auto"
           data-testid="scene-art-placeholder"
         >
-          <div className="relative text-center px-6">
+          <div className="flex items-start justify-between gap-3">
             <span
-              className="text-4xl block mb-2 drop-shadow-[0_0_12px_rgba(243,207,77,0.25)]"
+              className="text-4xl leading-none drop-shadow-[0_0_12px_rgba(243,207,77,0.25)]"
               aria-hidden="true"
             >
-              🏔️
+              {biomeIcon}
             </span>
+            <div className="text-right flex-shrink-0">
+              <p className="font-mono text-[9px] uppercase tracking-widest text-void-600">Music</p>
+              <p className="font-mono text-xs text-void-500">—</p>
+            </div>
+          </div>
+
+          <div className="text-center px-2">
             {currentLocation?.description ? (
-              <p className="text-void-300 text-sm font-body leading-relaxed line-clamp-2 max-w-sm">
+              <p className="text-void-300 text-sm font-body leading-relaxed line-clamp-2">
                 {currentLocation.description}
               </p>
             ) : (
               <p className="text-void-500 text-sm font-body">Scene art coming soon</p>
             )}
+          </div>
+
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-3 text-[10px] text-void-500">
+              {nearbyNpcCount > 0 && (
+                <span data-testid="scene-nearby-npcs" className="flex items-center gap-1">
+                  <Icon name="character" className="text-xs leading-none" />
+                  {nearbyNpcCount} nearby
+                </span>
+              )}
+              {nearbyLocationCount > 0 && (
+                <span data-testid="scene-nearby-locations" className="flex items-center gap-1">
+                  <Icon name="world" className="text-xs leading-none" />
+                  {nearbyLocationCount} nearby
+                </span>
+              )}
+            </div>
+            <p className="text-void-700 text-[9px] text-right">
+              More atmosphere &amp; artwork arrive in a future update.
+            </p>
           </div>
         </div>
       </div>
