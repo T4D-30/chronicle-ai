@@ -9,10 +9,12 @@ export {
   LargeTitle,
   LocationTitle,
   SectionHeader,
+  SubHeader,
   NpcName,
   Dialogue,
   StoryText,
   SystemText,
   StatLabel,
   TinyLabel,
+  StatNumber,
 } from './Typography'

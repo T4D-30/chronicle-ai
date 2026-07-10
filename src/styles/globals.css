@@ -24,7 +24,10 @@
   }
 
   body {
-    @apply bg-void-950 text-white font-body;
+    /* Warm parchment default text (void-100, repainted warm in UI 2.0)
+       instead of pure white — components set brighter tiers explicitly
+       (ivory void-50 for numbers/names, gold for headers). */
+    @apply bg-void-950 text-void-100 font-body;
     /* Faint ember-lit vignette — the "campfire in the dark" atmosphere
        the interface should always suggest, kept subtle since most of
        this is covered by the app shell; visible at edges/overscroll. */

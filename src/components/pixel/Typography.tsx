@@ -1,13 +1,17 @@
 /**
- * Typography — Phase 15.1 (Chronicle Design System)
+ * Typography — Phase 15.1 (Chronicle Design System), repainted UI 2.0
  *
- * Thin named wrappers over the type scale already defined in
- * docs/STYLE_GUIDE.md ("Text Hierarchy") and already in use, hand-derived,
- * across the adventure UI. No new fonts, sizes, or colors are introduced
- * here — every className below is copied verbatim from an existing,
- * shipped usage (cited per component) so adopting these causes zero visual
- * change. The value is a single named place to read/reuse the scale
+ * Thin named wrappers over the type scale defined in docs/STYLE_GUIDE.md
+ * ("Text Hierarchy") — a single named place to read/reuse the scale
  * instead of every screen re-deriving font classes by hand.
+ *
+ * UI 2.0 color assignments (the dark-fantasy warmth pass):
+ *   Headers      → warm gold      (bronze-300)
+ *   Subheaders   → copper         (arcane-600)
+ *   Body/story   → warm parchment (void-100/200 — the repainted void
+ *                   light stops ARE parchment-toned; no separate token)
+ *   Numbers/stats→ bright ivory   (void-50 — brighter than body, warmer
+ *                   than pure #fff)
  */
 
 import type { ElementType, HTMLAttributes, ReactNode } from 'react'
@@ -46,17 +50,24 @@ export const LocationTitle = makeText(
   'LocationTitle',
 )
 
-/** Panel/section titles. Verbatim from SessionSummaryPanel's campaign-title header. */
+/** Panel/section titles — warm gold (UI 2.0 "Headers" tier). */
 export const SectionHeader = makeText(
   'h2',
-  'font-display text-xl text-white',
+  'font-display text-xl text-bronze-300',
   'SectionHeader',
 )
 
-/** Character/NPC name display. Verbatim from CharacterSidebar/PartyStatusPanel. */
+/** Subsection headings — copper (UI 2.0 "Subheaders" tier). */
+export const SubHeader = makeText(
+  'h3',
+  'font-display text-base font-semibold text-arcane-600',
+  'SubHeader',
+)
+
+/** Character/NPC name display — bright ivory, warmer than pure white. */
 export const NpcName = makeText(
   'p',
-  'font-display font-bold text-white truncate leading-tight',
+  'font-display font-bold text-void-50 truncate leading-tight',
   'NpcName',
 )
 
@@ -79,4 +90,12 @@ export const TinyLabel = makeText(
   'p',
   'font-pixel-display text-[8px] text-void-400 uppercase',
   'TinyLabel',
+)
+
+/** Mechanically-meaningful numbers (HP, AC, modifiers, dice totals) —
+ *  bright ivory mono, the brightest text tier (UI 2.0 "Numbers"). */
+export const StatNumber = makeText(
+  'span',
+  'font-mono text-void-50 tabular-nums',
+  'StatNumber',
 )
