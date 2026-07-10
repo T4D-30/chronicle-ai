@@ -133,40 +133,63 @@ describe('SkeletonGrid — library loading UX', () => {
   })
 })
 
-// ── LandingPage onboarding improvements ──────────────────────────────────────
+// ── LandingPage title screen (UI 3.0) ────────────────────────────────────────
 
+import { fireEvent } from '@testing-library/react'
 import LandingPage from '@/app/pages/LandingPage'
 
-describe('LandingPage — onboarding', () => {
+/** The title screen boots into a JRPG reveal sequence (UI 3.0); "press
+ *  any key" skips straight to the full menu. Same onboarding contract
+ *  as before, asserted after the reveal. */
+function renderTitleScreen() {
+  const result = render(<MemoryRouter><LandingPage /></MemoryRouter>)
+  fireEvent.keyDown(window, { key: 'Enter' })
+  return result
+}
+
+describe('LandingPage — title screen onboarding', () => {
   it('shows the app title', () => {
-    render(<MemoryRouter><LandingPage /></MemoryRouter>)
+    renderTitleScreen()
     expect(screen.getByRole('heading', { name: /Chronicle AI/i })).toBeInTheDocument()
   })
 
   it('has a primary CTA link', () => {
-    render(<MemoryRouter><LandingPage /></MemoryRouter>)
+    renderTitleScreen()
     expect(screen.getByRole('link', { name: /Begin Your Chronicle/i })).toBeInTheDocument()
   })
 
   it('has a sign-in link', () => {
-    render(<MemoryRouter><LandingPage /></MemoryRouter>)
+    renderTitleScreen()
     expect(screen.getByRole('link', { name: /Sign In/i })).toBeInTheDocument()
   })
 
   it('shows feature value props', () => {
-    render(<MemoryRouter><LandingPage /></MemoryRouter>)
+    renderTitleScreen()
     expect(screen.getByText(/Real D&D Mechanics/i)).toBeInTheDocument()
     expect(screen.getByText(/AI Director/i)).toBeInTheDocument()
     expect(screen.getByText(/Solo Adventure/i)).toBeInTheDocument()
   })
 
   it('does not reference stale Phase 0 label', () => {
-    render(<MemoryRouter><LandingPage /></MemoryRouter>)
+    renderTitleScreen()
     expect(screen.queryByText(/Phase 0/i)).not.toBeInTheDocument()
   })
 
   it('features list is an accessible list', () => {
-    render(<MemoryRouter><LandingPage /></MemoryRouter>)
+    renderTitleScreen()
     expect(screen.getByRole('list', { name: /features/i })).toBeInTheDocument()
+  })
+
+  it('starts on the world alone — no menu before the reveal', () => {
+    render(<MemoryRouter><LandingPage /></MemoryRouter>)
+    expect(screen.getByTestId('world-renderer')).toBeInTheDocument()
+    expect(screen.queryByTestId('title-menu')).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Begin Your Chronicle/i })).not.toBeInTheDocument()
+  })
+
+  it('any key reveals the menu from the initial vista (skip the intro)', () => {
+    render(<MemoryRouter><LandingPage /></MemoryRouter>)
+    fireEvent.keyDown(window, { key: 'x' })
+    expect(screen.getByTestId('title-menu')).toBeInTheDocument()
   })
 })
