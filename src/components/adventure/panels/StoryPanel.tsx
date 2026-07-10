@@ -58,10 +58,11 @@ export function StoryPanel({
 
   return (
     <div className="flex-1 min-h-0 flex flex-col">
-      {/* Campaign header */}
+      {/* Campaign header — bronze frame, gold title (UI 2.0's "Story Box"
+          language), replacing the old cold-teal chr-panel-spirit framing. */}
       <div className="flex-shrink-0 px-4 pt-4 pb-2">
-        <div className="chr-panel-spirit p-3 rounded-lg max-w-3xl mx-auto w-full">
-          <p className="stat-label text-spirit-400 mb-0.5">{campaign.title.toUpperCase()}</p>
+        <div className="chr-panel p-3 rounded-lg max-w-3xl mx-auto w-full">
+          <p className="stat-label text-bronze-400 mb-0.5">{campaign.title.toUpperCase()}</p>
           {campaign.description && (
             <p className="text-void-400 text-xs line-clamp-1">{campaign.description}</p>
           )}
@@ -80,8 +81,8 @@ export function StoryPanel({
       >
         {turns.length === 0 && !streamingText && !isStreaming ? (
           <div className="flex flex-col items-center justify-center h-full gap-6 text-center">
-            <div className="chr-panel-arcane p-6 rounded-lg max-w-sm w-full">
-              <p className="stat-label text-arcane-400 mb-3">YOUR STORY BEGINS</p>
+            <div className="chr-panel p-6 rounded-lg max-w-sm w-full">
+              <p className="stat-label text-bronze-400 mb-3">YOUR STORY BEGINS</p>
               <p className="lore-text text-void-300 text-sm mb-4">
                 "Every hero's story begins with a single choice."
               </p>
@@ -101,9 +102,9 @@ export function StoryPanel({
 
             {/* Live streaming text */}
             {isStreaming && streamingText && (
-              <div className="chr-panel-spirit p-3 rounded-lg">
+              <div className="chr-panel p-3 rounded-lg">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="stat-label text-spirit-500">Director speaking…</span>
+                  <span className="stat-label text-bronze-400">Director speaking…</span>
                   <button
                     type="button"
                     onClick={onCancelStream}
@@ -121,14 +122,14 @@ export function StoryPanel({
 
             {/* Loading indicator — streaming started but no tokens yet */}
             {isStreaming && !streamingText && (
-              <div className="chr-panel-spirit p-3 rounded-lg">
+              <div className="chr-panel p-3 rounded-lg">
                 <div className="flex items-center gap-2">
                   <div className="flex gap-1" aria-hidden="true">
                     <span className="pixel-type-dot" style={{ animationDelay: '0ms' }} />
                     <span className="pixel-type-dot" style={{ animationDelay: '150ms' }} />
                     <span className="pixel-type-dot" style={{ animationDelay: '300ms' }} />
                   </div>
-                  <span className="stat-label text-arcane-500" role="status">The Director is narrating…</span>
+                  <span className="stat-label text-bronze-400" role="status">The Director is narrating…</span>
                 </div>
               </div>
             )}
@@ -140,11 +141,13 @@ export function StoryPanel({
 }
 
 /**
- * Dialogue-box treatment (Phase 15.2): player input and AI narration each
- * get their own bordered box (chr-panel-arcane / chr-panel-spirit — the
- * same "player-actionable vs read-only system" distinction those classes
- * already carry elsewhere) instead of bare paragraph text, closer to how
- * RPG dialogue boxes separate speakers. dialogue-reveal (pixel.css) gives
+ * Dialogue-box treatment (Phase 15.2, repainted UI 2.0): player input and
+ * AI narration each get their own bordered box instead of bare paragraph
+ * text, closer to how RPG dialogue boxes separate speakers. Player input
+ * keeps its distinct fire-toned chr-panel-arcane framing ("you acted");
+ * AI narration moved from the old cold-teal chr-panel-spirit to the base
+ * bronze chr-panel — the "Story Box" bronze-frame/gold-title language now
+ * used consistently across StoryPanel. dialogue-reveal (pixel.css) gives
  * each turn a brief fade/rise on mount, reduced-motion safe.
  */
 function TurnBlock({ turn }: { turn: NarrativeTurn }) {
@@ -165,7 +168,7 @@ function TurnBlock({ turn }: { turn: NarrativeTurn }) {
       )}
       {turn.aiNarration && (
         <div className="pl-8">
-          <StoryText className="chr-panel-spirit block px-3 py-2.5 rounded-lg text-sm text-void-200">
+          <StoryText className="chr-panel block px-3 py-2.5 rounded-lg text-sm text-void-200">
             {turn.aiNarration}
           </StoryText>
         </div>
