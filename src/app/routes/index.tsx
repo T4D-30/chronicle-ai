@@ -52,7 +52,9 @@ export const router = createBrowserRouter([
     element: <AppShell><ProtectedRoute /></AppShell>,
     children: [
       { path: '/dashboard',
-        element: lazyPage(() => import('@/app/pages/DashboardPage')) },
+        // MainMenuPage (UI 3.0): the /dashboard path is unchanged by
+        // explicit decision — only the component/mental model renamed.
+        element: lazyPage(() => import('@/app/pages/MainMenuPage')) },
       { path: '/characters',
         element: lazyPage(() => import('@/app/pages/CharacterLibraryPage')) },
       { path: '/characters/new',
