@@ -243,6 +243,31 @@
   animation: fog-drift 24s infinite ease-in-out;
 }
 
+/* ── World Renderer parallax (UI 3.0) ──────────────────────────────────────── */
+
+/* Slow horizontal drift for scenery silhouette bands. Layers set
+   --drift (amplitude) and --drift-duration so nearer bands move more
+   and faster than distant ones — the whole-scene motion is measured in
+   tens of seconds per UI_VISION.md's atmosphere rules. */
+@keyframes world-drift {
+  0%, 100% { transform: translateX(calc(var(--drift, 1%) * -1)); }
+  50%      { transform: translateX(var(--drift, 1%)); }
+}
+
+.world-band {
+  animation: world-drift var(--drift-duration, 60s) ease-in-out infinite;
+}
+
+/* Cloud/fog sheet drifting one direction and wrapping. */
+@keyframes cloud-drift {
+  0%   { transform: translateX(-12%); }
+  100% { transform: translateX(12%); }
+}
+
+.world-clouds {
+  animation: cloud-drift var(--drift-duration, 90s) ease-in-out infinite alternate;
+}
+
 /* ── Water shimmer ─────────────────────────────────────────────────────────── */
 
 @keyframes water-shimmer {
@@ -385,7 +410,9 @@
   .level-up-ray,
   .pixel-sparkle:hover,
   .pixel-sparkle:focus-visible,
-  .dialogue-reveal {
+  .dialogue-reveal,
+  .world-band,
+  .world-clouds {
     animation: none !important;
   }
   .pixel-bar-fill {
