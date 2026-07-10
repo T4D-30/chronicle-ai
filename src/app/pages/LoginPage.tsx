@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Button, Input } from '@/components/ui'
 import { GoogleSignInButton } from '@/components/auth'
+import { WorldRenderer } from '@/components/pixel'
 import { authService } from '@/lib/supabase'
 
 export default function LoginPage() {
@@ -26,8 +27,11 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-4">
-      <div className="chr-panel-arcane w-full max-w-sm p-8">
+    <main className="relative flex min-h-screen items-center justify-center px-4 overflow-hidden">
+      {/* Dawn on the ridge — the journey about to resume. Decorative
+          menu scenery per UI_VISION.md Concept 7. */}
+      <WorldRenderer scene="dawn-ridge" ambience="fog" />
+      <div className="chr-panel-arcane relative z-10 w-full max-w-sm p-8">
         <div className="text-center mb-8">
           <h1 className="font-display text-3xl font-bold text-gradient-arcane mb-2">Welcome Back</h1>
           <p className="text-void-400 text-sm">Continue your chronicle</p>

@@ -16,13 +16,14 @@ export function AppShell({ children }: AppShellProps) {
         Skip to main content
       </a>
 
-      {/* Ambient background glow */}
+      {/* Ambient background glow — ember-warm (UI 3.0 atmosphere pass;
+          the old cool indigo tint predated the dark-fantasy repaint) */}
       <div
         aria-hidden="true"
         className="pointer-events-none fixed inset-0 z-0"
         style={{
           background:
-            'radial-gradient(ellipse 80% 40% at 50% -10%, rgba(58,58,122,0.35) 0%, transparent 70%)',
+            'radial-gradient(ellipse 80% 40% at 50% -10%, rgba(180,90,26,0.12) 0%, transparent 70%)',
         }}
       />
       <div id="main-content" className="relative z-10 flex flex-col flex-1">
