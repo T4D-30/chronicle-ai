@@ -341,7 +341,7 @@ instead of hand-rolling panel/button/icon/text markup.
 |---|---|---|
 | `Window` | `src/components/pixel/Window.tsx` | Shared title-bar + scrollable body + optional footer. Use for any new panel that needs a header. |
 | `Icon` | `src/components/pixel/Icon.tsx` | Named registry over the emoji glyphs already used as icons (`<Icon name="dice" />`). See the file for the full `IconName` list. A real SVG pixel-icon set can swap in later behind the same API. |
-| `Typography` | `src/components/pixel/Typography.tsx` | `LargeTitle`, `LocationTitle`, `SectionHeader`, `NpcName`, `Dialogue`, `StoryText`, `SystemText`, `StatLabel`, `TinyLabel` — named wrappers over the Text Hierarchy above. |
+| `Typography` | `src/components/pixel/Typography.tsx` | `LargeTitle`, `LocationTitle`, `SectionHeader`, `SubHeader`, `NpcName`, `Dialogue`, `StoryText`, `SystemText`, `StatLabel`, `TinyLabel`, `StatNumber` — named wrappers over the Text Hierarchy above. UI 2.0 tiers: headers gold, subheaders copper, body parchment, numbers ivory. |
 | `Button` variants | `src/components/ui/Button.tsx` | Adds `navigation`, `menuAction`, `suggested`, `iconOnly` to the existing `arcane`/`spirit`/`ghost`/`danger` set — see the file's own header comment for the full role-to-variant mapping. |
 | `locationIcons` | `src/components/adventure/locationIcons.ts` | Shared `LOCATION_ICON`/`LOCATION_TYPE_LABEL` maps (single source of truth for AtlasPanel and AdventureScenePanel). |
 | Animations | `src/styles/pixel.css` | `pixel-type-dot` (typing indicator), `pixel-sparkle` (hover/focus flourish), `dialogue-reveal` (turn-block entrance) — all reduced-motion safe (see the kill-list at the bottom of that file; add new animations there too). |
@@ -372,4 +372,38 @@ avoid destabilizing large, heavily-tested surfaces in one pass:
 
 ---
 
-*Last updated: Phase 15.1*
+## UI 2.0 — Dark Fantasy Re-theme
+
+The first real exercise of the "swap the palette without touching
+components" promise: the entire GBA-gold → dark-fantasy repaint (tokens,
+panel lighting/texture, carved-plaque buttons, torch-lit sidebar, bronze
+story box, gold/copper/parchment/ivory typography, ember animations)
+landed with zero component-API changes and zero test churn.
+
+**Color ratio target** (keeps the UI dark and immersive; check new
+screens against it): ~55% dark charcoal/black (`void`), ~20% warm
+walnut (`panel`), ~15% bronze/gold (`bronze`), ~7% ember (`arcane`),
+~3% status accents (`heal`/`harm`/`spirit`/`mystic`).
+
+**Every panel is torchlit**: outer drop shadow + inset warm top
+highlight + inset bottom depth shadow, plus a faint CSS-only grain so
+surfaces never read as flat color. The recipe lives once in
+`.chr-panel` (globals.css) and `.pixel-border*` (pixel.css) — don't
+hand-roll it per component.
+
+### UI 2.0 deferred
+
+- **`mystic` (blue magic accent)**: token exists, deliberately unused so
+  far — apply it when spell/magic-specific UI (spell slots, concentration,
+  magic-item rarity) gets its own visual pass. Never use it as a general
+  highlight.
+- **Real bitmap textures** (wood/parchment photography or painted tiles):
+  the CSS gradient + SVG-noise grain reads well at panel scale; revisit
+  only if a future art pass wants more literal carved-oak surfaces.
+- **`spirit` teal**: retained as-is for system feedback (MP, DC chips,
+  enemy HP). It's the remaining cool accent by design — the 3% tier —
+  not an oversight.
+
+---
+
+*Last updated: UI 2.0 (Dark Fantasy Re-theme)*
