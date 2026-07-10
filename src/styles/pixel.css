@@ -61,7 +61,7 @@
 .pixel-border-spirit {
   border: 2px solid #198c87;
   box-shadow:
-    0 0 0 2px #050510,
+    0 0 0 2px #0a0a0f,
     inset 0 0 0 2px #092c2d,
     inset 2px 2px 0 2px rgba(59, 202, 192, 0.12);
   border-radius: 0;
@@ -147,10 +147,10 @@
   pointer-events: none;
   font-family: 'Press Start 2P', monospace;
   text-shadow:
-    2px 2px 0 #050510,
-    -1px -1px 0 #050510,
-    1px -1px 0 #050510,
-    -1px 1px 0 #050510;
+    2px 2px 0 #0a0a0f,
+    -1px -1px 0 #0a0a0f,
+    1px -1px 0 #0a0a0f,
+    -1px 1px 0 #0a0a0f;
 }
 
 @keyframes crit-flash {
@@ -175,7 +175,7 @@
   content: '▶';
   display: inline-block;
   margin-right: 0.4em;
-  color: #f7cf4d;
+  color: #e8a74a; /* fire gold — arcane-300 */
   animation: cursor-blink 0.9s infinite steps(1);
 }
 
@@ -189,12 +189,14 @@
   100% { transform: translate(calc(var(--drift-x, 20px) * 1.8), calc(var(--drift-y, -30px) * 1.6)); opacity: 0; }
 }
 
+/* Fireflies double as drifting campfire embers in UI 2.0 — same drift
+   mechanics, ember-orange glow instead of amber. */
 .particle-firefly {
   position: absolute;
   width: 3px;
   height: 3px;
-  background: #f7cf4d;
-  box-shadow: 0 0 6px 2px rgba(247, 207, 77, 0.6);
+  background: #d77a26; /* ember — arcane-400 */
+  box-shadow: 0 0 6px 2px rgba(215, 122, 38, 0.6);
   animation: firefly-drift var(--duration, 7s) infinite steps(24);
   animation-delay: var(--delay, 0s);
 }
@@ -278,7 +280,7 @@
   display: inline-block;
   width: 4px;
   height: 4px;
-  background: #f4b820;
+  background: #d77a26; /* ember — arcane-400 */
   animation: pixel-type 0.6s infinite steps(2);
 }
 
@@ -344,7 +346,7 @@
   left: 50%;
   width: 2px;
   height: 40%;
-  background: linear-gradient(to top, transparent, #f7cf4d, transparent);
+  background: linear-gradient(to top, transparent, #e8a74a, transparent); /* fire gold */
   transform-origin: bottom center;
   animation: level-up-ray 900ms steps(18) forwards;
 }
