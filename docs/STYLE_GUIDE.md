@@ -1,5 +1,11 @@
 # Chronicle AI — Style Guide
 
+> **[UI_VISION.md](UI_VISION.md) is the canonical design vision** (UI 3.0):
+> the north star, the eight core concepts (UI State Machine, Cameras-not-
+> Pages, World Renderer, …), and the new-component checklist. This file
+> remains the reference for tokens, primitives, and code patterns; when
+> deciding *whether/how* to build a component, start with UI_VISION.md.
+
 ---
 
 ## Design Language
@@ -406,4 +412,32 @@ hand-roll it per component.
 
 ---
 
-*Last updated: UI 2.0 (Dark Fantasy Re-theme)*
+## UI 3.0 — Pixel RPG Experience
+
+The experience layer on top of UI 2.0. New building blocks:
+
+| Component | File | Purpose |
+|---|---|---|
+| `uiSceneStore` | `src/store/uiSceneStore.ts` | The UI State Machine — presentation phases with a legal-transition table. New screens add camera states here, never ad hoc reveal flags. |
+| `WorldRenderer` | `src/components/pixel/WorldRenderer.tsx` | The world behind every screen: procedural parallax scenes (`night-camp`/`dusk-vale`/`dawn-ridge`) with asset slots at `public/assets/sprites/environments/<scene>.png`. |
+| `SettingsModal` | `src/components/pixel/SettingsModal.tsx` | First mounted home of `AudioSettingsPanel` — opened from the Main Menu and AdventureLeftNav. |
+| Title screen | `src/app/pages/LandingPage.tsx` | JRPG boot: vista → logo → press-any-key → menu, driven by the state machine. |
+| Main Menu | `src/app/pages/MainMenuPage.tsx` | Renamed from DashboardPage; JRPG menu at the camp. `/dashboard` route path deliberately unchanged. |
+
+### UI 3.0 deferred (see UI_VISION.md roadmap for the full list)
+
+- Portraits (blink/breathing/emotions) and the party menu — blocked on
+  real art assets.
+- Per-feature material treatments (journal-as-tome, inventory-as-leather,
+  …) — the material language is documented in UI_VISION.md, implemented
+  feature-by-feature.
+- Real environment/sprite/audio assets — the slots and silent/procedural
+  fallbacks are wired; adding assets requires a licensing decision, never
+  a code change.
+- In-game ambience/weather scenes — waits for Phase 10 Living World data
+  (honesty rule); AdventureHub's `ambienceKind = 'none'` stands.
+- `/menu` route alias — a dedicated routing-cleanup phase.
+
+---
+
+*Last updated: UI 3.0 (Pixel RPG Experience)*
