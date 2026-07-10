@@ -17,7 +17,7 @@ import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui'
-import { WorldRenderer, PixelPanel } from '@/components/pixel'
+import { WorldRenderer, PixelPanel, SettingsModal } from '@/components/pixel'
 
 const MENU_ITEMS = [
   { label: 'Continue', to: '/campaigns', hint: 'Return to your campaigns' },
@@ -28,6 +28,7 @@ const MENU_ITEMS = [
 export default function MainMenuPage() {
   const { user, signOut } = useAuth()
   const [selected, setSelected] = useState(0)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const itemRefs = useRef<Array<HTMLAnchorElement | null>>([])
 
   function onMenuKeyDown(e: React.KeyboardEvent) {
@@ -83,6 +84,18 @@ export default function MainMenuPage() {
                   </Link>
                 </li>
               ))}
+              <li>
+                <Button
+                  type="button"
+                  variant="menuAction"
+                  size="lg"
+                  className="w-full"
+                  onClick={() => setSettingsOpen(true)}
+                >
+                  <span className="flex-1 text-left">Settings</span>
+                  <span className="font-pixel-body text-sm text-void-500">Audio &amp; options</span>
+                </Button>
+              </li>
             </ul>
           </nav>
         </PixelPanel>
@@ -91,6 +104,8 @@ export default function MainMenuPage() {
           Sign Out
         </Button>
       </div>
+
+      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </main>
   )
 }

@@ -7,6 +7,7 @@ export type { AmbienceKind } from './AmbientOverlay'
 export { WorldRenderer } from './WorldRenderer'
 export type { WorldScene, WorldTint } from './WorldRenderer'
 export { AudioSettingsPanel, useAudio } from './AudioSettings'
+export { SettingsModal } from './SettingsModal'
 export {
   LargeTitle,
   LocationTitle,

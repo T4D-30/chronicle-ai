@@ -28,9 +28,10 @@
  * factions list, keeping this card to a compact glance summary.
  */
 
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui'
-import { PixelPanel, Icon } from '@/components/pixel'
+import { PixelPanel, Icon, SettingsModal } from '@/components/pixel'
 import type { IconName } from '@/components/pixel'
 import type { AdventurePanel } from './AdventureHub'
 import type { Campaign, GameSession } from '@/lib/supabase'
@@ -73,6 +74,7 @@ export function AdventureLeftNav({
     ? worldState.locations.find((l) => l.id === worldState.currentLocationId)
     : null
   const discoveredCount = worldState.locations.filter((l) => l.discovered).length
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   return (
     <nav
@@ -126,21 +128,20 @@ export function AdventureLeftNav({
           <Icon name="inventory" className="text-base leading-none" />
           Inventory
         </Link>
-        {/* No settings page exists anywhere in the app yet (confirmed —
-            no /settings route, AudioSettings.tsx is built but unmounted).
-            Rendered as an honest disabled placeholder rather than a
-            broken link, matching this phase's "no invented systems"
-            constraint. */}
+        {/* Live as of UI 3.0: opens the SettingsModal mounting the real
+            AudioSettingsPanel — no longer the disabled placeholder it
+            was while no settings surface existed. */}
         <button
           type="button"
-          disabled
-          title="Settings are not available yet"
-          className="flex items-center gap-2.5 px-3 py-2 rounded-sm text-left font-body text-sm font-medium border border-transparent text-void-700 cursor-not-allowed"
+          onClick={() => setSettingsOpen(true)}
+          className="flex items-center gap-2.5 px-3 py-2 rounded-sm text-left transition-all font-body text-sm font-medium border border-transparent text-void-400 hover:text-arcane-200 hover:bg-panel-800/60 hover:border-bronze-800 hover:shadow-bronze focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-arcane-400"
         >
           <Icon name="settings" className="text-base leading-none" />
           Settings
         </button>
       </div>
+
+      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
 
       <div className="chr-divider" />
 
