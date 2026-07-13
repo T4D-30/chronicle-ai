@@ -24,7 +24,12 @@ import { InteractionLayer, primaryVerb } from './InteractionLayer'
 import { PlayerSprite } from '../world/PlayerSprite'
 import { bodyKindFor, weaponKindFor } from '../world/characterAppearance'
 import { FACING_DELTA, entityAt, exitAt, encounterAt } from './overworldTypes'
-import type { OverworldIntent, OverworldMap } from './overworldTypes'
+import type {
+  FacingDirection,
+  OverworldIntent,
+  OverworldMap,
+  TileCoord,
+} from './overworldTypes'
 import type { CharacterRecord } from '@/lib/supabase'
 
 const INTERACT_KEYS = new Set(['e', 'E', 'Enter', ' '])
@@ -35,6 +40,10 @@ interface OverworldSceneProps {
   character?: CharacterRecord | null
   locked?: boolean
   onIntent?: (intent: OverworldIntent) => void
+  initialPosition?: TileCoord
+  initialFacing?: FacingDirection
+  initialZoneKey?: string | null
+  onPlayerStateChange?: (state: { pos: TileCoord; facing: FacingDirection }) => void
 }
 
 export function OverworldScene({
@@ -43,8 +52,18 @@ export function OverworldScene({
   character = null,
   locked = false,
   onIntent,
+  initialPosition,
+  initialFacing,
+  initialZoneKey = null,
+  onPlayerStateChange,
 }: OverworldSceneProps) {
-  const { pos, facing, tryMove } = useOverworldPlayer({ map, spawnId, locked })
+  const { pos, facing, tryMove } = useOverworldPlayer({
+    map,
+    spawnId,
+    locked,
+    initialPosition,
+    initialFacing,
+  })
 
   // The entity the player currently faces (adjacent tile in facing dir).
   const facedPos = { x: pos.x + FACING_DELTA[facing].x, y: pos.y + FACING_DELTA[facing].y }
@@ -52,7 +71,11 @@ export function OverworldScene({
 
   // Standing on an exit or encounter tile emits its intent — once per
   // arrival (leaving and re-entering re-arms it).
-  const lastZoneKey = useRef<string | null>(null)
+  const lastZoneKey = useRef<string | null>(initialZoneKey)
+  useEffect(() => {
+    onPlayerStateChange?.({ pos, facing })
+  }, [pos, facing, onPlayerStateChange])
+
   useEffect(() => {
     const exit = exitAt(map, pos)
     const encounter = encounterAt(map, pos)
@@ -64,7 +87,7 @@ export function OverworldScene({
     } else if (encounter) {
       onIntent?.({ type: 'encounter', triggerId: encounter.id, label: encounter.label })
     }
-  }, [map, pos, onIntent])
+  }, [map, pos, facing, onIntent])
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {

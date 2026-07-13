@@ -321,7 +321,7 @@ describe('AdventureHub — panel switching', () => {
         </MemoryRouter>,
       )
 
-      function step(key: string) {
+      const step = (key: string) => {
         fireEvent.keyDown(window, { key })
         act(() => {
           vi.advanceTimersByTime(STEP_MS + 10)
@@ -368,10 +368,13 @@ describe('AdventureHub — panel switching', () => {
       )
       expect(screen.getByTestId('overworld-mode')).toBeInTheDocument()
       expect(screen.getByTestId('overworld-scene')).toHaveAttribute('data-map', 'forest-path')
-      expect(screen.getByTestId('overworld-player')).toHaveAttribute('data-y', '10')
+      expect(screen.getByTestId('overworld-player')).toHaveAttribute('data-x', '3')
+      expect(screen.getByTestId('overworld-player')).toHaveAttribute('data-y', '3')
+      expect(actions.startCombat).toHaveBeenCalledOnce()
 
       step('ArrowUp')
-      expect(screen.getByTestId('overworld-player')).toHaveAttribute('data-y', '9')
+      expect(screen.getByTestId('overworld-player')).toHaveAttribute('data-y', '2')
+      expect(actions.startCombat).toHaveBeenCalledOnce()
     } finally {
       vi.useRealTimers()
     }

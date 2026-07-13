@@ -15,7 +15,7 @@
  * through the same actions.submitAction contract as ActionBar.
  */
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { OverworldScene } from './OverworldScene'
 import { DialogueWindow } from './DialogueWindow'
 import { PauseMenu } from './PauseMenu'
@@ -25,11 +25,15 @@ import type { TransitionPhase } from './WorldTransition'
 import { handleOverworldIntent } from './overworldAdapter'
 import { OVERWORLD_MAPS, monasteryCourtyard } from './maps'
 import type { OverworldIntent } from './overworldTypes'
+import type { FacingDirection, TileCoord } from './overworldTypes'
 import type { AdventureState, AdventureActions } from '../useAdventureSession'
 
 export interface OverworldArea {
   mapId: string
   spawnId: string
+  position?: TileCoord
+  facing?: FacingDirection
+  activeZoneKey?: string | null
 }
 
 export const DEFAULT_OVERWORLD_AREA: OverworldArea = {
@@ -59,6 +63,7 @@ export function OverworldMode({
   const area = controlledArea ?? localArea
   const [transition, setTransition] = useState<TransitionPhase>(null)
   const pendingArea = useRef<OverworldArea | null>(null)
+  const currentPlayer = useRef<{ pos: TileCoord; facing: FacingDirection } | null>(null)
   // Narration older than the dialogue is stale — only show responses
   // that arrive after it opened.
   const turnCountAtOpen = useRef(0)
@@ -69,13 +74,25 @@ export function OverworldMode({
   const busy = state.isActionInFlight || isStreaming
   const locked = !!dialogue || !!transition || busy || !!pauseTab
 
-  function commitArea(nextArea: OverworldArea) {
+  const commitArea = useCallback((nextArea: OverworldArea) => {
     if (onAreaChange) {
       onAreaChange(nextArea)
     } else {
       setLocalArea(nextArea)
     }
-  }
+  }, [onAreaChange])
+
+  const commitPlayerState = useCallback(({ pos, facing }: { pos: TileCoord; facing: FacingDirection }) => {
+    currentPlayer.current = { pos, facing }
+    const nextArea = {
+      mapId: area.mapId,
+      spawnId: area.spawnId,
+      activeZoneKey: area.activeZoneKey,
+      position: pos,
+      facing,
+    }
+    commitArea(nextArea)
+  }, [area.mapId, area.spawnId, area.activeZoneKey, commitArea])
 
   // Escape: pause menu over the frozen map. When dialogue is open it
   // closes that first (never strands the player — Law 1). Tab remains
@@ -109,7 +126,7 @@ export function OverworldMode({
       }
     }, TRANSITION_PHASE_MS)
     return () => window.clearTimeout(timer)
-  }, [transition, onAreaChange])
+  }, [transition, commitArea])
 
   function onIntent(intent: OverworldIntent) {
     if (intent.type === 'interact') {
@@ -119,6 +136,15 @@ export function OverworldMode({
     if (intent.type === 'exit' && OVERWORLD_MAPS[intent.to]) {
       pendingArea.current = { mapId: intent.to, spawnId: intent.spawn }
       setTransition('out')
+    }
+    if (intent.type === 'encounter') {
+      const player = currentPlayer.current
+      commitArea({
+        ...area,
+        position: player?.pos ?? area.position,
+        facing: player?.facing ?? area.facing,
+        activeZoneKey: `enc:${intent.triggerId}`,
+      })
     }
     handleOverworldIntent(intent, actions)
   }
@@ -140,6 +166,10 @@ export function OverworldMode({
         character={state.character}
         locked={locked}
         onIntent={onIntent}
+        initialPosition={area.position}
+        initialFacing={area.facing}
+        initialZoneKey={area.activeZoneKey}
+        onPlayerStateChange={commitPlayerState}
       />
 
       <WorldTransition phase={transition} />

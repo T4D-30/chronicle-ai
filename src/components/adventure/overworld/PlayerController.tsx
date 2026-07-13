@@ -46,18 +46,26 @@ interface UseOverworldPlayerOptions {
   map: OverworldMap
   spawnId: string
   locked: boolean
+  initialPosition?: TileCoord
+  initialFacing?: FacingDirection
 }
 
-export function useOverworldPlayer({ map, spawnId, locked }: UseOverworldPlayerOptions) {
+export function useOverworldPlayer({
+  map,
+  spawnId,
+  locked,
+  initialPosition,
+  initialFacing,
+}: UseOverworldPlayerOptions) {
   const spawn = map.spawns.find((s) => s.id === spawnId) ?? map.spawns[0]
-  const [pos, setPos] = useState<TileCoord>(spawn.pos)
-  const [facing, setFacing] = useState<FacingDirection>(spawn.facing)
+  const [pos, setPos] = useState<TileCoord>(initialPosition ?? spawn.pos)
+  const [facing, setFacing] = useState<FacingDirection>(initialFacing ?? spawn.facing)
   const steppingUntil = useRef(0)
 
   // Re-spawn when the map (area transition) changes.
   useEffect(() => {
-    setPos(spawn.pos)
-    setFacing(spawn.facing)
+    setPos(initialPosition ?? spawn.pos)
+    setFacing(initialFacing ?? spawn.facing)
     steppingUntil.current = 0
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map.id, spawnId])

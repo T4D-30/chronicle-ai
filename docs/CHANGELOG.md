@@ -44,3 +44,10 @@ This is the append-only historical record for completed phases and milestones. D
 - Scope clarification: Playable Overworld 9/9 retains separate Story and World tabs in `AdventureHub`. The unified Adventure Screen recomposition is the next milestone and was not implemented here.
 - Major architectural decisions: None. The browser pass exercised existing presentation, controller, Director, persistence, and combat paths without changing their contracts or adding preview routes, test-only pages, features, or persistence code.
 - Verification results: Authenticated browser walkthrough passed in Chrome against `/adventure/e62ea105-4612-4721-ba18-052e387d4f96`; `npx tsc --noEmit` passed; `npx vitest run` passed 2,243 tests across 102 files with the documented benign Mammoth/jsdom warnings; `npm run build:check` passed.
+
+## 2026-07-13 — Exact-Position Combat Return Correction
+
+- Branch: `feature/presentation-playable-overworld`
+- Summary: Corrected the final Overworld 9/9 handoff so combat returns to the exact encounter tile and facing rather than the area's spawn. The active encounter zone is retained locally across the combat remount, preventing an immediate combat retrigger; leaving and re-entering the fixture trigger still rearms it as designed.
+- Major architectural decisions: Tile, facing, and active-zone state remain local presentation state lifted through the existing `AdventureHub` overworld area. No durable state, Supabase, controller, AI Director, rules, world-tick, or combat-resolution contract changed.
+- Verification results: `npx tsc --noEmit` passed; focused overworld tests passed 80/80; `npx vitest run` passed 2,243 tests across 102 files with the documented benign Mammoth/jsdom warnings; `npm run build:check` passed; the authenticated Chrome walkthrough passed again at desktop and 390×844 with exact-tile return, no immediate retrigger, restored movement, reduced motion, focus behavior, dialogue overflow, and zero console errors.
