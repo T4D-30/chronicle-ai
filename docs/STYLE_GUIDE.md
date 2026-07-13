@@ -440,4 +440,25 @@ The experience layer on top of UI 2.0. New building blocks:
 
 ---
 
-*Last updated: UI 3.0 (Pixel RPG Experience)*
+## UI 4.1 — World Presence
+
+The world's idle state: whenever no real scene artwork exists, the
+Adventure story view renders a living pixel world BEHIND the dialogue
+(never stealing narration height — the readability pass's 378px
+stands). Files under `src/components/adventure/world/`:
+
+| File | Purpose |
+|---|---|
+| `AdventureWorldPreview.tsx` | Biome-aware idle scenes keyed by real LocationType (forest/village/dungeon/interior/mountains/default), ambient animation, readability vignette. Evolution path: → WorldRenderer → procedural scene renderer. |
+| `PlayerSprite.tsx` | The party leader standing in the world — idle breathe/blink only. Mount point for the future per-character sprite (portraits phase). |
+| `WeatherLayer.tsx` | Visualizes weather ONLY when given a real value; WorldState has no weather field yet, so it renders clear. Phase 10 wires in as one prop. |
+| `timeOfDay.ts` | Grades the Director's real free-text worldTime into morning/day/sunset/night (keyword table); no signal → neutral, exteriors only. |
+
+Honesty stance: biome furniture (trees, torches, houses) represents a
+location that genuinely exists; rain/snow remain impossible without a
+real weather field; time tint reflects only what the Director wrote.
+All motion is CSS, in the reduced-motion kill-lists.
+
+---
+
+*Last updated: UI 4.1 (World Presence)*

@@ -329,7 +329,7 @@ export function AdventureWorldPreview({
           ActionBar overlay zone so the world stays visible). */}
       <svg
         className="absolute inset-x-0 w-full"
-        style={{ top: '58%', height: '42%' }}
+        style={{ top: '46%', height: '54%' }}
         viewBox="0 0 100 42"
         preserveAspectRatio="none"
       >
@@ -339,7 +339,7 @@ export function AdventureWorldPreview({
       {/* Furniture in a non-stretched overlay so shapes keep proportions. */}
       <svg
         className="absolute inset-x-0 w-full pixel-crisp"
-        style={{ top: '58%', height: '42%' }}
+        style={{ top: '46%', height: '54%' }}
         viewBox="0 0 100 42"
         preserveAspectRatio="xMidYMax meet"
       >
@@ -348,7 +348,7 @@ export function AdventureWorldPreview({
 
       {/* The party leader, present in the world — idle breathing/blink
           only, standing on the near ground ridge. */}
-      <div className="absolute" style={{ left: '30%', bottom: '26%', width: 26, height: 39 }}>
+      <div className="absolute" style={{ left: '30%', bottom: '40%', width: 26, height: 39 }}>
         <PlayerSprite className="w-full h-full" />
       </div>
 
