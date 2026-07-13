@@ -290,6 +290,14 @@ Not in UI 3.0; each is a later phase evaluated against this document:
 - Day/night cycle and weather-driven scenes (blocked on Phase 10
   Living World data — honesty rule).
 - Dialogue system with speaker names, portraits, and typed reveal.
+- Adventure story view will eventually transition to a dialogue system
+  docked over a full-bleed world scene, following the Combat HUD and
+  classic JRPG dialogue architecture. The world remains the primary
+  visual focus while dialogue overlays it rather than consuming
+  separate layout space. (The dialogue-readability pass prepared this:
+  the scene viewport is content-aware and collapses when no artwork
+  exists, so re-inflating it — or going full-bleed behind an overlay —
+  needs no layout redesign.)
 - `/menu` route alias (dedicated routing-cleanup phase; `/dashboard`
   path is unchanged by UI 3.0 by explicit decision).
 
