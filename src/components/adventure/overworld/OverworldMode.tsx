@@ -18,6 +18,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { OverworldScene } from './OverworldScene'
 import { DialogueWindow } from './DialogueWindow'
+import { PauseMenu } from './PauseMenu'
+import type { PauseTab } from './PauseMenu'
 import { WorldTransition, TRANSITION_PHASE_MS } from './WorldTransition'
 import type { TransitionPhase } from './WorldTransition'
 import { handleOverworldIntent } from './overworldAdapter'
@@ -42,9 +44,27 @@ export function OverworldMode({ state, actions }: OverworldModeProps) {
   // that arrive after it opened.
   const turnCountAtOpen = useRef(0)
 
+  const [pauseTab, setPauseTab] = useState<PauseTab | null>(null)
+
   const isStreaming = state.narrationStatus === 'streaming'
   const busy = state.isActionInFlight || isStreaming
-  const locked = !!dialogue || !!transition || busy
+  const locked = !!dialogue || !!transition || busy || !!pauseTab
+
+  // Esc/Tab: pause menu over the frozen map. Esc closes the dialogue
+  // first when one is open (never strands the player — Law 1).
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key !== 'Escape' && e.key !== 'Tab') return
+      e.preventDefault()
+      if (dialogue && e.key === 'Escape') {
+        setDialogue(null)
+        return
+      }
+      setPauseTab((current) => (current ? null : 'character'))
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [dialogue])
 
   // Timer-driven fade: out → swap at full black → in → clear.
   useEffect(() => {
@@ -95,6 +115,15 @@ export function OverworldMode({ state, actions }: OverworldModeProps) {
       />
 
       <WorldTransition phase={transition} />
+
+      {pauseTab && (
+        <PauseMenu
+          state={state}
+          tab={pauseTab}
+          onSelectTab={setPauseTab}
+          onClose={() => setPauseTab(null)}
+        />
+      )}
 
       {dialogue && (
         <DialogueWindow
