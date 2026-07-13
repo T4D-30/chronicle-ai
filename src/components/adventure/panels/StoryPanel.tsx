@@ -36,15 +36,41 @@ export function StoryPanel({
   onClearCheckResult,
 }: StoryPanelProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
+  // Reader-aware follow state (dialogue-readability pass). A ref, not
+  // React state: scroll events must never cause re-renders. True while
+  // the reader is at/near the bottom (they want to follow new
+  // narration); flips false the moment they scroll up to reread, and
+  // back true when they return within the threshold.
+  const followRef = useRef(true)
 
   const isStreaming = narrationStatus === 'streaming'
 
-  // Auto-scroll to bottom when new content arrives
+  /** How close to the bottom (px) still counts as "following". */
+  const FOLLOW_THRESHOLD = 40
+
+  function handleScroll() {
+    const el = scrollRef.current
+    if (!el) return
+    followRef.current =
+      el.scrollHeight - el.scrollTop - el.clientHeight <= FOLLOW_THRESHOLD
+  }
+
+  // Follow new narration ONLY if the reader is already near the bottom.
+  // A reader who scrolled up to reread keeps their position exactly —
+  // no yanking mid-stream. Streaming appends jump instantly ("auto",
+  // token-by-token smoothness would fight itself); completed turns
+  // glide ("smooth"). jsdom has no element scrollTo — fall back to
+  // direct scrollTop assignment.
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+    const el = scrollRef.current
+    if (!el || !followRef.current) return
+    const behavior: ScrollBehavior = isStreaming ? 'auto' : 'smooth'
+    if (typeof el.scrollTo === 'function') {
+      el.scrollTo({ top: el.scrollHeight, behavior })
+    } else {
+      el.scrollTop = el.scrollHeight
     }
-  }, [turns, streamingText])
+  }, [turns, streamingText, isStreaming])
 
   // Auto-dismiss the dice-check popup after its display window. The
   // component owns this timing (not the hook) — same division of
@@ -76,6 +102,7 @@ export function StoryPanel({
           around a centered reading column instead of longer lines. */}
       <div
         ref={scrollRef}
+        onScroll={handleScroll}
         className="flex-1 overflow-y-auto min-h-0 px-4 py-2"
         data-testid="story-scroll"
       >
