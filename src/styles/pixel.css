@@ -296,6 +296,28 @@
   transform-box: fill-box;
 }
 
+/* Idle breathing — a barely-there vertical settle, anchored at the feet. */
+@keyframes sprite-breathe {
+  0%, 100% { transform: scaleY(1); }
+  50%      { transform: scaleY(1.03); }
+}
+
+.sprite-breathe {
+  animation: sprite-breathe 3.4s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+
+/* Idle blink — eyes closed for a single beat every few seconds. */
+@keyframes sprite-blink {
+  0%, 92%, 100% { opacity: 1; }
+  94%, 97%      { opacity: 0; }
+}
+
+.sprite-blink {
+  animation: sprite-blink 5.2s steps(1) infinite;
+}
+
 /* ── Water shimmer ─────────────────────────────────────────────────────────── */
 
 @keyframes water-shimmer {
@@ -442,7 +464,9 @@
   .world-band,
   .world-clouds,
   .world-sway,
-  .world-smoke {
+  .world-smoke,
+  .sprite-breathe,
+  .sprite-blink {
     animation: none !important;
   }
   .pixel-bar-fill {

@@ -73,6 +73,19 @@ describe('AdventureWorldPreview — ambient animation (biome furniture, reduced-
   })
 })
 
+describe('AdventureWorldPreview — player presence', () => {
+  it('the party leader is visible in every scene, idle-animated', () => {
+    for (const type of ['outdoor', 'town', 'dungeon', 'region', null] as const) {
+      const { container, unmount } = renderPreview(type)
+      const sprite = screen.getByTestId('player-sprite')
+      expect(sprite).toBeInTheDocument()
+      expect(container.querySelector('.sprite-breathe')).toBeInTheDocument()
+      expect(container.querySelector('.sprite-blink')).toBeInTheDocument()
+      unmount()
+    }
+  })
+})
+
 describe('AdventureWorldPreview — decorative contract', () => {
   it('is aria-hidden and pointer-events-none (never intercepts play)', () => {
     renderPreview('town')

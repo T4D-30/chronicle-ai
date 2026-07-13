@@ -35,6 +35,7 @@
 import type { ReactNode } from 'react'
 import { AmbientOverlay } from '@/components/pixel'
 import type { AmbienceKind } from '@/components/pixel'
+import { PlayerSprite } from './PlayerSprite'
 import type { LocationType } from '@/types/campaign'
 
 export type WorldSceneKind =
@@ -329,6 +330,12 @@ export function AdventureWorldPreview({
       >
         {scene.furniture}
       </svg>
+
+      {/* The party leader, present in the world — idle breathing/blink
+          only, standing on the near ground ridge. */}
+      <div className="absolute" style={{ left: '30%', bottom: '26%', width: 26, height: 39 }}>
+        <PlayerSprite className="w-full h-full" />
+      </div>
 
       {/* Biome-furniture ambience (fireflies/fog) — reuses the existing
           reduced-motion-safe particle system. */}
