@@ -9,9 +9,12 @@ Codex is the implementation and verification engineer for ChronAI.
 Before changing code, read:
 1. AGENTS.md
 2. docs/PROJECT_STATE.md
-3. docs/UI_VISION.md
-4. docs/STYLE_GUIDE.md
-5. Any phase plan named by the user
+3. docs/ROADMAP.md
+4. docs/GAME_DESIGN.md
+5. docs/DECISIONS.md
+6. docs/ARCHITECTURE.md
+7. docs/UI_VISION.md
+8. Any phase plan named by the user
 
 ## Startup
 
@@ -24,9 +27,14 @@ Inspect existing work before editing.
 
 ## Rules
 
+- Read `docs/PROJECT_STATE.md` before implementing.
+- Continue from the current milestone.
+- Never restart completed phases.
 - Do not recreate completed work.
 - Do not redesign approved architecture.
+- Never introduce parallel architectures.
 - Reuse existing components and patterns.
+- Follow existing patterns.
 - Presentation may read game state but never mutate it directly.
 - Never fabricate world state.
 - Never write directly to Supabase from presentation components.
@@ -45,7 +53,9 @@ Inspect existing work before editing.
 6. Remove temporary artifacts
 7. Commit
 8. Update docs/PROJECT_STATE.md
-9. Summarize results and limitations
+9. Append docs/CHANGELOG.md
+10. Update docs/ARCHITECTURE.md if responsibilities changed
+11. Summarize results and limitations
 
 ## Verification
 
@@ -63,11 +73,15 @@ For visual work also verify:
 
 ## Handoff
 
-At the end of work, update `docs/PROJECT_STATE.md` with:
+After every completed phase, update `docs/PROJECT_STATE.md` with:
 - what completed
 - what remains
 - current branch and git status
 - temporary files
 - next recommended task
+
+Append `docs/CHANGELOG.md` with the date, branch, summary, architectural decisions, and verification results. Update `docs/ARCHITECTURE.md` when responsibilities, boundaries, or data flow changed.
+
+Leave the repository ready for a fresh AI session.
 
 Keep this file concise. Do not modify unrelated files.

@@ -12,6 +12,11 @@ documents: [CHRONICLE_CONSTITUTION.md](CHRONICLE_CONSTITUTION.md)
 (what may never be violated) and [STYLE_GUIDE.md](STYLE_GUIDE.md)
 (tokens, primitives, and code patterns).
 
+Use this file for long-term presentation philosophy. Current implementation
+state belongs in [PROJECT_STATE.md](PROJECT_STATE.md), historical delivery
+notes belong in [CHANGELOG.md](CHANGELOG.md), and system ownership belongs in
+[ARCHITECTURE.md](ARCHITECTURE.md).
+
 ---
 
 ## Vision
@@ -289,15 +294,11 @@ Not in UI 3.0; each is a later phase evaluated against this document:
 - Real environment/sprite/audio assets (licensing decision required).
 - Day/night cycle and weather-driven scenes (blocked on Phase 10
   Living World data — honesty rule).
-- Dialogue system with speaker names, portraits, and typed reveal.
-- Adventure story view will eventually transition to a dialogue system
-  docked over a full-bleed world scene, following the Combat HUD and
-  classic JRPG dialogue architecture. The world remains the primary
-  visual focus while dialogue overlays it rather than consuming
-  separate layout space. (The dialogue-readability pass prepared this:
-  the scene viewport is content-aware and collapses when no artwork
-  exists, so re-inflating it — or going full-bleed behind an overlay —
-  needs no layout redesign.)
+- Dialogue cinematics beyond the playable-overworld foundation. The current
+  `DialogueWindow` already docks real Director text, typed reveal, suggested
+  actions, and free input over the visible world; a later phase may add real
+  portraits, richer pacing, and cinematic transitions without changing its
+  action or narration contracts.
 - `/menu` route alias (dedicated routing-cleanup phase; `/dashboard`
   path is unchanged by UI 3.0 by explicit decision).
 
