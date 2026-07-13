@@ -41,14 +41,17 @@
 import { useState } from 'react'
 import { LocationTitle } from '@/components/pixel'
 import { AdventureWorldPreview } from './world/AdventureWorldPreview'
-import type { Campaign } from '@/lib/supabase'
+import { facingFor } from './world/characterAppearance'
+import type { Campaign, CharacterRecord } from '@/lib/supabase'
 
 interface AdventureScenePanelProps {
   campaign: Campaign
+  /** The real party leader — drives the world preview's sprite (UI 4.2). */
+  character?: CharacterRecord | null
   children: React.ReactNode
 }
 
-export function AdventureScenePanel({ campaign, children }: AdventureScenePanelProps) {
+export function AdventureScenePanel({ campaign, character = null, children }: AdventureScenePanelProps) {
   const { worldState } = campaign
   const currentLocation = worldState.currentLocationId
     ? worldState.locations.find((l) => l.id === worldState.currentLocationId)
@@ -125,6 +128,8 @@ export function AdventureScenePanel({ campaign, children }: AdventureScenePanelP
           <AdventureWorldPreview
             locationType={currentLocation?.type ?? null}
             worldTime={worldState.worldTime}
+            character={character}
+            facing={facingFor(currentLocation?.id)}
           />
         )}
         <div className="flex-1 min-h-0 flex flex-col relative z-10">

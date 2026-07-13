@@ -39,7 +39,10 @@ import { PlayerSprite } from './PlayerSprite'
 import { WeatherLayer } from './WeatherLayer'
 import type { WorldWeather } from './WeatherLayer'
 import { parseTimeOfDay, tintFor } from './timeOfDay'
+import { bodyKindFor, weaponKindFor } from './characterAppearance'
+import type { Facing } from './characterAppearance'
 import type { LocationType } from '@/types/campaign'
+import type { CharacterRecord } from '@/lib/supabase'
 
 export type WorldSceneKind =
   | 'forest'
@@ -280,6 +283,12 @@ interface AdventureWorldPreviewProps {
    *  callers pass nothing and the sky stays clear. Exists so Phase 10's
    *  real field wires in as a one-line prop. */
   weather?: WorldWeather | null
+  /** The real party leader — drives the sprite's build/accent/weapon
+   *  (UI 4.2). Null renders the generic traveler. */
+  character?: CharacterRecord | null
+  /** Stable per-location facing, derived by the caller from the real
+   *  location id. */
+  facing?: Facing
   className?: string
 }
 
@@ -287,6 +296,8 @@ export function AdventureWorldPreview({
   locationType,
   worldTime = null,
   weather = null,
+  character = null,
+  facing = 'right',
   className,
 }: AdventureWorldPreviewProps) {
   const kind: WorldSceneKind = locationType ? SCENE_FOR_TYPE[locationType] : 'default'
@@ -346,10 +357,16 @@ export function AdventureWorldPreview({
         {scene.furniture}
       </svg>
 
-      {/* The party leader, present in the world — idle breathing/blink
-          only, standing on the near ground ridge. */}
+      {/* The party leader, present in the world — reflecting the real
+          character's build, accent, and equipped weapon (UI 4.2). */}
       <div className="absolute" style={{ left: '30%', bottom: '40%', width: 26, height: 39 }}>
-        <PlayerSprite className="w-full h-full" />
+        <PlayerSprite
+          className="w-full h-full"
+          body={bodyKindFor(character?.sheet.archetype)}
+          weapon={weaponKindFor(character?.sheet.equipment)}
+          archetype={character?.sheet.archetype ?? null}
+          facing={facing}
+        />
       </div>
 
       {/* Biome-furniture ambience (fireflies/fog) — reuses the existing

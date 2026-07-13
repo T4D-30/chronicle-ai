@@ -6,12 +6,14 @@
  * mapping, the neutral default, and the decorative/pointer-inert
  * contract.
  */
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect } from 'vitest'
 import { AdventureWorldPreview } from '@/components/adventure/world/AdventureWorldPreview'
 import { WeatherLayer } from '@/components/adventure/world/WeatherLayer'
+import { PlayerSprite } from '@/components/adventure/world/PlayerSprite'
 import { parseTimeOfDay } from '@/components/adventure/world/timeOfDay'
 import type { LocationType } from '@/types/campaign'
+import type { CharacterRecord } from '@/lib/supabase'
 
 function renderPreview(locationType: LocationType | null, worldTime: string | null = null) {
   return render(
@@ -85,6 +87,111 @@ describe('AdventureWorldPreview — player presence', () => {
       expect(container.querySelector('.sprite-blink')).toBeInTheDocument()
       unmount()
     }
+  })
+})
+
+describe('PlayerSprite — character presence (UI 4.2)', () => {
+  function renderSprite(props: Parameters<typeof PlayerSprite>[0] = {}) {
+    return render(<div style={{ position: 'relative' }}><PlayerSprite {...props} /></div>)
+  }
+
+  it('renders the generic traveler with no weapon by default', () => {
+    renderSprite()
+    const sprite = screen.getByTestId('player-sprite')
+    expect(sprite).toHaveAttribute('data-body', 'traveler')
+    expect(sprite).toHaveAttribute('data-weapon', 'none')
+    expect(sprite).toHaveAttribute('data-facing', 'right')
+    expect(screen.queryByTestId('sprite-weapon')).not.toBeInTheDocument()
+  })
+
+  it.each(['bruiser', 'skirmisher', 'devout', 'caster'] as const)(
+    'renders the %s build',
+    (body) => {
+      renderSprite({ body })
+      expect(screen.getByTestId('player-sprite')).toHaveAttribute('data-body', body)
+    },
+  )
+
+  it.each(['sword', 'dagger', 'axe', 'bow', 'staff', 'mace', 'spear'] as const)(
+    'draws the %s silhouette when equipped',
+    (weapon) => {
+      renderSprite({ weapon })
+      expect(screen.getByTestId('sprite-weapon')).toHaveAttribute('data-weapon', weapon)
+    },
+  )
+
+  it('flips horizontally when facing left', () => {
+    const { container } = renderSprite({ facing: 'left' })
+    const svg = container.querySelector('svg')
+    expect(svg).toHaveStyle({ transform: 'scaleX(-1)' })
+  })
+
+  it('companion slot exists but renders nothing (no companion system exists)', () => {
+    renderSprite()
+    expect(screen.getByTestId('companion-slot')).toBeEmptyDOMElement()
+  })
+
+  it('renders a provided companion in the slot', () => {
+    renderSprite({ companion: <span data-testid="future-companion" /> })
+    expect(screen.getByTestId('companion-slot')).toContainElement(
+      screen.getByTestId('future-companion'),
+    )
+  })
+
+  it('asset override: probes the portraits slot and swaps in real art on load', () => {
+    renderSprite({ archetype: 'Wizard' })
+    const probe = screen.getByTestId('player-sprite-probe')
+    expect(probe).toHaveAttribute('src', '/assets/sprites/portraits/player-wizard.png')
+    fireEvent.load(probe)
+    expect(screen.getByTestId('player-sprite-asset')).toBeInTheDocument()
+  })
+
+  it('no archetype → no probe, procedural figure only', () => {
+    renderSprite()
+    expect(screen.queryByTestId('player-sprite-probe')).not.toBeInTheDocument()
+  })
+})
+
+describe('AdventureWorldPreview — real character drives the sprite (UI 4.2)', () => {
+  function makeCharacter(archetype: string, weaponName?: string): CharacterRecord {
+    return {
+      id: 'char-1', userId: 'user-1', portraitUrl: null, bio: '', experience: 0,
+      tempHp: 0, deathSavesSuccess: 0, deathSavesFailure: 0,
+      conditions: [], features: [], inventory: [], spells: {},
+      createdAt: '', updatedAt: '',
+      sheet: {
+        name: 'Test Hero', level: 1, archetype, ancestry: 'human', background: 'soldier',
+        scores: { strength: 10, dexterity: 10, constitution: 10, intelligence: 10, wisdom: 10, charisma: 10 },
+        modifiers: { strength: 0, dexterity: 0, constitution: 0, intelligence: 0, wisdom: 0, charisma: 0 },
+        hitDie: 'd8', maxHp: 10, currentHp: 10, armorClass: 10, proficiencyBonus: 2,
+        skillProficiencies: [], savingThrowProficiencies: [],
+        equipment: weaponName
+          ? [{ id: 'w1', name: weaponName, slot: 'weapon', equipped: true }]
+          : [],
+        conditions: [], deathSaveSuccesses: 0, deathSaveFailures: 0,
+      },
+    } as CharacterRecord
+  }
+
+  it('a wizard with a staff renders the caster build holding a staff', () => {
+    render(
+      <div style={{ position: 'relative' }}>
+        <AdventureWorldPreview
+          locationType="outdoor"
+          character={makeCharacter('wizard', 'Gnarled Oak Staff')}
+          facing="left"
+        />
+      </div>,
+    )
+    const sprite = screen.getByTestId('player-sprite')
+    expect(sprite).toHaveAttribute('data-body', 'caster')
+    expect(sprite).toHaveAttribute('data-weapon', 'staff')
+    expect(sprite).toHaveAttribute('data-facing', 'left')
+  })
+
+  it('no character renders the generic traveler', () => {
+    renderPreview('outdoor')
+    expect(screen.getByTestId('player-sprite')).toHaveAttribute('data-body', 'traveler')
   })
 })
 

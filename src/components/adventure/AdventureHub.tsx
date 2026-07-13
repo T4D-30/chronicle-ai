@@ -282,7 +282,7 @@ function ActivePanelContent({
     case 'story':
       return (
         <div id="panel-story" role="tabpanel" className="h-full flex flex-col">
-          <AdventureScenePanel campaign={campaign}>
+          <AdventureScenePanel campaign={campaign} character={character}>
           <StoryPanel
             campaign={campaign}
             turns={turns}
