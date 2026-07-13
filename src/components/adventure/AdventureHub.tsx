@@ -292,11 +292,12 @@ function ActivePanelContent({
             lastCheckResult={state.lastCheckResult}
             onClearCheckResult={actions.clearCheckResult}
           />
-          {/* Suggested action chips above the input bar */}
+          {/* Suggested action chips above the input bar — no visual
+              heading (dialogue-readability pass); the aria-label keeps
+              the semantics the removed "Suggested" label provided. */}
           {state.suggestedActions.length > 0 && state.narrationStatus !== 'streaming' && (
             <div className="flex-shrink-0 px-4 pb-1 pt-2 max-w-3xl mx-auto w-full">
-              <p className="stat-label text-void-600 mb-1.5">Suggested</p>
-              <div className="flex gap-2 flex-wrap">
+              <div className="flex gap-2 flex-wrap" role="group" aria-label="Suggested actions">
                 {state.suggestedActions.map((action, i) => (
                   <Button
                     key={i}
