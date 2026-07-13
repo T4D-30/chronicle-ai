@@ -147,4 +147,34 @@ describe('AdventureScenePanel — content-aware scene viewport (dialogue-readabi
     expect(screen.getByTestId('scene-location-title')).toHaveTextContent('Rivergate')
     expect(screen.getByTestId('scene-time-line')).toHaveTextContent('Dusk, third day')
   })
+
+  describe('world presence (UI 4.1) — the idle world behind the dialogue', () => {
+    it('renders the world preview as a background layer when no artwork exists', () => {
+      renderScene(CAMPAIGN_AT_TOWN)
+      const preview = screen.getByTestId('adventure-world-preview')
+      expect(preview).toBeInTheDocument()
+      expect(preview).toHaveAttribute('aria-hidden', 'true')
+      expect(preview.className).toContain('pointer-events-none')
+      expect(preview.className).toContain('absolute')
+    })
+
+    it('renders the world preview even when no current location resolves (neutral scene)', () => {
+      renderScene()
+      expect(screen.getByTestId('adventure-world-preview')).toBeInTheDocument()
+    })
+
+    it('hides the world preview once real artwork carries the world instead', () => {
+      renderScene(CAMPAIGN_AT_TOWN)
+      fireEvent.load(screen.getByTestId('scene-artwork-probe'))
+      expect(screen.getByTestId('scene-artwork')).toBeInTheDocument()
+      expect(screen.queryByTestId('adventure-world-preview')).not.toBeInTheDocument()
+    })
+
+    it('story children render above the preview, not inside it', () => {
+      renderScene(CAMPAIGN_AT_TOWN)
+      const preview = screen.getByTestId('adventure-world-preview')
+      const children = screen.getByTestId('scene-children')
+      expect(preview).not.toContainElement(children)
+    })
+  })
 })

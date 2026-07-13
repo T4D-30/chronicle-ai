@@ -40,6 +40,7 @@
 
 import { useState } from 'react'
 import { LocationTitle } from '@/components/pixel'
+import { AdventureWorldPreview } from './world/AdventureWorldPreview'
 import type { Campaign } from '@/lib/supabase'
 
 interface AdventureScenePanelProps {
@@ -114,8 +115,21 @@ export function AdventureScenePanel({ campaign, children }: AdventureScenePanelP
         </div>
       )}
 
-      <div className="flex-1 min-h-0 flex flex-col">
-        {children}
+      {/* Story content area. When no real artwork exists, the world's
+          idle state (UI 4.1 World Presence) renders BEHIND the dialogue
+          as a background layer — dialogue keeps its full height, and
+          the previously blank space becomes a living world. With real
+          artwork, the viewport above carries the world instead. */}
+      <div className="flex-1 min-h-0 flex flex-col relative">
+        {!(artworkSrc && artworkReady) && (
+          <AdventureWorldPreview
+            locationType={currentLocation?.type ?? null}
+            worldTime={worldState.worldTime}
+          />
+        )}
+        <div className="flex-1 min-h-0 flex flex-col relative z-10">
+          {children}
+        </div>
       </div>
     </div>
   )
