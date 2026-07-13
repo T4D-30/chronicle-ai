@@ -7,13 +7,18 @@
  *  - Session controls (pause, resume, end)
  *  - Error banner rendering
  */
-import { render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, it, expect, vi } from 'vitest'
 import { AdventureHub } from '@/components/adventure/AdventureHub'
 import type { AdventureState, AdventureActions } from '@/components/adventure/useAdventureSession'
 import { DEFAULT_DIRECTOR_CONFIG, DEFAULT_WORLD_STATE } from '@/types/campaign'
+import { initCombat } from '@/lib/engine'
+import { STEP_MS } from '@/components/adventure/overworld/PlayerController'
+import { TRANSITION_PHASE_MS } from '@/components/adventure/overworld/WorldTransition'
+
+const DEBUG_ENABLED = import.meta.env.VITE_ENABLE_DEBUG_PANEL === 'true'
 
 const MOCK_CAMPAIGN = {
   id: 'camp-1', userId: 'user-1', title: 'The Shattered Throne',
@@ -125,10 +130,11 @@ describe('AdventureHub — layout', () => {
     expect(screen.getByRole('tablist', { name: 'Adventure panels' })).toBeInTheDocument()
   })
 
-  it('renders 7 panel tabs (debug hidden without VITE_ENABLE_DEBUG_PANEL)', () => {
+  it('renders the expected bottom panel tabs for the current debug flag', () => {
     renderHub()
-    const tabs = screen.getAllByRole('tab')
-    expect(tabs).toHaveLength(7)  // debug tab absent when flag unset
+    const tabNav = screen.getByRole('tablist', { name: 'Adventure panels' })
+    const tabs = within(tabNav).getAllByRole('tab')
+    expect(tabs).toHaveLength(DEBUG_ENABLED ? 9 : 8)
   })
 
   it('starts with the Story tab active', () => {
@@ -268,9 +274,15 @@ describe('AdventureHub — panel switching', () => {
     expect(screen.queryByRole('button', { name: 'Level Up' })).not.toBeInTheDocument()
   })
 
-  it('does not render Debug tab without VITE_ENABLE_DEBUG_PANEL flag', () => {
+  it('renders the Debug tab only when VITE_ENABLE_DEBUG_PANEL is true', () => {
     renderHub()
-    expect(screen.queryByRole('tab', { name: /Debug/i })).not.toBeInTheDocument()
+    const tabNav = screen.getByRole('tablist', { name: 'Adventure panels' })
+    const debugTab = within(tabNav).queryByRole('tab', { name: /Debug/i })
+    if (DEBUG_ENABLED) {
+      expect(debugTab).toBeInTheDocument()
+    } else {
+      expect(debugTab).not.toBeInTheDocument()
+    }
   })
 
   it('marks the newly active tab as selected', async () => {
@@ -279,6 +291,90 @@ describe('AdventureHub — panel switching', () => {
     await user.click(screen.getByRole('tab', { name: /Dice/i }))
     expect(screen.getByRole('tab', { name: /Story/i })).toHaveAttribute('aria-selected', 'false')
     expect(screen.getByRole('tab', { name: /Dice/i })).toHaveAttribute('aria-selected', 'true')
+  })
+
+  it('hands an overworld encounter to combat and restores the current area and movement afterward', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(0)
+    const actions = makeActions()
+    const enemy = {
+      id: 'forest-wolf',
+      name: 'Forest Wolf',
+      isPlayer: false as const,
+      maxHp: 11,
+      currentHp: 11,
+      armorClass: 13,
+      attackBonus: 4,
+      damageDie: 'd6' as const,
+      damageBonus: 2,
+      dexMod: 2,
+    }
+    const combatState = initCombat(
+      { id: 'player', name: MOCK_CHARACTER.sheet.name, isPlayer: true as const, sheet: MOCK_CHARACTER.sheet },
+      [enemy],
+    )
+
+    try {
+      const { rerender } = render(
+        <MemoryRouter>
+          <AdventureHub state={makeState()} actions={actions} />
+        </MemoryRouter>,
+      )
+
+      function step(key: string) {
+        fireEvent.keyDown(window, { key })
+        act(() => {
+          vi.advanceTimersByTime(STEP_MS + 10)
+        })
+      }
+
+      fireEvent.click(screen.getByRole('tab', { name: /World/i }))
+      expect(screen.getByTestId('overworld-mode')).toBeInTheDocument()
+
+      // Monastery spawn (7,8) -> forest gate (6,0).
+      step('ArrowLeft')
+      for (let i = 0; i < 8; i++) step('ArrowUp')
+      act(() => {
+        vi.advanceTimersByTime(TRANSITION_PHASE_MS + 5)
+      })
+      act(() => {
+        vi.advanceTimersByTime(TRANSITION_PHASE_MS + 5)
+      })
+      expect(screen.getByTestId('overworld-scene')).toHaveAttribute('data-map', 'forest-path')
+
+      // Forest spawn (5,10) -> ambush (3,3). The real encounter adapter
+      // must hand the fixture enemy to the existing combat action.
+      for (let i = 0; i < 2; i++) step('ArrowUp')
+      step('ArrowLeft')
+      step('ArrowLeft')
+      for (let i = 0; i < 5; i++) step('ArrowUp')
+      expect(actions.startCombat).toHaveBeenCalledOnce()
+      expect(actions.startCombat).toHaveBeenCalledWith([
+        expect.objectContaining({ id: 'wolf-1', name: 'Forest Wolf' }),
+      ])
+
+      rerender(
+        <MemoryRouter>
+          <AdventureHub state={makeState({ combatState })} actions={actions} />
+        </MemoryRouter>,
+      )
+      expect(screen.getByTestId('combat-panel')).toBeInTheDocument()
+      expect(screen.queryByTestId('overworld-mode')).not.toBeInTheDocument()
+
+      rerender(
+        <MemoryRouter>
+          <AdventureHub state={makeState({ combatState: null })} actions={actions} />
+        </MemoryRouter>,
+      )
+      expect(screen.getByTestId('overworld-mode')).toBeInTheDocument()
+      expect(screen.getByTestId('overworld-scene')).toHaveAttribute('data-map', 'forest-path')
+      expect(screen.getByTestId('overworld-player')).toHaveAttribute('data-y', '10')
+
+      step('ArrowUp')
+      expect(screen.getByTestId('overworld-player')).toHaveAttribute('data-y', '9')
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
 

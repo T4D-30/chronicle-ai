@@ -82,7 +82,7 @@ export function DialogueWindow({
       role="dialog"
       aria-label={`Dialogue with ${speaker}`}
     >
-      <div className="chr-panel rounded-lg max-w-3xl mx-auto p-4">
+      <div className="chr-panel rounded-lg max-w-3xl max-h-[60vh] mx-auto p-4 overflow-y-auto">
         <div className="flex items-center justify-between mb-2">
           <span
             className="font-pixel-display text-[10px] text-bronze-400 uppercase"

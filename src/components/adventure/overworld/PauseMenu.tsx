@@ -13,6 +13,7 @@
  * the pause menu reads state, it does not own modals.
  */
 
+import { useEffect, useRef } from 'react'
 import { CharacterSidebar } from '../CharacterSidebar'
 import { JournalPanel } from '../panels/JournalPanel'
 import { QuestsPanel } from '../panels/QuestsPanel'
@@ -42,11 +43,43 @@ interface PauseMenuProps {
 
 export function PauseMenu({ state, tab, onSelectTab, onClose }: PauseMenuProps) {
   const { campaign, character, session } = state
+  const dialogRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const previouslyFocused = document.activeElement as HTMLElement | null
+    const selectedTab = dialogRef.current?.querySelector<HTMLElement>('[aria-current="page"]')
+    selectedTab?.focus()
+
+    function trapFocus(e: KeyboardEvent) {
+      if (e.key !== 'Tab') return
+      const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      )
+      if (!focusable || focusable.length === 0) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
+
+    document.addEventListener('keydown', trapFocus)
+    return () => {
+      document.removeEventListener('keydown', trapFocus)
+      previouslyFocused?.focus()
+    }
+  }, [])
+
   if (!campaign || !session) return null
 
   return (
     <div
-      className="absolute inset-0 z-40 flex bg-void-950/85 backdrop-blur-sm menu-enter"
+      ref={dialogRef}
+      className="absolute inset-0 z-40 flex flex-col sm:flex-row bg-void-950/85 backdrop-blur-sm menu-enter"
       data-testid="pause-menu"
       role="dialog"
       aria-modal="true"
@@ -54,10 +87,10 @@ export function PauseMenu({ state, tab, onSelectTab, onClose }: PauseMenuProps) 
     >
       {/* Tab rail */}
       <nav
-        className="flex-shrink-0 w-44 flex flex-col gap-1 p-3 border-r border-bronze-800/50"
+        className="flex-shrink-0 w-full sm:w-44 flex flex-row sm:flex-col gap-1 p-2 sm:p-3 border-b sm:border-b-0 sm:border-r border-bronze-800/50 overflow-x-auto"
         aria-label="Pause menu sections"
       >
-        <p className="font-pixel-display text-[10px] text-bronze-400 uppercase px-2 pb-2">Paused</p>
+        <p className="hidden sm:block font-pixel-display text-[10px] text-bronze-400 uppercase px-2 pb-2">Paused</p>
         {PAUSE_TABS.map((t) => (
           <button
             key={t.id}
@@ -65,7 +98,7 @@ export function PauseMenu({ state, tab, onSelectTab, onClose }: PauseMenuProps) 
             onClick={() => onSelectTab(t.id)}
             aria-current={tab === t.id ? 'page' : undefined}
             className={[
-              'flex items-center gap-2 px-3 py-2 rounded-sm text-left transition-all font-body text-sm font-medium border',
+              'flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-sm text-left transition-all font-body text-sm font-medium border',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-arcane-400',
               tab === t.id
                 ? 'bg-panel-800 text-arcane-300 border-bronze-500'
@@ -80,7 +113,7 @@ export function PauseMenu({ state, tab, onSelectTab, onClose }: PauseMenuProps) 
         <button
           type="button"
           onClick={onClose}
-          className="mt-auto flex items-center gap-2 px-3 py-2 rounded-sm text-left font-body text-sm text-void-500 hover:text-arcane-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-arcane-400"
+          className="flex-shrink-0 sm:mt-auto flex items-center gap-2 px-3 py-2 rounded-sm text-left font-body text-sm text-void-500 hover:text-arcane-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-arcane-400"
           data-testid="pause-close"
         >
           ✕ Resume (Esc)
@@ -88,7 +121,7 @@ export function PauseMenu({ state, tab, onSelectTab, onClose }: PauseMenuProps) 
       </nav>
 
       {/* Panel content — the EXISTING components, unmodified */}
-      <div className="flex-1 min-w-0 overflow-hidden" data-testid="pause-panel">
+      <div className="flex-1 min-w-0 min-h-0 overflow-hidden" data-testid="pause-panel">
         {tab === 'character' && character && <CharacterSidebar character={character} />}
         {tab === 'journal' && (
           <JournalPanel

@@ -3,7 +3,7 @@
  * Covers: AdventureHub touch targets, library skeleton loading,
  * and LandingPage value props.
  */
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, it, expect, vi } from 'vitest'
 
@@ -13,6 +13,7 @@ import { AdventureHub } from '@/components/adventure/AdventureHub'
 import type { AdventureState, AdventureActions } from '@/components/adventure/useAdventureSession'
 import { DEFAULT_DIRECTOR_CONFIG, DEFAULT_WORLD_STATE } from '@/types/campaign'
 
+const DEBUG_ENABLED = import.meta.env.VITE_ENABLE_DEBUG_PANEL === 'true'
 
 const MOCK_STATE: AdventureState = {
   status: 'ready',
@@ -82,7 +83,7 @@ describe('AdventureHub — touch targets', () => {
 
   it('tab nav buttons have min-h-[44px] class for touch target compliance', () => {
     renderHub()
-    const tabs = screen.getAllByRole('tab')
+    const tabs = within(screen.getByTestId('adventure-tab-nav')).getAllByRole('tab')
     expect(tabs.length).toBeGreaterThan(0)
     // Every tab button should carry the min-height touch target class
     tabs.forEach((tab) => {
@@ -90,9 +91,10 @@ describe('AdventureHub — touch targets', () => {
     })
   })
 
-  it('renders 7 adventure panel tabs (debug hidden in test env)', () => {
+  it('renders the expected adventure panel tabs for the current debug flag', () => {
     renderHub()
-    expect(screen.getAllByRole('tab')).toHaveLength(7)  // debug hidden without flag
+    const tabs = within(screen.getByTestId('adventure-tab-nav')).getAllByRole('tab')
+    expect(tabs).toHaveLength(DEBUG_ENABLED ? 9 : 8)
   })
 
   it('tab nav has safe-area-bottom class for iOS notch', () => {

@@ -27,19 +27,38 @@ import { OVERWORLD_MAPS, monasteryCourtyard } from './maps'
 import type { OverworldIntent } from './overworldTypes'
 import type { AdventureState, AdventureActions } from '../useAdventureSession'
 
+export interface OverworldArea {
+  mapId: string
+  spawnId: string
+}
+
+export const DEFAULT_OVERWORLD_AREA: OverworldArea = {
+  mapId: monasteryCourtyard.id,
+  spawnId: 'start',
+}
+
 interface OverworldModeProps {
   state: AdventureState
   actions: AdventureActions
+  area?: OverworldArea
+  onAreaChange?: (area: OverworldArea) => void
 }
 
-export function OverworldMode({ state, actions }: OverworldModeProps) {
+export function OverworldMode({
+  state,
+  actions,
+  area: controlledArea,
+  onAreaChange,
+}: OverworldModeProps) {
   const [dialogue, setDialogue] = useState<{ speaker: string } | null>(null)
   // Current area — presentation state; named-location persistence
   // happens ONLY via the exit intent's grounded text through the
-  // controller, never per tile.
-  const [area, setArea] = useState({ mapId: monasteryCourtyard.id, spawnId: 'start' })
+  // controller, never per tile. AdventureHub may own this so combat
+  // handoff can unmount/remount the world without resetting the area.
+  const [localArea, setLocalArea] = useState<OverworldArea>(DEFAULT_OVERWORLD_AREA)
+  const area = controlledArea ?? localArea
   const [transition, setTransition] = useState<TransitionPhase>(null)
-  const pendingArea = useRef<{ mapId: string; spawnId: string } | null>(null)
+  const pendingArea = useRef<OverworldArea | null>(null)
   // Narration older than the dialogue is stale — only show responses
   // that arrive after it opened.
   const turnCountAtOpen = useRef(0)
@@ -50,13 +69,22 @@ export function OverworldMode({ state, actions }: OverworldModeProps) {
   const busy = state.isActionInFlight || isStreaming
   const locked = !!dialogue || !!transition || busy || !!pauseTab
 
-  // Esc/Tab: pause menu over the frozen map. Esc closes the dialogue
-  // first when one is open (never strands the player — Law 1).
+  function commitArea(nextArea: OverworldArea) {
+    if (onAreaChange) {
+      onAreaChange(nextArea)
+    } else {
+      setLocalArea(nextArea)
+    }
+  }
+
+  // Escape: pause menu over the frozen map. When dialogue is open it
+  // closes that first (never strands the player — Law 1). Tab remains
+  // available for standard keyboard focus navigation.
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key !== 'Escape' && e.key !== 'Tab') return
+      if (e.key !== 'Escape') return
       e.preventDefault()
-      if (dialogue && e.key === 'Escape') {
+      if (dialogue) {
         setDialogue(null)
         return
       }
@@ -72,7 +100,7 @@ export function OverworldMode({ state, actions }: OverworldModeProps) {
     const timer = window.setTimeout(() => {
       if (transition === 'out') {
         if (pendingArea.current) {
-          setArea(pendingArea.current)
+          commitArea(pendingArea.current)
           pendingArea.current = null
         }
         setTransition('in')
@@ -81,7 +109,7 @@ export function OverworldMode({ state, actions }: OverworldModeProps) {
       }
     }, TRANSITION_PHASE_MS)
     return () => window.clearTimeout(timer)
-  }, [transition])
+  }, [transition, onAreaChange])
 
   function onIntent(intent: OverworldIntent) {
     if (intent.type === 'interact') {

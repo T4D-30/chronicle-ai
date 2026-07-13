@@ -1,8 +1,8 @@
 /**
  * Pause Menu Tests — Presentation 3 (Playable Overworld)
  *
- * Esc/Tab opens the existing panels over the paused map; movement is
- * frozen while paused; Esc resumes; the panels are the REAL existing
+ * Esc opens the existing panels over the paused map; movement is frozen
+ * while paused; Esc resumes; Tab retains normal focus navigation; the panels are the REAL existing
  * components (Quest Log, Codex, Atlas, Character, Settings).
  */
 import { render, screen, fireEvent, act } from '@testing-library/react'
@@ -84,10 +84,23 @@ describe('OverworldMode — pause menu', () => {
     expect(screen.queryByTestId('pause-menu')).not.toBeInTheDocument()
   })
 
-  it('Tab also toggles the pause menu', () => {
+  it('does not intercept Tab for pause-menu toggling', () => {
     renderMode()
     fireEvent.keyDown(window, { key: 'Tab' })
-    expect(screen.getByTestId('pause-menu')).toBeInTheDocument()
+    expect(screen.queryByTestId('pause-menu')).not.toBeInTheDocument()
+  })
+
+  it('moves focus into the menu and traps it within the modal', () => {
+    renderMode()
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(screen.getByTestId('pause-tab-character')).toHaveFocus()
+
+    const focusable = screen.getByTestId('pause-menu').querySelectorAll<HTMLElement>(
+      'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+    )
+    focusable[focusable.length - 1].focus()
+    fireEvent.keyDown(document, { key: 'Tab' })
+    expect(screen.getByTestId('pause-tab-character')).toHaveFocus()
   })
 
   it('movement is frozen while paused and restored on resume', () => {

@@ -12,7 +12,7 @@ See `docs/DECISIONS.md` for the append-only rationale behind foundational decisi
 
 ## Active Work
 
-The playable-overworld milestone is complete and awaiting commit/handoff. The unified Adventure Screen keeps the world as the playable surface, docks real Director narration and dialogue over it, exposes contextual interaction plus existing menu panels, and hands encounters to the existing combat flow. The overworld remains presentation/input only: meaningful actions use existing `AdventureActions` (`submitAction` and `startCombat`).
+The playable-overworld milestone is complete and fully verified. The World tab provides the playable map, NPC dialogue stays docked over the visible map, contextual interactions use grounded intents, the pause menu reuses existing panels, and encounters hand off to the existing combat flow. The overworld remains presentation/input only: meaningful actions use existing `AdventureActions` (`submitAction` and `startCombat`). Story and World remain separate AdventureHub tabs in this milestone; merging them into one unified Adventure screen is the next presentation phase, not part of Overworld 9/9.
 
 Primary files in scope:
 - `src/components/adventure/AdventureHub.tsx`
@@ -23,13 +23,14 @@ Primary files in scope:
 
 ## Remaining Work
 
-1. Commit the verified playable-overworld milestone when requested.
-2. Push the feature branch and open a pull request when requested.
-3. Run a manual touch-device pass before claiming touch play; the current overworld movement controls are keyboard-only.
+1. Commit and push the verified playable-overworld milestone.
+2. Open a pull request for review.
+3. Do not claim touch play; the responsive layout is verified at 390×844, but overworld movement remains keyboard-only.
 
 ## Current Git Status
 
-- Branch contains uncommitted playable-overworld review fixes, tests, and continuity-document updates.
+- The continuity-document pass is committed separately as `cee5258`.
+- The playable-overworld implementation, scoped review fixes, tests, and final verification record are ready for their own milestone commit.
 - No preview route, preview page, scratch file, migration, Edge Function, AI Director, rules-engine, persistence, world-tick, or combat-resolution change is present in the reviewed worktree.
 
 ## Known Temporary Files
@@ -38,4 +39,4 @@ Primary files in scope:
 
 ## Next Recommended Task
 
-Start the planned Dialogue Cinematics milestone as a separate phase/branch only after this milestone is committed. Preserve the existing `DialogueWindow`/`submitAction` boundary and add presentation polish without changing Director or rules contracts.
+Create `feature/presentation-unified-adventure-screen` from the landed work and merge the separate Story and World experiences as the next presentation milestone. Recompose the existing overworld, dialogue, actions, pause panels, and combat handoff without changing Director, rules, or persistence contracts.

@@ -37,7 +37,8 @@ import { StoryPanel } from './panels/StoryPanel'
 import { JournalPanel } from './panels/JournalPanel'
 import { QuestsPanel } from './panels/QuestsPanel'
 import { AtlasPanel } from './panels/AtlasPanel'
-import { OverworldMode } from './overworld/OverworldMode'
+import { DEFAULT_OVERWORLD_AREA, OverworldMode } from './overworld/OverworldMode'
+import type { OverworldArea } from './overworld/OverworldMode'
 import { AtlasMapPanel } from './panels/AtlasMapPanel'
 import { CodexPanel } from './panels/CodexPanel'
 import { DebugPanel } from './panels/DebugPanel'
@@ -83,6 +84,7 @@ interface AdventureHubProps {
 export function AdventureHub({ state, actions }: AdventureHubProps) {
   const [activePanel, setActivePanel] = useState<AdventurePanel>('story')
   const [saveConfirmed, setSaveConfirmed] = useState(false)
+  const [overworldArea, setOverworldArea] = useState<OverworldArea>(DEFAULT_OVERWORLD_AREA)
   const { setContext } = useAudio()
 
   const { campaign, character, session, combatState } = state
@@ -207,6 +209,8 @@ export function AdventureHub({ state, actions }: AdventureHubProps) {
               panel={activePanel}
               state={state}
               actions={actions}
+              overworldArea={overworldArea}
+              onOverworldAreaChange={setOverworldArea}
             />
           )}
         </main>
@@ -278,10 +282,14 @@ function ActivePanelContent({
   panel,
   state,
   actions,
+  overworldArea,
+  onOverworldAreaChange,
 }: {
   panel: AdventurePanel
   state: AdventureState
   actions: AdventureActions
+  overworldArea: OverworldArea
+  onOverworldAreaChange: (area: OverworldArea) => void
 }) {
   const { campaign, character, turns, session } = state
   const [levelUpOpen, setLevelUpOpen] = useState(false)
@@ -345,7 +353,12 @@ function ActivePanelContent({
       // for CombatPanel, and combat's end returns here.
       return (
         <div id="panel-overworld" role="tabpanel" className="h-full overflow-hidden">
-          <OverworldMode state={state} actions={actions} />
+          <OverworldMode
+            state={state}
+            actions={actions}
+            area={overworldArea}
+            onAreaChange={onOverworldAreaChange}
+          />
         </div>
       )
     case 'character':
