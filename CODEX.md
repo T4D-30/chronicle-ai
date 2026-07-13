@@ -1,15 +1,73 @@
-# Codex Entry Point
+# CODEX.md
 
-`AGENTS.md` is the source of truth for Chronicle AI agent instructions. Read and follow it before doing any work in this repository.
+## Role
 
-Codex should focus on code review, bug finding, debugging, targeted fixes, and maintainability checks. Keep changes narrow, preserve deterministic engine behavior, and avoid modifying protected areas unless the user explicitly approves it.
+Codex is the implementation and verification engineer for ChronAI.
 
-## Review Checklist
+## Read First
 
-- Verify AI prose does not determine mechanical outcomes.
-- Confirm game state comes from persisted data, not fabricated assumptions.
-- Check for regressions in deterministic rules engine behavior.
-- Verify the implementation follows the current architecture instead of introducing parallel patterns.
-- Look for missing tests around user-facing or behavioral changes.
-- Flag maintainability risks, unclear ownership boundaries, and unnecessary broad refactors.
-- Ensure TypeScript, relevant tests, and production build are run before completion when code changes are made.
+Before changing code, read:
+1. AGENTS.md
+2. docs/PROJECT_STATE.md
+3. docs/UI_VISION.md
+4. docs/STYLE_GUIDE.md
+5. Any phase plan named by the user
+
+## Startup
+
+Always run:
+- git branch --show-current
+- git status
+- git log --oneline -10
+
+Inspect existing work before editing.
+
+## Rules
+
+- Do not recreate completed work.
+- Do not redesign approved architecture.
+- Reuse existing components and patterns.
+- Presentation may read game state but never mutate it directly.
+- Never fabricate world state.
+- Never write directly to Supabase from presentation components.
+- Do not change AI, rules, persistence, combat, or world-tick contracts unless explicitly approved.
+- Remove temporary preview routes and verification files before committing.
+- One verified commit per milestone.
+- Stop and ask when scope or architecture is ambiguous.
+
+## Workflow
+
+1. Inspect
+2. Summarize current state
+3. Propose the smallest safe plan
+4. Implement
+5. Verify
+6. Remove temporary artifacts
+7. Commit
+8. Update docs/PROJECT_STATE.md
+9. Summarize results and limitations
+
+## Verification
+
+Before each commit run:
+- npx tsc --noEmit
+- npx vitest run
+- npm run build:check
+
+For visual work also verify:
+- browser behavior
+- responsive layout
+- accessibility
+- reduced motion
+- zero console errors
+
+## Handoff
+
+At the end of work, update `docs/PROJECT_STATE.md` with:
+- what completed
+- what remains
+- current branch and git status
+- temporary files
+- next recommended task
+
+Keep this file concise. Do not modify unrelated files.
