@@ -4,7 +4,7 @@
 - Current branch: `feature/presentation-playable-overworld`
 - Current milestone: Playable Overworld complete (9/9)
 - Current roadmap position: `docs/ROADMAP.md` > Presentation > Playable Overworld.
-- Current PR: Not open/unknown from local repository state.
+- Current PR: [#3 — Complete Playable Overworld 9/9](https://github.com/T4D-30/chronicle-ai/pull/3) (draft).
 
 ## Recent Architectural Decisions
 
@@ -23,14 +23,15 @@ Primary files in scope:
 
 ## Remaining Work
 
-1. Commit and push the verified playable-overworld milestone.
-2. Open a pull request for review.
+1. Review and merge draft PR #3 when approved; do not merge automatically.
+2. After merge, create the unified Adventure Screen feature branch from the landed work.
 3. Do not claim touch play; the responsive layout is verified at 390×844, but overworld movement remains keyboard-only.
 
 ## Current Git Status
 
 - The continuity-document pass is committed separately as `cee5258`.
-- The playable-overworld implementation, scoped review fixes, tests, and final verification record are ready for their own milestone commit.
+- Playable Overworld 9/9 is committed separately as `23893bb` and pushed to the tracked feature branch.
+- Draft PR #3 is open against `main`; the working tree is expected to be clean after this handoff update.
 - No preview route, preview page, scratch file, migration, Edge Function, AI Director, rules-engine, persistence, world-tick, or combat-resolution change is present in the reviewed worktree.
 
 ## Known Temporary Files
