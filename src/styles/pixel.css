@@ -268,6 +268,34 @@
   animation: cloud-drift var(--drift-duration, 90s) ease-in-out infinite alternate;
 }
 
+/* ── World-presence idle animations (UI 4.1) ───────────────────────────────── */
+
+/* Slow tree sway — rotation anchored at the trunk base. transform-box
+   makes the origin work on SVG groups. */
+@keyframes tree-sway {
+  0%, 100% { transform: rotate(-1.2deg); }
+  50%      { transform: rotate(1.2deg); }
+}
+
+.world-sway {
+  animation: tree-sway var(--sway-duration, 6s) ease-in-out infinite;
+  animation-delay: var(--sway-delay, 0s);
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+
+/* Chimney smoke — puffs rise, spread, and fade. */
+@keyframes smoke-rise {
+  0%   { transform: translateY(0) scale(1); opacity: 0.45; }
+  100% { transform: translateY(-14px) scale(1.9); opacity: 0; }
+}
+
+.world-smoke {
+  animation: smoke-rise var(--smoke-duration, 5s) linear infinite;
+  animation-delay: var(--smoke-delay, 0s);
+  transform-box: fill-box;
+}
+
 /* ── Water shimmer ─────────────────────────────────────────────────────────── */
 
 @keyframes water-shimmer {
@@ -412,7 +440,9 @@
   .pixel-sparkle:focus-visible,
   .dialogue-reveal,
   .world-band,
-  .world-clouds {
+  .world-clouds,
+  .world-sway,
+  .world-smoke {
     animation: none !important;
   }
   .pixel-bar-fill {

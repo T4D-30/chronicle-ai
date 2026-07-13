@@ -43,6 +43,36 @@ describe('AdventureWorldPreview — biome mapping (real LocationTypes only)', ()
   })
 })
 
+describe('AdventureWorldPreview — ambient animation (biome furniture, reduced-motion-safe)', () => {
+  it('forest breathes: swaying trees and fireflies', () => {
+    const { container } = renderPreview('outdoor')
+    expect(container.querySelectorAll('.world-sway').length).toBeGreaterThan(0)
+    expect(screen.getByTestId('ambient-fireflies')).toBeInTheDocument()
+  })
+
+  it('village breathes: chimney smoke, flickering windows, drifting clouds', () => {
+    const { container } = renderPreview('town')
+    expect(container.querySelectorAll('.world-smoke').length).toBeGreaterThan(0)
+    expect(container.querySelectorAll('.torch-flicker').length).toBeGreaterThan(0)
+    expect(screen.getByTestId('scene-clouds')).toBeInTheDocument()
+  })
+
+  it('dungeon breathes: flickering torches and drifting fog', () => {
+    const { container } = renderPreview('dungeon')
+    expect(container.querySelectorAll('.torch-flicker').length).toBeGreaterThan(0)
+    expect(screen.getByTestId('ambient-fog')).toBeInTheDocument()
+  })
+
+  it('never renders rain or snow ambience (no weather field exists)', () => {
+    for (const type of ['outdoor', 'town', 'dungeon', 'region', 'building'] as const) {
+      const { unmount } = renderPreview(type)
+      expect(screen.queryByTestId('ambient-rain')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('ambient-snow')).not.toBeInTheDocument()
+      unmount()
+    }
+  })
+})
+
 describe('AdventureWorldPreview — decorative contract', () => {
   it('is aria-hidden and pointer-events-none (never intercepts play)', () => {
     renderPreview('town')

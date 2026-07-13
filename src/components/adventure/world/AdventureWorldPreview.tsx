@@ -33,6 +33,8 @@
  */
 
 import type { ReactNode } from 'react'
+import { AmbientOverlay } from '@/components/pixel'
+import type { AmbienceKind } from '@/components/pixel'
 import type { LocationType } from '@/types/campaign'
 
 export type WorldSceneKind =
@@ -62,6 +64,12 @@ interface SceneSpec {
   furniture: ReactNode
   /** Darker scenes get a heavier readability vignette. */
   vignetteOpacity: number
+  /** Biome-furniture ambience: fireflies in the forest, drifting fog in
+   *  the dungeon — atmosphere for a place that genuinely exists, never
+   *  a weather claim (rain/snow stay gated on a real weather field). */
+  ambience: AmbienceKind
+  /** Slow drifting cloud sheet across the sky band. */
+  clouds: boolean
 }
 
 /* Furniture is hand-authored flat SVG in palette tones — deterministic,
@@ -69,13 +77,22 @@ interface SceneSpec {
 
 const FOREST_FURNITURE = (
   <g data-testid="scene-furniture-forest">
-    {/* pine trees: trunk + stacked triangles */}
+    {/* pine trees: trunk + stacked triangles; each sways at its own
+        pace, anchored at the trunk base */}
     {[[8, 0.9], [20, 1.2], [78, 1.0], [90, 0.8]].map(([x, s], i) => (
       <g key={i} transform={`translate(${x}, ${16 - Number(s) * 8}) scale(${s})`}>
-        <rect x="2.4" y="12" width="1.2" height="3" fill="#241810" />
-        <polygon points="3,0 6,6 0,6" fill="#14261a" />
-        <polygon points="3,3.5 6.6,9.5 -0.6,9.5" fill="#0f1d14" />
-        <polygon points="3,7 7.2,13 -1.2,13" fill="#0b160f" />
+        <g
+          className="world-sway"
+          style={{
+            ['--sway-duration' as string]: `${5.5 + i * 1.3}s`,
+            ['--sway-delay' as string]: `${i * 0.9}s`,
+          }}
+        >
+          <rect x="2.4" y="12" width="1.2" height="3" fill="#241810" />
+          <polygon points="3,0 6,6 0,6" fill="#14261a" />
+          <polygon points="3,3.5 6.6,9.5 -0.6,9.5" fill="#0f1d14" />
+          <polygon points="3,7 7.2,13 -1.2,13" fill="#0b160f" />
+        </g>
       </g>
     ))}
     {/* grass tufts */}
@@ -91,13 +108,31 @@ const FOREST_FURNITURE = (
 
 const VILLAGE_FURNITURE = (
   <g data-testid="scene-furniture-village">
-    {/* houses: body + roof + lit window + chimney */}
+    {/* houses: body + roof + lit window (soft flicker) + chimney with
+        rising smoke puffs */}
     {[[12, 1.1], [34, 0.85], [72, 1.0]].map(([x, s], i) => (
       <g key={i} transform={`translate(${x}, ${10 - Number(s) * 2}) scale(${s})`}>
         <rect x="0" y="6" width="12" height="8" fill="#241a16" />
         <polygon points="-1,6 6,0 13,6" fill="#170f0b" />
-        <rect x="4.5" y="9" width="2.6" height="2.6" fill="#d77a26" opacity="0.8" />
-        <rect x="9" y="1.5" width="1.6" height="4" fill="#1f1814" data-chimney={i === 0 ? 'true' : undefined} />
+        <rect x="4.5" y="9" width="2.6" height="2.6" fill="#d77a26" opacity="0.8" className="torch-flicker" />
+        <rect x="9" y="1.5" width="1.6" height="4" fill="#1f1814" />
+        {[0, 1, 2].map((p) => (
+          <rect
+            key={p}
+            x="9.2"
+            y="0.4"
+            width="1.2"
+            height="1.2"
+            rx="0.4"
+            fill="#6b625a"
+            opacity="0.4"
+            className="world-smoke"
+            style={{
+              ['--smoke-duration' as string]: '5s',
+              ['--smoke-delay' as string]: `${p * 1.6 + i * 0.7}s`,
+            }}
+          />
+        ))}
       </g>
     ))}
     {/* fence posts */}
@@ -127,12 +162,14 @@ const DUNGEON_FURNITURE = (
         />
       )),
     )}
-    {/* torch sconces — flames animate in the ambient milestone */}
+    {/* torch sconces — flickering flames */}
     {[22, 76].map((x, i) => (
       <g key={`t${i}`} transform={`translate(${x}, 4)`}>
         <rect x="0.6" y="2.4" width="1" height="3.6" fill="#241810" />
-        <rect x="0.2" y="0.8" width="1.8" height="2" fill="#d77a26" data-torch="true" />
-        <rect x="0.55" y="0.2" width="1.1" height="1" fill="#e8a74a" />
+        <g className="torch-flicker" style={{ animationDelay: `${i * 1.1}s` }}>
+          <rect x="0.2" y="0.8" width="1.8" height="2" fill="#d77a26" data-torch="true" />
+          <rect x="0.55" y="0.2" width="1.1" height="1" fill="#e8a74a" />
+        </g>
       </g>
     ))}
   </g>
@@ -158,7 +195,7 @@ const INTERIOR_FURNITURE = (
       <rect x="1.2" y="5.4" width="1.2" height="4.6" fill="#170f0b" />
       <rect x="11.6" y="5.4" width="1.2" height="4.6" fill="#170f0b" />
       <rect x="6.2" y="1.8" width="1.4" height="2.2" fill="#e4dcd0" />
-      <rect x="6.5" y="0.9" width="0.8" height="1" fill="#e8a74a" data-candle="true" />
+      <rect x="6.5" y="0.9" width="0.8" height="1" fill="#e8a74a" data-candle="true" className="torch-flicker" />
     </g>
   </g>
 )
@@ -181,36 +218,48 @@ const SCENES: Record<WorldSceneKind, SceneSpec> = {
     ground: ['#0f1d14', '#0b160f'],
     furniture: FOREST_FURNITURE,
     vignetteOpacity: 0.5,
+    ambience: 'fireflies',
+    clouds: false,
   },
   village: {
     sky: 'linear-gradient(180deg, #101014 0%, #1b1a1e 55%, #2b1608 100%)',
     ground: ['#170f0b', '#0f0a08'],
     furniture: VILLAGE_FURNITURE,
     vignetteOpacity: 0.5,
+    ambience: 'none',
+    clouds: true,
   },
   dungeon: {
     sky: 'linear-gradient(180deg, #0a0a0f 0%, #101014 100%)',
     ground: ['#141315', '#0a0a0f'],
     furniture: DUNGEON_FURNITURE,
     vignetteOpacity: 0.7,
+    ambience: 'fog',
+    clouds: false,
   },
   interior: {
     sky: 'linear-gradient(180deg, #1f1814 0%, #241a16 100%)',
     ground: ['#170f0b', '#0f0a08'],
     furniture: INTERIOR_FURNITURE,
     vignetteOpacity: 0.55,
+    ambience: 'none',
+    clouds: false,
   },
   mountains: {
     sky: 'linear-gradient(180deg, #101014 0%, #1b1a1e 60%, #241a16 100%)',
     ground: ['#141315', '#0f0a08'],
     furniture: MOUNTAIN_FURNITURE,
     vignetteOpacity: 0.5,
+    ambience: 'none',
+    clouds: true,
   },
   default: {
     sky: 'linear-gradient(180deg, #101014 0%, #1b1a1e 55%, #241a16 100%)',
     ground: ['#170f0b', '#0f0a08'],
     furniture: null,
     vignetteOpacity: 0.55,
+    ambience: 'none',
+    clouds: false,
   },
 }
 
@@ -243,6 +292,23 @@ export function AdventureWorldPreview({
       {/* Sky / interior wall */}
       <div className="absolute inset-0" style={{ background: scene.sky }} />
 
+      {/* Drifting cloud sheet across the sky band (village/mountains). */}
+      {scene.clouds && (
+        <div
+          className="absolute inset-x-0 world-clouds"
+          data-testid="scene-clouds"
+          style={{
+            top: '4%',
+            height: '30%',
+            ['--drift-duration' as string]: '110s',
+            background:
+              'radial-gradient(ellipse 26% 42% at 24% 45%, rgba(107, 98, 90, 0.10), transparent 70%),' +
+              'radial-gradient(ellipse 20% 34% at 62% 30%, rgba(107, 98, 90, 0.07), transparent 70%),' +
+              'radial-gradient(ellipse 24% 38% at 86% 55%, rgba(107, 98, 90, 0.08), transparent 70%)',
+          }}
+        />
+      )}
+
       {/* Ground band + biome furniture, horizon at ~58% (above the
           ActionBar overlay zone so the world stays visible). */}
       <svg
@@ -263,6 +329,10 @@ export function AdventureWorldPreview({
       >
         {scene.furniture}
       </svg>
+
+      {/* Biome-furniture ambience (fireflies/fog) — reuses the existing
+          reduced-motion-safe particle system. */}
+      {scene.ambience !== 'none' && <AmbientOverlay kind={scene.ambience} count={scene.ambience === 'fireflies' ? 8 : undefined} />}
 
       {/* Readability vignette — heavier in dark scenes. */}
       <div
