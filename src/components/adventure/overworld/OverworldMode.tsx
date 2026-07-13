@@ -15,11 +15,13 @@
  * through the same actions.submitAction contract as ActionBar.
  */
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { OverworldScene } from './OverworldScene'
 import { DialogueWindow } from './DialogueWindow'
+import { WorldTransition, TRANSITION_PHASE_MS } from './WorldTransition'
+import type { TransitionPhase } from './WorldTransition'
 import { handleOverworldIntent } from './overworldAdapter'
-import { monasteryCourtyard } from './maps/monasteryCourtyard'
+import { OVERWORLD_MAPS, monasteryCourtyard } from './maps'
 import type { OverworldIntent } from './overworldTypes'
 import type { AdventureState, AdventureActions } from '../useAdventureSession'
 
@@ -30,21 +32,50 @@ interface OverworldModeProps {
 
 export function OverworldMode({ state, actions }: OverworldModeProps) {
   const [dialogue, setDialogue] = useState<{ speaker: string } | null>(null)
+  // Current area — presentation state; named-location persistence
+  // happens ONLY via the exit intent's grounded text through the
+  // controller, never per tile.
+  const [area, setArea] = useState({ mapId: monasteryCourtyard.id, spawnId: 'start' })
+  const [transition, setTransition] = useState<TransitionPhase>(null)
+  const pendingArea = useRef<{ mapId: string; spawnId: string } | null>(null)
   // Narration older than the dialogue is stale — only show responses
   // that arrive after it opened.
   const turnCountAtOpen = useRef(0)
 
   const isStreaming = state.narrationStatus === 'streaming'
   const busy = state.isActionInFlight || isStreaming
-  const locked = !!dialogue || busy
+  const locked = !!dialogue || !!transition || busy
+
+  // Timer-driven fade: out → swap at full black → in → clear.
+  useEffect(() => {
+    if (!transition) return
+    const timer = window.setTimeout(() => {
+      if (transition === 'out') {
+        if (pendingArea.current) {
+          setArea(pendingArea.current)
+          pendingArea.current = null
+        }
+        setTransition('in')
+      } else {
+        setTransition(null)
+      }
+    }, TRANSITION_PHASE_MS)
+    return () => window.clearTimeout(timer)
+  }, [transition])
 
   function onIntent(intent: OverworldIntent) {
     if (intent.type === 'interact') {
       turnCountAtOpen.current = state.turns.length
       setDialogue({ speaker: intent.entityName })
     }
+    if (intent.type === 'exit' && OVERWORLD_MAPS[intent.to]) {
+      pendingArea.current = { mapId: intent.to, spawnId: intent.spawn }
+      setTransition('out')
+    }
     handleOverworldIntent(intent, actions)
   }
+
+  const map = OVERWORLD_MAPS[area.mapId] ?? monasteryCourtyard
 
   const latestTurn = state.turns[state.turns.length - 1]
   const responseText = isStreaming
@@ -56,12 +87,14 @@ export function OverworldMode({ state, actions }: OverworldModeProps) {
   return (
     <div className="relative w-full h-full" data-testid="overworld-mode">
       <OverworldScene
-        map={monasteryCourtyard}
-        spawnId="start"
+        map={map}
+        spawnId={area.spawnId}
         character={state.character}
         locked={locked}
         onIntent={onIntent}
       />
+
+      <WorldTransition phase={transition} />
 
       {dialogue && (
         <DialogueWindow

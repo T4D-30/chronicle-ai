@@ -15,7 +15,7 @@
  * pause menu set it (later milestones wire those).
  */
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { TileMap, TILE_PX } from './TileMap'
 import { CameraViewport } from './CameraViewport'
 import { useOverworldPlayer, directionForKey } from './PlayerController'
@@ -23,7 +23,7 @@ import { NpcEntity, ObjectEntity } from './NpcEntity'
 import { InteractionLayer, primaryVerb } from './InteractionLayer'
 import { PlayerSprite } from '../world/PlayerSprite'
 import { bodyKindFor, weaponKindFor } from '../world/characterAppearance'
-import { FACING_DELTA, entityAt } from './overworldTypes'
+import { FACING_DELTA, entityAt, exitAt, encounterAt } from './overworldTypes'
 import type { OverworldIntent, OverworldMap } from './overworldTypes'
 import type { CharacterRecord } from '@/lib/supabase'
 
@@ -49,6 +49,22 @@ export function OverworldScene({
   // The entity the player currently faces (adjacent tile in facing dir).
   const facedPos = { x: pos.x + FACING_DELTA[facing].x, y: pos.y + FACING_DELTA[facing].y }
   const faced = entityAt(map, facedPos)
+
+  // Standing on an exit or encounter tile emits its intent — once per
+  // arrival (leaving and re-entering re-arms it).
+  const lastZoneKey = useRef<string | null>(null)
+  useEffect(() => {
+    const exit = exitAt(map, pos)
+    const encounter = encounterAt(map, pos)
+    const zoneKey = exit ? `exit:${exit.id}` : encounter ? `enc:${encounter.id}` : null
+    if (zoneKey === lastZoneKey.current) return
+    lastZoneKey.current = zoneKey
+    if (exit) {
+      onIntent?.({ type: 'exit', exitId: exit.id, to: exit.to, spawn: exit.spawn, text: exit.intentText })
+    } else if (encounter) {
+      onIntent?.({ type: 'encounter', triggerId: encounter.id, label: encounter.label })
+    }
+  }, [map, pos, onIntent])
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
