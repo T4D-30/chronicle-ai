@@ -37,9 +37,7 @@ import { StoryPanel } from './panels/StoryPanel'
 import { JournalPanel } from './panels/JournalPanel'
 import { QuestsPanel } from './panels/QuestsPanel'
 import { AtlasPanel } from './panels/AtlasPanel'
-import { OverworldScene } from './overworld/OverworldScene'
-import { handleOverworldIntent } from './overworld/overworldAdapter'
-import { monasteryCourtyard } from './overworld/maps/monasteryCourtyard'
+import { OverworldMode } from './overworld/OverworldMode'
 import { AtlasMapPanel } from './panels/AtlasMapPanel'
 import { CodexPanel } from './panels/CodexPanel'
 import { DebugPanel } from './panels/DebugPanel'
@@ -342,19 +340,12 @@ function ActivePanelContent({
         </div>
       )
     case 'overworld':
-      // Presentation 3: the playable overworld. Locked while an action
-      // resolves; combat handoff is automatic — when combatState exists
-      // the hub swaps this panel for CombatPanel, and combat's end
-      // returns here (state unchanged).
+      // Presentation 3: the playable overworld. Combat handoff is
+      // automatic — when combatState exists the hub swaps this panel
+      // for CombatPanel, and combat's end returns here.
       return (
         <div id="panel-overworld" role="tabpanel" className="h-full overflow-hidden">
-          <OverworldScene
-            map={monasteryCourtyard}
-            spawnId="start"
-            character={character}
-            locked={state.isActionInFlight || state.narrationStatus === 'streaming'}
-            onIntent={(intent) => handleOverworldIntent(intent, actions)}
-          />
+          <OverworldMode state={state} actions={actions} />
         </div>
       )
     case 'character':
