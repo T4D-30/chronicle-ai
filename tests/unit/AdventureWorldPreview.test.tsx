@@ -126,6 +126,18 @@ describe('PlayerSprite — character presence (UI 4.2)', () => {
     expect(svg).toHaveStyle({ transform: 'scaleX(-1)' })
   })
 
+  it('casts a ground shadow and a swaying cape (cape skipped for casters)', () => {
+    renderSprite({ body: 'skirmisher' })
+    expect(screen.getByTestId('sprite-shadow')).toBeInTheDocument()
+    expect(screen.getByTestId('sprite-cloak')).toBeInTheDocument()
+  })
+
+  it('casters have no separate cape — the robe is the cloth', () => {
+    renderSprite({ body: 'caster' })
+    expect(screen.getByTestId('sprite-shadow')).toBeInTheDocument()
+    expect(screen.queryByTestId('sprite-cloak')).not.toBeInTheDocument()
+  })
+
   it('companion slot exists but renders nothing (no companion system exists)', () => {
     renderSprite()
     expect(screen.getByTestId('companion-slot')).toBeEmptyDOMElement()

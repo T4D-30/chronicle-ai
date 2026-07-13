@@ -252,6 +252,18 @@ export function PlayerSprite({
           className="w-full h-full pixel-crisp"
           style={facing === 'left' ? { transform: 'scaleX(-1)' } : undefined}
         >
+          {/* Ground shadow — static, does not breathe. */}
+          <ellipse cx="6" cy="17.6" rx="4.2" ry="0.85" fill="#0a0a0f" opacity="0.45" data-testid="sprite-shadow" />
+          {/* Trailing cape — sways at the shoulder anchor (skipped for
+              casters, whose full robe already reads as flowing cloth). */}
+          {body !== 'caster' && (
+            <polygon
+              className="sprite-cloak"
+              data-testid="sprite-cloak"
+              points="3,6.2 1.2,13.5 3.4,12.5"
+              fill="#170f0b"
+            />
+          )}
           <g className="sprite-breathe">
             <BodyFigure body={body} accent={resolvedAccent} />
             {weapon && <WeaponSilhouette kind={weapon} />}
