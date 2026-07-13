@@ -36,6 +36,9 @@ import type { ReactNode } from 'react'
 import { AmbientOverlay } from '@/components/pixel'
 import type { AmbienceKind } from '@/components/pixel'
 import { PlayerSprite } from './PlayerSprite'
+import { WeatherLayer } from './WeatherLayer'
+import type { WorldWeather } from './WeatherLayer'
+import { parseTimeOfDay, tintFor } from './timeOfDay'
 import type { LocationType } from '@/types/campaign'
 
 export type WorldSceneKind =
@@ -264,22 +267,33 @@ const SCENES: Record<WorldSceneKind, SceneSpec> = {
   },
 }
 
+/** Exterior scenes get time-of-day grading; interiors/dungeons have no
+ *  sky to grade. */
+const EXTERIOR_SCENES: WorldSceneKind[] = ['forest', 'village', 'mountains', 'default']
+
 interface AdventureWorldPreviewProps {
   /** Real current-location type; null renders the neutral default scene. */
   locationType: LocationType | null
   /** Director's free-text world time (real state; may be null). */
   worldTime?: string | null
+  /** Real weather state. No such field exists on WorldState today —
+   *  callers pass nothing and the sky stays clear. Exists so Phase 10's
+   *  real field wires in as a one-line prop. */
+  weather?: WorldWeather | null
   className?: string
 }
 
 export function AdventureWorldPreview({
   locationType,
   worldTime = null,
+  weather = null,
   className,
 }: AdventureWorldPreviewProps) {
-  void worldTime
   const kind: WorldSceneKind = locationType ? SCENE_FOR_TYPE[locationType] : 'default'
   const scene = SCENES[kind]
+  const isExterior = EXTERIOR_SCENES.includes(kind)
+  const timePhase = isExterior ? parseTimeOfDay(worldTime) : null
+  const timeTint = tintFor(timePhase)
 
   return (
     <div
@@ -289,6 +303,7 @@ export function AdventureWorldPreview({
       aria-hidden="true"
       data-testid="adventure-world-preview"
       data-scene={kind}
+      data-time={timePhase ?? 'neutral'}
     >
       {/* Sky / interior wall */}
       <div className="absolute inset-0" style={{ background: scene.sky }} />
@@ -340,6 +355,20 @@ export function AdventureWorldPreview({
       {/* Biome-furniture ambience (fireflies/fog) — reuses the existing
           reduced-motion-safe particle system. */}
       {scene.ambience !== 'none' && <AmbientOverlay kind={scene.ambience} count={scene.ambience === 'fireflies' ? 8 : undefined} />}
+
+      {/* Weather — renders nothing today (no real weather field exists);
+          see WeatherLayer's header. */}
+      <WeatherLayer weather={weather} />
+
+      {/* Time-of-day grade — only when the Director's real worldTime
+          contains an honest signal, exterior scenes only. */}
+      {timeTint && (
+        <div
+          className="absolute inset-0"
+          data-testid="scene-time-tint"
+          style={{ background: timeTint }}
+        />
+      )}
 
       {/* Readability vignette — heavier in dark scenes. */}
       <div

@@ -9,6 +9,8 @@
 import { render, screen } from '@testing-library/react'
 import { describe, it, expect } from 'vitest'
 import { AdventureWorldPreview } from '@/components/adventure/world/AdventureWorldPreview'
+import { WeatherLayer } from '@/components/adventure/world/WeatherLayer'
+import { parseTimeOfDay } from '@/components/adventure/world/timeOfDay'
 import type { LocationType } from '@/types/campaign'
 
 function renderPreview(locationType: LocationType | null, worldTime: string | null = null) {
@@ -83,6 +85,69 @@ describe('AdventureWorldPreview — player presence', () => {
       expect(container.querySelector('.sprite-blink')).toBeInTheDocument()
       unmount()
     }
+  })
+})
+
+describe('AdventureWorldPreview — time of day (graded ONLY from the Director\'s real worldTime)', () => {
+  it.each([
+    ['Dawn breaks over the valley', 'morning'],
+    ['Late afternoon, the market busy', 'day'],
+    ['Dusk, third day of travel', 'sunset'],
+    ['Deep night, moonlit road', 'night'],
+  ])('"%s" grades the exterior scene as %s', (worldTime, phase) => {
+    renderPreview('outdoor', worldTime)
+    expect(screen.getByTestId('adventure-world-preview')).toHaveAttribute('data-time', phase)
+  })
+
+  it('renders neutral with no tint when worldTime gives no honest signal', () => {
+    renderPreview('outdoor', 'The third bell since the caravan left')
+    expect(screen.getByTestId('adventure-world-preview')).toHaveAttribute('data-time', 'neutral')
+    expect(screen.queryByTestId('scene-time-tint')).not.toBeInTheDocument()
+  })
+
+  it('renders neutral when worldTime is null', () => {
+    renderPreview('outdoor', null)
+    expect(screen.getByTestId('adventure-world-preview')).toHaveAttribute('data-time', 'neutral')
+  })
+
+  it('tints exterior scenes at night', () => {
+    renderPreview('outdoor', 'Midnight')
+    expect(screen.getByTestId('scene-time-tint')).toBeInTheDocument()
+  })
+
+  it('never tints interiors/dungeons — no sky to grade', () => {
+    renderPreview('dungeon', 'Midnight')
+    expect(screen.getByTestId('adventure-world-preview')).toHaveAttribute('data-time', 'neutral')
+    expect(screen.queryByTestId('scene-time-tint')).not.toBeInTheDocument()
+  })
+
+  it('parseTimeOfDay: "day" phase applies no tint (neutral daylight)', () => {
+    expect(parseTimeOfDay('Noon sharp')).toBe('day')
+    renderPreview('outdoor', 'Noon sharp')
+    expect(screen.queryByTestId('scene-time-tint')).not.toBeInTheDocument()
+  })
+})
+
+describe('WeatherLayer — clear until a real weather field exists', () => {
+  it('renders nothing for null/clear (the only values reachable today)', () => {
+    const { container: c1 } = render(<WeatherLayer weather={null} />)
+    expect(c1.firstChild).toBeNull()
+    const { container: c2 } = render(<WeatherLayer weather="clear" />)
+    expect(c2.firstChild).toBeNull()
+  })
+
+  it('visualizes rain/snow/fog/cloudy when given a (future) real value', () => {
+    render(<div style={{ position: 'relative' }}><WeatherLayer weather="rain" /></div>)
+    expect(screen.getByTestId('ambient-rain')).toBeInTheDocument()
+    render(<div style={{ position: 'relative' }}><WeatherLayer weather="cloudy" /></div>)
+    expect(screen.getByTestId('weather-cloudy')).toBeInTheDocument()
+  })
+
+  it('the preview passes no weather by default — no rain/snow can render', () => {
+    renderPreview('outdoor', 'Dusk')
+    expect(screen.queryByTestId('ambient-rain')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('ambient-snow')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('weather-cloudy')).not.toBeInTheDocument()
   })
 })
 
