@@ -35,6 +35,7 @@
 import type { ReactNode } from 'react'
 import { AmbientOverlay } from '@/components/pixel'
 import type { AmbienceKind } from '@/components/pixel'
+import { CameraPlane } from './CameraLayer'
 import { PlayerSprite } from './PlayerSprite'
 import { WeatherLayer } from './WeatherLayer'
 import type { WorldWeather } from './WeatherLayer'
@@ -316,72 +317,94 @@ export function AdventureWorldPreview({
       data-scene={kind}
       data-time={timePhase ?? 'neutral'}
     >
-      {/* Sky / interior wall */}
-      <div className="absolute inset-0" style={{ background: scene.sky }} />
+      {/* ── World camera planes (Presentation 2): sky → background →
+          midground → player → foreground, each drifting with
+          depth-scaled amplitude. ── */}
 
-      {/* Drifting cloud sheet across the sky band (village/mountains). */}
-      {scene.clouds && (
-        <div
-          className="absolute inset-x-0 world-clouds"
-          data-testid="scene-clouds"
-          style={{
-            top: '4%',
-            height: '30%',
-            ['--drift-duration' as string]: '110s',
-            background:
-              'radial-gradient(ellipse 26% 42% at 24% 45%, rgba(107, 98, 90, 0.10), transparent 70%),' +
-              'radial-gradient(ellipse 20% 34% at 62% 30%, rgba(107, 98, 90, 0.07), transparent 70%),' +
-              'radial-gradient(ellipse 24% 38% at 86% 55%, rgba(107, 98, 90, 0.08), transparent 70%)',
-          }}
-        />
-      )}
+      <CameraPlane depth="sky">
+        <div className="absolute inset-0" style={{ background: scene.sky }} />
+      </CameraPlane>
 
-      {/* Ground band + biome furniture, horizon at ~58% (above the
-          ActionBar overlay zone so the world stays visible). */}
-      <svg
-        className="absolute inset-x-0 w-full"
-        style={{ top: '46%', height: '54%' }}
-        viewBox="0 0 100 42"
-        preserveAspectRatio="none"
-      >
-        <polygon points="0,42 0,8 18,5 42,9 68,4 88,8 100,6 100,42" fill={scene.ground[0]} />
-        <polygon points="0,42 0,16 25,13 55,17 80,12 100,15 100,42" fill={scene.ground[1]} />
-      </svg>
-      {/* Furniture in a non-stretched overlay so shapes keep proportions. */}
-      <svg
-        className="absolute inset-x-0 w-full pixel-crisp"
-        style={{ top: '46%', height: '54%' }}
-        viewBox="0 0 100 42"
-        preserveAspectRatio="xMidYMax meet"
-      >
-        {scene.furniture}
-      </svg>
+      <CameraPlane depth="background">
+        {/* Drifting cloud sheet across the sky band (village/mountains). */}
+        {scene.clouds && (
+          <div
+            className="absolute inset-x-0 world-clouds"
+            data-testid="scene-clouds"
+            style={{
+              top: '4%',
+              height: '30%',
+              ['--drift-duration' as string]: '110s',
+              background:
+                'radial-gradient(ellipse 26% 42% at 24% 45%, rgba(107, 98, 90, 0.10), transparent 70%),' +
+                'radial-gradient(ellipse 20% 34% at 62% 30%, rgba(107, 98, 90, 0.07), transparent 70%),' +
+                'radial-gradient(ellipse 24% 38% at 86% 55%, rgba(107, 98, 90, 0.08), transparent 70%)',
+            }}
+          />
+        )}
+      </CameraPlane>
 
-      {/* The party leader, present in the world — reflecting the real
-          character's build, accent, and equipped weapon (UI 4.2). */}
-      <div className="absolute" style={{ left: '30%', bottom: '40%', width: 26, height: 39 }}>
-        <PlayerSprite
-          className="w-full h-full"
-          body={bodyKindFor(character?.sheet.archetype)}
-          weapon={weaponKindFor(character?.sheet.equipment)}
-          archetype={character?.sheet.archetype ?? null}
-          facing={facing}
-        />
-      </div>
+      <CameraPlane depth="midground">
+        {/* Ground band + biome furniture, horizon above the ActionBar
+            overlay zone so the world stays visible. */}
+        <svg
+          className="absolute inset-x-0 w-full"
+          style={{ top: '46%', height: '54%' }}
+          viewBox="0 0 100 42"
+          preserveAspectRatio="none"
+        >
+          <polygon points="0,42 0,8 18,5 42,9 68,4 88,8 100,6 100,42" fill={scene.ground[0]} />
+          <polygon points="0,42 0,16 25,13 55,17 80,12 100,15 100,42" fill={scene.ground[1]} />
+        </svg>
+        {/* Furniture in a non-stretched overlay so shapes keep proportions. */}
+        <svg
+          className="absolute inset-x-0 w-full pixel-crisp"
+          style={{ top: '46%', height: '54%' }}
+          viewBox="0 0 100 42"
+          preserveAspectRatio="xMidYMax meet"
+        >
+          {scene.furniture}
+        </svg>
+      </CameraPlane>
+
+      <CameraPlane depth="player">
+        {/* The party leader, present in the world — reflecting the real
+            character's build, accent, and equipped weapon. */}
+        <div className="absolute" style={{ left: '30%', bottom: '40%', width: 26, height: 39 }}>
+          <PlayerSprite
+            className="w-full h-full"
+            body={bodyKindFor(character?.sheet.archetype)}
+            weapon={weaponKindFor(character?.sheet.equipment)}
+            archetype={character?.sheet.archetype ?? null}
+            facing={facing}
+          />
+        </div>
+      </CameraPlane>
+
+      {/* ── Static full-frame layers above the camera: particles manage
+          their own motion; grades/vignette must not parallax. ── */}
 
       {/* Biome-furniture ambience (fireflies/fog) — reuses the existing
           reduced-motion-safe particle system. */}
-      {scene.ambience !== 'none' && <AmbientOverlay kind={scene.ambience} count={scene.ambience === 'fireflies' ? 8 : undefined} />}
+      {scene.ambience !== 'none' && (
+        <AmbientOverlay
+          kind={scene.ambience}
+          count={scene.ambience === 'fireflies' ? 8 : undefined}
+          className="z-[5]"
+        />
+      )}
 
       {/* Weather — renders nothing today (no real weather field exists);
           see WeatherLayer's header. */}
-      <WeatherLayer weather={weather} />
+      <div className="absolute inset-0 z-[5]">
+        <WeatherLayer weather={weather} />
+      </div>
 
       {/* Time-of-day grade — only when the Director's real worldTime
           contains an honest signal, exterior scenes only. */}
       {timeTint && (
         <div
-          className="absolute inset-0"
+          className="absolute inset-0 z-[6]"
           data-testid="scene-time-tint"
           style={{ background: timeTint }}
         />
@@ -389,7 +412,7 @@ export function AdventureWorldPreview({
 
       {/* Readability vignette — heavier in dark scenes. */}
       <div
-        className="absolute inset-0"
+        className="absolute inset-0 z-[7]"
         style={{
           background: `radial-gradient(ellipse 90% 80% at 50% 45%, transparent 55%, rgba(10, 10, 15, ${scene.vignetteOpacity}) 100%)`,
         }}

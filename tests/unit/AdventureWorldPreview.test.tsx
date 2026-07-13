@@ -258,6 +258,29 @@ describe('WeatherLayer — clear until a real weather field exists', () => {
   })
 })
 
+describe('AdventureWorldPreview — world camera planes (Presentation 2)', () => {
+  it('renders sky/background/midground/player planes in depth order', () => {
+    renderPreview('town')
+    for (const depth of ['sky', 'background', 'midground', 'player'] as const) {
+      expect(screen.getByTestId(`camera-plane-${depth}`)).toHaveAttribute('data-depth', depth)
+    }
+  })
+
+  it('the sky plane is pinned — no parallax drift class', () => {
+    renderPreview('town')
+    expect(screen.getByTestId('camera-plane-sky').className).not.toContain('camera-drift')
+    expect(screen.getByTestId('camera-plane-midground').className).toContain('camera-drift')
+  })
+
+  it('nearer planes drift with larger amplitude than distant ones', () => {
+    renderPreview('town')
+    const bg = screen.getByTestId('camera-plane-background')
+    const player = screen.getByTestId('camera-plane-player')
+    const amp = (el: HTMLElement) => parseFloat(el.style.getPropertyValue('--camera-amplitude'))
+    expect(amp(player)).toBeGreaterThan(amp(bg))
+  })
+})
+
 describe('AdventureWorldPreview — decorative contract', () => {
   it('is aria-hidden and pointer-events-none (never intercepts play)', () => {
     renderPreview('town')

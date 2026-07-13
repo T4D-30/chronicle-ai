@@ -296,6 +296,18 @@
   transform-box: fill-box;
 }
 
+/* Camera parallax drift — one shared period, per-plane amplitude
+   (--camera-amplitude), so layered depth reads as a slow handheld
+   camera. Sky planes don't get this class at all. */
+@keyframes camera-drift {
+  0%, 100% { transform: translateX(calc(var(--camera-amplitude, 0.5%) * -1)); }
+  50%      { transform: translateX(var(--camera-amplitude, 0.5%)); }
+}
+
+.camera-drift {
+  animation: camera-drift 48s ease-in-out infinite;
+}
+
 /* Idle breathing — a barely-there vertical settle, anchored at the feet. */
 @keyframes sprite-breathe {
   0%, 100% { transform: scaleY(1); }
@@ -466,7 +478,8 @@
   .world-sway,
   .world-smoke,
   .sprite-breathe,
-  .sprite-blink {
+  .sprite-blink,
+  .camera-drift {
     animation: none !important;
   }
   .pixel-bar-fill {
