@@ -120,3 +120,73 @@ describe('OverworldScene — camera', () => {
     expect(screen.getByTestId('overworld-camera')).toBeInTheDocument()
   })
 })
+
+describe('OverworldScene — interactions (typed intents only)', () => {
+  function walkToMonk() {
+    // Spawn (7,8) → up 3 to (7,5) → left toward monk at (2,5); stop at (3,5)
+    for (let i = 0; i < 3; i++) pressAndSettle('ArrowUp')
+    for (let i = 0; i < 4; i++) pressAndSettle('ArrowLeft')
+  }
+
+  it('shows the interaction prompt when facing an entity, hides it otherwise', () => {
+    renderScene()
+    expect(screen.queryByTestId('interaction-prompt')).not.toBeInTheDocument()
+    walkToMonk()
+    expect(player()).toHaveAttribute('data-x', '3')
+    expect(player()).toHaveAttribute('data-facing', 'left')
+    expect(screen.getByTestId('interaction-prompt')).toHaveTextContent('Talk')
+    expect(screen.getByTestId('overworld-entity-monk')).toHaveAttribute('data-faced', 'true')
+  })
+
+  it('pressing E while facing the monk emits a talk intent with the fixture text', () => {
+    const onIntent = vi.fn()
+    renderScene({ onIntent })
+    walkToMonk()
+    fireEvent.keyDown(window, { key: 'e' })
+    expect(onIntent).toHaveBeenCalledWith({
+      type: 'interact',
+      verb: 'talk',
+      entityId: 'monk',
+      entityName: 'Brother Aldwin',
+      text: 'I approach the monk in the courtyard and greet him.',
+    })
+  })
+
+  it('Enter and Space also interact; nothing emits when facing empty ground', () => {
+    const onIntent = vi.fn()
+    renderScene({ onIntent })
+    fireEvent.keyDown(window, { key: 'Enter' })
+    fireEvent.keyDown(window, { key: ' ' })
+    expect(onIntent).not.toHaveBeenCalled() // facing empty path at spawn
+    walkToMonk()
+    fireEvent.keyDown(window, { key: 'Enter' })
+    expect(onIntent).toHaveBeenCalledTimes(1)
+  })
+
+  it('locked suppresses interaction and the prompt', () => {
+    const onIntent = vi.fn()
+    const { rerender } = render(
+      <div style={{ width: 600, height: 400 }}>
+        <OverworldScene map={monasteryCourtyard} spawnId="start" onIntent={onIntent} />
+      </div>,
+    )
+    walkToMonk()
+    rerender(
+      <div style={{ width: 600, height: 400 }}>
+        <OverworldScene map={monasteryCourtyard} spawnId="start" onIntent={onIntent} locked />
+      </div>,
+    )
+    expect(screen.queryByTestId('interaction-prompt')).not.toBeInTheDocument()
+    fireEvent.keyDown(window, { key: 'e' })
+    expect(onIntent).not.toHaveBeenCalled()
+  })
+
+  it('the herb patch primary verb is collect', () => {
+    // Spawn (7,8) → up 4 to (7,4) → right toward herb at (10,4); stop at (9,4)
+    renderScene({ onIntent: vi.fn() })
+    for (let i = 0; i < 4; i++) pressAndSettle('ArrowUp')
+    for (let i = 0; i < 2; i++) pressAndSettle('ArrowRight')
+    expect(player()).toHaveAttribute('data-x', '9')
+    expect(screen.getByTestId('interaction-prompt')).toHaveTextContent('Collect')
+  })
+})

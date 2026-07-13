@@ -19,10 +19,15 @@ import { useEffect } from 'react'
 import { TileMap, TILE_PX } from './TileMap'
 import { CameraViewport } from './CameraViewport'
 import { useOverworldPlayer, directionForKey } from './PlayerController'
+import { NpcEntity, ObjectEntity } from './NpcEntity'
+import { InteractionLayer, primaryVerb } from './InteractionLayer'
 import { PlayerSprite } from '../world/PlayerSprite'
 import { bodyKindFor, weaponKindFor } from '../world/characterAppearance'
+import { FACING_DELTA, entityAt } from './overworldTypes'
 import type { OverworldIntent, OverworldMap } from './overworldTypes'
 import type { CharacterRecord } from '@/lib/supabase'
+
+const INTERACT_KEYS = new Set(['e', 'E', 'Enter', ' '])
 
 interface OverworldSceneProps {
   map: OverworldMap
@@ -39,8 +44,11 @@ export function OverworldScene({
   locked = false,
   onIntent,
 }: OverworldSceneProps) {
-  void onIntent // interactions arrive in the next milestone
   const { pos, facing, tryMove } = useOverworldPlayer({ map, spawnId, locked })
+
+  // The entity the player currently faces (adjacent tile in facing dir).
+  const facedPos = { x: pos.x + FACING_DELTA[facing].x, y: pos.y + FACING_DELTA[facing].y }
+  const faced = entityAt(map, facedPos)
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -49,11 +57,26 @@ export function OverworldScene({
       if (direction) {
         e.preventDefault()
         tryMove(direction)
+        return
+      }
+      if (INTERACT_KEYS.has(e.key) && faced) {
+        const verb = primaryVerb(faced)
+        const text = verb ? faced.intentText[verb] : undefined
+        if (verb && text) {
+          e.preventDefault()
+          onIntent?.({
+            type: 'interact',
+            verb,
+            entityId: faced.id,
+            entityName: faced.name,
+            text,
+          })
+        }
       }
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [locked, tryMove])
+  }, [locked, tryMove, faced, onIntent])
 
   const spriteFacing = facing === 'left' ? 'left' : 'right'
 
@@ -61,6 +84,18 @@ export function OverworldScene({
     <div className="w-full h-full" data-testid="overworld-scene" data-map={map.id}>
       <CameraViewport map={map} focus={pos}>
         <TileMap map={map} />
+
+        {/* Entities with faced-highlight */}
+        {map.entities.map((entity) =>
+          entity.kind === 'npc' ? (
+            <NpcEntity key={entity.id} entity={entity} faced={faced?.id === entity.id} />
+          ) : (
+            <ObjectEntity key={entity.id} entity={entity} faced={faced?.id === entity.id} />
+          ),
+        )}
+
+        {/* "Press E" affordance above the faced entity */}
+        <InteractionLayer faced={locked ? null : faced} />
 
         {/* The player — the real character's sprite, gliding tile to
             tile (transition zeroed under reduced motion → instant). */}

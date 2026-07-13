@@ -76,7 +76,8 @@ export const monasteryCourtyard: OverworldMap = {
       name: 'Herb Patch',
       pos: { x: 10, y: 4 },
       glyph: '🌿',
-      interactions: ['inspect', 'collect'],
+      // collect first — the primary verb the interact key fires
+      interactions: ['collect', 'inspect'],
       intentText: {
         inspect: 'I look over the herb patch growing by the courtyard stones.',
         collect: 'I try to gather some herbs from the herb patch.',

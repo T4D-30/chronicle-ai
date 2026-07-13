@@ -58,23 +58,8 @@ export function TileMap({ map }: { map: OverworldMap }) {
         )),
       )}
 
-      {/* Entities */}
-      {map.entities.map((entity) => (
-        <div
-          key={entity.id}
-          className="absolute flex items-end justify-center text-2xl leading-none"
-          style={{
-            left: entity.pos.x * TILE_PX,
-            top: entity.pos.y * TILE_PX,
-            width: TILE_PX,
-            height: TILE_PX,
-          }}
-          aria-hidden="true"
-          data-testid={`overworld-entity-${entity.id}`}
-        >
-          {entity.glyph}
-        </div>
-      ))}
+      {/* Entities render in OverworldScene (NpcEntity/ObjectEntity) so
+          the faced-highlight can follow player state. */}
 
       {/* Exit markers — a subtle glow on exit tiles */}
       {map.exits.map((exit) => (

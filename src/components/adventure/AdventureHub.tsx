@@ -37,6 +37,9 @@ import { StoryPanel } from './panels/StoryPanel'
 import { JournalPanel } from './panels/JournalPanel'
 import { QuestsPanel } from './panels/QuestsPanel'
 import { AtlasPanel } from './panels/AtlasPanel'
+import { OverworldScene } from './overworld/OverworldScene'
+import { handleOverworldIntent } from './overworld/overworldAdapter'
+import { monasteryCourtyard } from './overworld/maps/monasteryCourtyard'
 import { AtlasMapPanel } from './panels/AtlasMapPanel'
 import { CodexPanel } from './panels/CodexPanel'
 import { DebugPanel } from './panels/DebugPanel'
@@ -50,6 +53,7 @@ import type { AdventureState, AdventureActions } from './useAdventureSession'
 
 export type AdventurePanel =
   | 'story'
+  | 'overworld'
   | 'character'
   | 'dice'
   | 'journal'
@@ -62,6 +66,7 @@ const DEBUG_ENABLED = import.meta.env.VITE_ENABLE_DEBUG_PANEL === 'true'
 
 const TAB_DEFS: Array<{ id: AdventurePanel; label: string; icon: IconName }> = [
   { id: 'story',     label: 'Story',     icon: 'story' },
+  { id: 'overworld', label: 'World',     icon: 'move' },
   { id: 'character', label: 'Character', icon: 'character' },
   { id: 'dice',      label: 'Dice',      icon: 'dice' },
   { id: 'journal',   label: 'Journal',   icon: 'journal' },
@@ -163,9 +168,15 @@ export function AdventureHub({ state, actions }: AdventureHubProps) {
         {/* Left navigation — new in the redesign, desktop-only (lg+).
             Drives the SAME activePanel state as the bottom tab nav below;
             see AdventureLeftNav's own header comment for why the bottom
-            tabs are not removed or replaced. */}
+            tabs are not removed or replaced. Hidden in overworld mode —
+            the world is the primary visual area there (Presentation 3);
+            everything remains reachable via the bottom tabs (Law 1) and
+            the pause menu. */}
         <aside
-          className="hidden lg:flex w-56 flex-col border-r border-void-700/50 bg-void-900/40 overflow-hidden flex-shrink-0"
+          className={[
+            activePanel === 'overworld' ? 'hidden' : 'hidden lg:flex',
+            'w-56 flex-col border-r border-void-700/50 bg-void-900/40 overflow-hidden flex-shrink-0',
+          ].join(' ')}
           data-testid="adventure-left-sidebar"
         >
           <AdventureLeftNav
@@ -210,7 +221,10 @@ export function AdventureHub({ state, actions }: AdventureHubProps) {
             width for readability. Everything it shows remains reachable
             on mobile via the Character tab in the bottom nav, unchanged. */}
         <aside
-          className="hidden md:flex w-72 flex-col border-l border-void-700/50 bg-void-900/40 overflow-hidden flex-shrink-0"
+          className={[
+            activePanel === 'overworld' ? 'hidden' : 'hidden md:flex',
+            'w-72 flex-col border-l border-void-700/50 bg-void-900/40 overflow-hidden flex-shrink-0',
+          ].join(' ')}
           data-testid="adventure-right-sidebar-wrapper"
         >
           <AdventureRightSidebar
@@ -325,6 +339,22 @@ function ActivePanelContent({
             onCancelStream={actions.cancelStream}
           />
           </AdventureScenePanel>
+        </div>
+      )
+    case 'overworld':
+      // Presentation 3: the playable overworld. Locked while an action
+      // resolves; combat handoff is automatic — when combatState exists
+      // the hub swaps this panel for CombatPanel, and combat's end
+      // returns here (state unchanged).
+      return (
+        <div id="panel-overworld" role="tabpanel" className="h-full overflow-hidden">
+          <OverworldScene
+            map={monasteryCourtyard}
+            spawnId="start"
+            character={character}
+            locked={state.isActionInFlight || state.narrationStatus === 'streaming'}
+            onIntent={(intent) => handleOverworldIntent(intent, actions)}
+          />
         </div>
       )
     case 'character':
