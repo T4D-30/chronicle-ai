@@ -3,7 +3,7 @@
  * Covers: AdventureHub touch targets, library skeleton loading,
  * and LandingPage value props.
  */
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, it, expect, vi } from 'vitest'
 
@@ -13,6 +13,7 @@ import { AdventureHub } from '@/components/adventure/AdventureHub'
 import type { AdventureState, AdventureActions } from '@/components/adventure/useAdventureSession'
 import { DEFAULT_DIRECTOR_CONFIG, DEFAULT_WORLD_STATE } from '@/types/campaign'
 
+const DEBUG_ENABLED = import.meta.env.VITE_ENABLE_DEBUG_PANEL === 'true'
 
 const MOCK_STATE: AdventureState = {
   status: 'ready',
@@ -82,7 +83,7 @@ describe('AdventureHub — touch targets', () => {
 
   it('tab nav buttons have min-h-[44px] class for touch target compliance', () => {
     renderHub()
-    const tabs = screen.getAllByRole('tab')
+    const tabs = within(screen.getByTestId('adventure-tab-nav')).getAllByRole('tab')
     expect(tabs.length).toBeGreaterThan(0)
     // Every tab button should carry the min-height touch target class
     tabs.forEach((tab) => {
@@ -90,9 +91,10 @@ describe('AdventureHub — touch targets', () => {
     })
   })
 
-  it('renders 7 adventure panel tabs (debug hidden in test env)', () => {
+  it('renders the expected adventure panel tabs for the current debug flag', () => {
     renderHub()
-    expect(screen.getAllByRole('tab')).toHaveLength(7)  // debug hidden without flag
+    const tabs = within(screen.getByTestId('adventure-tab-nav')).getAllByRole('tab')
+    expect(tabs).toHaveLength(DEBUG_ENABLED ? 9 : 8)
   })
 
   it('tab nav has safe-area-bottom class for iOS notch', () => {
@@ -133,40 +135,63 @@ describe('SkeletonGrid — library loading UX', () => {
   })
 })
 
-// ── LandingPage onboarding improvements ──────────────────────────────────────
+// ── LandingPage title screen (UI 3.0) ────────────────────────────────────────
 
+import { fireEvent } from '@testing-library/react'
 import LandingPage from '@/app/pages/LandingPage'
 
-describe('LandingPage — onboarding', () => {
+/** The title screen boots into a JRPG reveal sequence (UI 3.0); "press
+ *  any key" skips straight to the full menu. Same onboarding contract
+ *  as before, asserted after the reveal. */
+function renderTitleScreen() {
+  const result = render(<MemoryRouter><LandingPage /></MemoryRouter>)
+  fireEvent.keyDown(window, { key: 'Enter' })
+  return result
+}
+
+describe('LandingPage — title screen onboarding', () => {
   it('shows the app title', () => {
-    render(<MemoryRouter><LandingPage /></MemoryRouter>)
+    renderTitleScreen()
     expect(screen.getByRole('heading', { name: /Chronicle AI/i })).toBeInTheDocument()
   })
 
   it('has a primary CTA link', () => {
-    render(<MemoryRouter><LandingPage /></MemoryRouter>)
+    renderTitleScreen()
     expect(screen.getByRole('link', { name: /Begin Your Chronicle/i })).toBeInTheDocument()
   })
 
   it('has a sign-in link', () => {
-    render(<MemoryRouter><LandingPage /></MemoryRouter>)
+    renderTitleScreen()
     expect(screen.getByRole('link', { name: /Sign In/i })).toBeInTheDocument()
   })
 
   it('shows feature value props', () => {
-    render(<MemoryRouter><LandingPage /></MemoryRouter>)
+    renderTitleScreen()
     expect(screen.getByText(/Real D&D Mechanics/i)).toBeInTheDocument()
     expect(screen.getByText(/AI Director/i)).toBeInTheDocument()
     expect(screen.getByText(/Solo Adventure/i)).toBeInTheDocument()
   })
 
   it('does not reference stale Phase 0 label', () => {
-    render(<MemoryRouter><LandingPage /></MemoryRouter>)
+    renderTitleScreen()
     expect(screen.queryByText(/Phase 0/i)).not.toBeInTheDocument()
   })
 
   it('features list is an accessible list', () => {
-    render(<MemoryRouter><LandingPage /></MemoryRouter>)
+    renderTitleScreen()
     expect(screen.getByRole('list', { name: /features/i })).toBeInTheDocument()
+  })
+
+  it('starts on the world alone — no menu before the reveal', () => {
+    render(<MemoryRouter><LandingPage /></MemoryRouter>)
+    expect(screen.getByTestId('world-renderer')).toBeInTheDocument()
+    expect(screen.queryByTestId('title-menu')).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Begin Your Chronicle/i })).not.toBeInTheDocument()
+  })
+
+  it('any key reveals the menu from the initial vista (skip the intro)', () => {
+    render(<MemoryRouter><LandingPage /></MemoryRouter>)
+    fireEvent.keyDown(window, { key: 'x' })
+    expect(screen.getByTestId('title-menu')).toBeInTheDocument()
   })
 })

@@ -24,10 +24,16 @@
   }
 
   body {
-    @apply bg-void-950 text-white font-body;
+    /* Warm parchment default text (void-100, repainted warm in UI 2.0)
+       instead of pure white — components set brighter tiers explicitly
+       (ivory void-50 for numbers/names, gold for headers). */
+    @apply bg-void-950 text-void-100 font-body;
+    /* Faint ember-lit vignette — the "campfire in the dark" atmosphere
+       the interface should always suggest, kept subtle since most of
+       this is covered by the app shell; visible at edges/overscroll. */
     background-image: radial-gradient(
       ellipse at 50% 0%,
-      rgba(30, 30, 69, 0.6) 0%,
+      rgba(180, 90, 26, 0.10) 0%,
       transparent 60%
     );
     min-height: 100vh;
@@ -86,10 +92,23 @@
 }
 
 @layer components {
-  /* Chronicle panel — reusable dark card */
+  /* Chronicle panel — reusable carved-wood/stone card (UI 2.0 repaint).
+     Every panel gets the same three-part lighting recipe: an outer drop
+     shadow for separation, an inset top highlight suggesting torchlight
+     falling from above, and an inset bottom shadow for depth — plus a
+     faint grain texture so the surface never reads as a flat color
+     fill. CSS-simulated only (layered gradients + an inline SVG noise
+     filter) — no image assets. */
   .chr-panel {
-    @apply bg-void-900/80 border border-void-700/50 rounded-lg backdrop-blur-sm;
-    box-shadow: var(--tw-shadow-panel);
+    @apply relative border border-bronze-600/50 rounded-lg backdrop-blur-sm;
+    background-color: rgb(31 24 20 / 0.92); /* panel-900 */
+    background-image:
+      repeating-linear-gradient(115deg, rgba(0, 0, 0, 0.05) 0px, rgba(0, 0, 0, 0.05) 1px, transparent 1px, transparent 6px),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+    box-shadow:
+      0 4px 16px rgba(10, 10, 15, 0.55),           /* outer shadow */
+      inset 0 1px 0 rgba(226, 181, 98, 0.10),      /* warm top highlight */
+      inset 0 -10px 18px rgba(10, 10, 15, 0.35);   /* inner shadow (depth) */
   }
 
   .chr-panel-arcane {
@@ -110,26 +129,35 @@
     @apply font-mono text-xs uppercase tracking-widest text-void-400;
   }
 
-  /* Section divider — arcane */
+  /* Section divider — bronze, matching the border/frame family */
   .chr-divider {
-    @apply border-t border-void-700/50;
+    @apply border-t border-bronze-800/50;
   }
 
   /* Scene viewport — premium CRPG-style framed viewer (Adventure UI 3.0,
      Phase 1). Layered lighting instead of a flat pixel-bordered box, with
      minimal gold corner brackets (top-left / bottom-right) for a
      "viewfinder" framing motif. Presentational only — no data lives here. */
+  /* Scene viewport — UI 2.0: a warm bronze frame ready to hold future AI
+     artwork. A soft radial vignette keeps focus on the center (where
+     artwork will eventually sit), lit by an ember undertone suggesting a
+     firelight source rather than the old cool teal accent. Same
+     mechanics as before (border + layered background + box-shadow +
+     glowing corner brackets), repainted warm. */
   .scene-viewport {
     @apply relative rounded-xl overflow-hidden;
-    border: 1px solid rgba(243, 207, 77, 0.2);
+    border: 1px solid rgba(200, 148, 67, 0.30); /* bronze-400 */
     background:
-      radial-gradient(ellipse 80% 70% at 50% 15%, rgba(243, 207, 77, 0.10) 0%, transparent 60%),
-      radial-gradient(ellipse 60% 50% at 15% 85%, rgba(59, 202, 192, 0.06) 0%, transparent 65%),
-      linear-gradient(180deg, rgba(20, 20, 46, 0.5) 0%, rgba(5, 5, 16, 0.8) 100%);
+      radial-gradient(ellipse 80% 70% at 50% 15%, rgba(226, 181, 98, 0.10) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 50% at 15% 85%, rgba(215, 122, 38, 0.07) 0%, transparent 65%),
+      linear-gradient(180deg, rgba(42, 32, 26, 0.5) 0%, rgba(10, 10, 15, 0.85) 100%),
+      /* vignette — darkens toward the edges, keeping the center (future
+         artwork) the visual focus */
+      radial-gradient(ellipse 95% 95% at 50% 50%, transparent 45%, rgba(10, 10, 15, 0.45) 100%);
     box-shadow:
-      inset 0 0 0 1px rgba(5, 5, 16, 0.6),
-      inset 0 1px 0 rgba(255, 255, 255, 0.04),
-      0 8px 32px rgba(5, 5, 16, 0.5);
+      inset 0 0 0 1px rgba(10, 10, 15, 0.6),
+      inset 0 1px 0 rgba(226, 181, 98, 0.08),
+      0 8px 32px rgba(10, 10, 15, 0.55);
   }
 
   .scene-viewport::before,
@@ -139,21 +167,22 @@
     width: 18px;
     height: 18px;
     pointer-events: none;
-    opacity: 0.6;
+    opacity: 0.75;
+    filter: drop-shadow(0 0 4px rgba(226, 181, 98, 0.55)); /* glowing corners */
   }
 
   .scene-viewport::before {
     top: 7px;
     left: 7px;
-    border-top: 2px solid rgba(243, 207, 77, 0.65);
-    border-left: 2px solid rgba(243, 207, 77, 0.65);
+    border-top: 2px solid rgba(226, 181, 98, 0.8);
+    border-left: 2px solid rgba(226, 181, 98, 0.8);
   }
 
   .scene-viewport::after {
     bottom: 7px;
     right: 7px;
-    border-bottom: 2px solid rgba(243, 207, 77, 0.65);
-    border-right: 2px solid rgba(243, 207, 77, 0.65);
+    border-bottom: 2px solid rgba(226, 181, 98, 0.8);
+    border-right: 2px solid rgba(226, 181, 98, 0.8);
   }
 
   /* Skip link — WCAG 2.4.1 bypass block
@@ -182,7 +211,7 @@
 @layer utilities {
   .text-gradient-arcane {
     @apply bg-clip-text text-transparent;
-    background-image: linear-gradient(135deg, #f7cf4d 0%, #e39a08 100%);
+    background-image: linear-gradient(135deg, #e8a74a 0%, #b45a1a 100%);
   }
 
   .text-gradient-spirit {
@@ -191,7 +220,7 @@
   }
 
   .glow-arcane {
-    filter: drop-shadow(0 0 8px rgba(243, 207, 77, 0.4));
+    filter: drop-shadow(0 0 8px rgba(215, 122, 38, 0.4));
   }
 
   .glow-spirit {

@@ -1,7 +1,12 @@
 /**
- * AdventureScenePanel Tests — Phase 11.5 (Adventure Hub redesign)
+ * AdventureScenePanel Tests — Phase 11.5, updated for the
+ * dialogue-readability pass: the scene viewport is content-aware. With
+ * no real artwork (jsdom never loads images — also exactly what ships,
+ * since no environment art exists yet) the viewport collapses entirely
+ * and reserves no space; firing load on the hidden probe exercises the
+ * artwork-present branch.
  */
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect } from 'vitest'
 import { AdventureScenePanel } from '@/components/adventure/AdventureScenePanel'
 import { DEFAULT_DIRECTOR_CONFIG, DEFAULT_WORLD_STATE } from '@/types/campaign'
@@ -34,10 +39,6 @@ describe('AdventureScenePanel — rendering', () => {
     expect(screen.getByTestId('scene-children')).toHaveTextContent('Story content goes here')
   })
 
-  it('renders the scene art placeholder', () => {
-    renderScene()
-    expect(screen.getByTestId('scene-art-placeholder')).toBeInTheDocument()
-  })
 })
 
 describe('AdventureScenePanel — location title', () => {
@@ -93,25 +94,87 @@ describe('AdventureScenePanel — time line (real worldTime only, never fabricat
   })
 })
 
-describe('AdventureScenePanel — scene art placeholder (honest, no fabricated image)', () => {
-  it('shows a generic placeholder message when no current location resolves', () => {
-    renderScene()
-    expect(screen.getByText('Scene art coming soon')).toBeInTheDocument()
+describe('AdventureScenePanel — content-aware scene viewport (dialogue-readability pass)', () => {
+  const CAMPAIGN_AT_TOWN: Campaign = {
+    ...MOCK_CAMPAIGN,
+    worldState: {
+      ...DEFAULT_WORLD_STATE,
+      currentLocationId: 'loc-1',
+      locations: [{
+        id: 'loc-1', name: 'Rivergate', type: 'town', parentId: null,
+        description: 'A bustling river town.', visited: true, discovered: true, properties: {},
+      }],
+    },
+  }
+
+  it('collapses the viewport entirely when no artwork exists — no placeholder, no reserved space', () => {
+    renderScene(CAMPAIGN_AT_TOWN)
+    expect(screen.queryByTestId('scene-artwork')).not.toBeInTheDocument()
+    expect(screen.queryByText('Scene art coming soon')).not.toBeInTheDocument()
+    expect(screen.queryByText(/artwork arrive in a future update/i)).not.toBeInTheDocument()
   })
 
-  it('shows the real location description when a current location resolves', () => {
+  it('renders a hidden artwork probe keyed by the location type asset slot', () => {
+    renderScene(CAMPAIGN_AT_TOWN)
+    const probe = screen.getByTestId('scene-artwork-probe')
+    expect(probe).toHaveAttribute('src', '/assets/sprites/environments/location-town.png')
+    expect(probe).toHaveClass('hidden')
+  })
+
+  it('renders the viewport with the artwork once the probe actually loads', () => {
+    renderScene(CAMPAIGN_AT_TOWN)
+    fireEvent.load(screen.getByTestId('scene-artwork-probe'))
+    const viewport = screen.getByTestId('scene-artwork')
+    expect(viewport).toBeInTheDocument()
+    expect(screen.getByAltText('Scene: Rivergate')).toHaveAttribute(
+      'src',
+      '/assets/sprites/environments/location-town.png',
+    )
+  })
+
+  it('renders no probe and no viewport when no current location resolves', () => {
+    renderScene()
+    expect(screen.queryByTestId('scene-artwork-probe')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('scene-artwork')).not.toBeInTheDocument()
+  })
+
+  it('location title and world time remain visible when the viewport is collapsed', () => {
     const campaign: Campaign = {
-      ...MOCK_CAMPAIGN,
-      worldState: {
-        ...DEFAULT_WORLD_STATE,
-        currentLocationId: 'loc-1',
-        locations: [{
-          id: 'loc-1', name: 'Rivergate', type: 'town', parentId: null,
-          description: 'A bustling river town full of traders.', visited: true, discovered: true, properties: {},
-        }],
-      },
+      ...CAMPAIGN_AT_TOWN,
+      worldState: { ...CAMPAIGN_AT_TOWN.worldState, worldTime: 'Dusk, third day' },
     }
     renderScene(campaign)
-    expect(screen.getByText('A bustling river town full of traders.')).toBeInTheDocument()
+    expect(screen.getByTestId('scene-location-title')).toHaveTextContent('Rivergate')
+    expect(screen.getByTestId('scene-time-line')).toHaveTextContent('Dusk, third day')
+  })
+
+  describe('world presence (UI 4.1) — the idle world behind the dialogue', () => {
+    it('renders the world preview as a background layer when no artwork exists', () => {
+      renderScene(CAMPAIGN_AT_TOWN)
+      const preview = screen.getByTestId('adventure-world-preview')
+      expect(preview).toBeInTheDocument()
+      expect(preview).toHaveAttribute('aria-hidden', 'true')
+      expect(preview.className).toContain('pointer-events-none')
+      expect(preview.className).toContain('absolute')
+    })
+
+    it('renders the world preview even when no current location resolves (neutral scene)', () => {
+      renderScene()
+      expect(screen.getByTestId('adventure-world-preview')).toBeInTheDocument()
+    })
+
+    it('hides the world preview once real artwork carries the world instead', () => {
+      renderScene(CAMPAIGN_AT_TOWN)
+      fireEvent.load(screen.getByTestId('scene-artwork-probe'))
+      expect(screen.getByTestId('scene-artwork')).toBeInTheDocument()
+      expect(screen.queryByTestId('adventure-world-preview')).not.toBeInTheDocument()
+    })
+
+    it('story children render above the preview, not inside it', () => {
+      renderScene(CAMPAIGN_AT_TOWN)
+      const preview = screen.getByTestId('adventure-world-preview')
+      const children = screen.getByTestId('scene-children')
+      expect(preview).not.toContainElement(children)
+    })
   })
 })

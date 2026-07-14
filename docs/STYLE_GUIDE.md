@@ -1,16 +1,39 @@
 # Chronicle AI — Style Guide
 
+> **[UI_VISION.md](UI_VISION.md) is the canonical design vision** (UI 3.0):
+> the north star, the eight core concepts (UI State Machine, Cameras-not-
+> Pages, World Renderer, …), and the new-component checklist. This file
+> remains the reference for tokens, primitives, and code patterns; when
+> deciding *whether/how* to build a component, start with UI_VISION.md.
+
 ---
 
 ## Design Language
 
-**Aesthetic reference**: Premium Game Boy Advance / Nintendo DS fantasy RPG. Think Golden Sun, Fire Emblem: Sacred Stones, Final Fantasy Tactics Advance, Castlevania: Aria of Sorrow. Warm, immediate, visually structured. High contrast between UI chrome and content. Every pixel has a job.
+**Aesthetic reference (UI 2.0)**: Dark-fantasy pixel RPG HUD, not a GBA
+palette anymore. Think Octopath Traveler, Pokémon Mystery Dungeon, Sea of
+Stars, Darkest Dungeon's UI, Diablo II menus, old Zelda inventory screens.
+Warm, heavy, torchlit. The interface should read as a leather-bound
+adventure journal open by a campfire, never as a dashboard or productivity
+app. High contrast between UI chrome and content. Every pixel has a job.
 
 **Mechanical reference**: D&D 5e / Roll20. Character sheets, stat blocks, and dice results look familiar to anyone who has played at a digital table.
 
-**Palette Philosophy**: The void is the canvas — deep space backgrounds that make color pop. Arcane gold is action and reward. Spirit teal is the system communicating. Warm amber and pixel-crisp borders frame every game panel. These colors carry semantic meaning; they are never purely decorative.
+**Palette Philosophy**: `void` is the canvas — nearly-black navy/charcoal
+backgrounds that make color pop. `panel` is carved oak and worn stone —
+every game panel's surface, warmer and heavier than the background behind
+it. `bronze` is the frame — heavy borders and glowing gold corners holding
+each panel together. `arcane` is fire — action, reward, and warmth
+(hover states, selected tabs, CTAs, XP), painted in ember/copper/fire-gold
+rather than a cold amber. `spirit` is the system communicating. `mystic`
+is a narrow blue accent reserved for spell/magic-specific UI only — it is
+not a general highlight color. These colors carry semantic meaning; they
+are never purely decorative.
 
-The two registers (GBA warmth + dark fantasy depth) must coexist. Dark backgrounds. Bright, saturated panel borders. Pixel-adjacent corner treatments on UI chrome. Soft glow effects reserved for magical events.
+Every panel should feel lit from a torch: an inner shadow for depth, an
+outer shadow for separation, and a warm top highlight where the light
+would fall. Soft glow effects reserved for magical events and selected/
+active states — never neon, never flat color fields.
 
 ---
 
@@ -18,22 +41,67 @@ The two registers (GBA warmth + dark fantasy depth) must coexist. Dark backgroun
 
 | Token | Hex | Use |
 |-------|-----|-----|
-| `void-950` | `#050510` | Page background, deep UI shadow |
-| `void-900` | `#0a0a1a` | Panel backgrounds |
-| `void-700` | `#1e1e45` | Borders, dividers |
-| `void-400` | `#5c5c98` | Muted text, disabled labels |
-| `arcane-400` | `#f7cf4d` | Highlights, active state borders, CTA text, XP |
-| `arcane-600` | `#c27505` | CTA button backgrounds, selected state |
+| `void-950` | `#0a0a0f` | Page background — nearly-black navy |
+| `void-800` | `#141315` | Secondary background — charcoal stone |
+| `void-700` | `#1b1a1e` | Dividers, dark slate |
+| `void-400` | `#6b625a` | Muted text, disabled labels |
+| `panel-900` | `#1f1814` | Panel background — carved oak |
+| `panel-700` | `#2a201a` | Lifted/hover panel surface — worn stone |
+| `bronze-800` | `#4a3423` | Dark bronze — panel border, pressed-state inset |
+| `bronze-600` | `#7a5630` | Bronze — default panel/button border |
+| `bronze-400` | `#c89443` | Gold — header text, active border, corner glow |
+| `bronze-300` | `#e2b562` | Highlight — brightest corner glow, focus rings |
+| `arcane-300` | `#e8a74a` | Fire gold — highlight tier, XP, subheader text |
+| `arcane-400` | `#d77a26` | Ember — primary accent, CTA text, selected-tab glow |
+| `arcane-600` | `#a86932` | Copper — CTA/button hover glow |
+| `arcane-700` | `#b45a1a` | Burnt orange — deeper accent border/bg tint |
+| `mystic-400` | `#5e83d7` | Spell/magic-specific accent only — never a general CTA color |
 | `spirit-400` | `#3bcac0` | System feedback, secondary actions, MP/mana |
-| `harm-400` | `#f87171` | Damage numbers, error states, poison indicator |
-| `heal-400` | `#4ade80` | Healing numbers, success states, buffs |
+| `harm-400` | `#b33131` | Blood red — damage numbers, error states |
+| `harm-600` | `#7a1e1e` | Dark crimson — deeper danger tone, danger-button bg |
+| `heal-400` | `#5ea85b` | Nature green — healing numbers, success states, buffs |
 
 **Semantic rules — do not break these:**
-- `arcane-*` means "action available" or "important reward." Never decorative.
+- `arcane-*` means "action available" or "important reward." Never decorative. (UI 2.0: painted in fire/ember/copper tones, not amber-gold — the role is unchanged, only the hue.)
+- `bronze-*` is structural — panel/button borders, corner glow, header gold. Not a status or action signal.
+- `panel-*` is the carved-wood/stone surface every game panel sits on. Distinct from `void`, which is the cooler background behind the panels.
+- `mystic-*` is reserved for spell/magic-specific UI. Never a general highlight or CTA — use `arcane-*` for that.
 - `spirit-*` means "the system is informing you." Never narrative prose.
 - `harm-*` is exclusively for damage, errors, and negative conditions.
 - `heal-*` is exclusively for healing, successes, and positive conditions.
-- White text on void backgrounds only. No light mode.
+- `warning-*` (`warning-400 #a86932` / `warning-600 #7a4a1f`) is exclusively
+  for caution states that are not yet errors — a duller, darker register
+  than `arcane-*`'s brighter ember/fire-gold CTA tones, so caution doesn't
+  read identically to "action available" at a glance.
+- Warm parchment/ivory text on dark backgrounds only. No light mode.
+
+### Generic token names (Phase 15 design-system mapping)
+
+The design system is sometimes described in generic terms (Background,
+Surface, Panel, Border, Gold, Success, Danger, Muted, Highlight, Selected,
+Disabled). These are **not new tokens** — they already exist under the
+semantic names above. This table exists so nobody reinvents them:
+
+| Generic name | Existing token |
+|---|---|
+| Background | `void-950` |
+| Surface / Panel | `panel-900` |
+| Border | `bronze-600` |
+| Gold | `bronze-400` |
+| Arcane | `arcane-*` |
+| Success | `heal-400` |
+| Danger | `harm-400` |
+| Warning | `warning-400` |
+| Muted | `void-400` |
+| Highlight | `bronze-300` |
+| Selected | `arcane-400` |
+| Disabled | `bronze-800` (border) + reduced opacity, per component |
+
+Because every component already reads these through Tailwind classes (not
+hardcoded hex values), a future theme only requires swapping the palette in
+`tailwind.config.ts` — no component changes needed. UI 2.0 is the first
+real exercise of that promise: the `Window`/`Icon`/`Typography`/`Button`
+component layer from Phase 15 needed zero API changes for this repaint.
 
 ### Battle Screen Color Additions
 
@@ -267,4 +335,130 @@ export function BattleScreen({ session, character, enemies }: BattleScreenProps)
 
 ---
 
-*Last updated: Phase 1.2*
+## Chronicle Design System (Phase 15.1)
+
+Reusable component layer built on top of everything above — new screens
+(including a future WorldSmith module) should reach for these first
+instead of hand-rolling panel/button/icon/text markup.
+
+### Components
+
+| Component | File | Purpose |
+|---|---|---|
+| `Window` | `src/components/pixel/Window.tsx` | Shared title-bar + scrollable body + optional footer. Use for any new panel that needs a header. |
+| `Icon` | `src/components/pixel/Icon.tsx` | Named registry over the emoji glyphs already used as icons (`<Icon name="dice" />`). See the file for the full `IconName` list. A real SVG pixel-icon set can swap in later behind the same API. |
+| `Typography` | `src/components/pixel/Typography.tsx` | `LargeTitle`, `LocationTitle`, `SectionHeader`, `SubHeader`, `NpcName`, `Dialogue`, `StoryText`, `SystemText`, `StatLabel`, `TinyLabel`, `StatNumber` — named wrappers over the Text Hierarchy above. UI 2.0 tiers: headers gold, subheaders copper, body parchment, numbers ivory. |
+| `Button` variants | `src/components/ui/Button.tsx` | Adds `navigation`, `menuAction`, `suggested`, `iconOnly` to the existing `arcane`/`spirit`/`ghost`/`danger` set — see the file's own header comment for the full role-to-variant mapping. |
+| `locationIcons` | `src/components/adventure/locationIcons.ts` | Shared `LOCATION_ICON`/`LOCATION_TYPE_LABEL` maps (single source of truth for AtlasPanel and AdventureScenePanel). |
+| Animations | `src/styles/pixel.css` | `pixel-type-dot` (typing indicator), `pixel-sparkle` (hover/focus flourish), `dialogue-reveal` (turn-block entrance) — all reduced-motion safe (see the kill-list at the bottom of that file; add new animations there too). |
+
+### Deferred (not migrated in Phase 15)
+
+These exist so the next contributor doesn't assume they were missed —
+they were deliberately left alone to keep each Phase 15 commit small and
+avoid destabilizing large, heavily-tested surfaces in one pass:
+
+- **`Window` migration**: `AtlasPanel`, `CombatPanel`, `DicePanel`,
+  `CharacterSidebar` still hand-roll their own headers (83/25/18/18
+  tests respectively — a real retrofit risk for a single phase).
+- **`Icon` migration**: `AtlasPanel`'s `LOCATION_ICON` consumers,
+  `QuestsPanel`'s `STATUS_META`, `CodexPanel`'s alive/dead glyphs, and
+  `ActionBar`'s weapon/spell/item submenu icons still use raw emoji
+  literals directly.
+- **Real SVG pixel-icon asset set**: `Icon` centralizes existing emoji;
+  it does not introduce new artwork or an asset pipeline.
+- **Weather / mood fields**: still do not exist on `WorldState` — the
+  scene panel and header only show real fields (location, region,
+  worldTime, turn, tone, difficulty) and reserve visually-labeled space
+  for when Phase 10 (Living World) adds them for real.
+- **Living Atlas** (tile canvas, fog of war, DM/player map layers):
+  `AtlasMapPanel` (Phase 15.3) is a static room-grid placeholder
+  establishing the mental model only — the full system is the
+  Constitution's separate, larger Phase 6.
+
+---
+
+## UI 2.0 — Dark Fantasy Re-theme
+
+The first real exercise of the "swap the palette without touching
+components" promise: the entire GBA-gold → dark-fantasy repaint (tokens,
+panel lighting/texture, carved-plaque buttons, torch-lit sidebar, bronze
+story box, gold/copper/parchment/ivory typography, ember animations)
+landed with zero component-API changes and zero test churn.
+
+**Color ratio target** (keeps the UI dark and immersive; check new
+screens against it): ~55% dark charcoal/black (`void`), ~20% warm
+walnut (`panel`), ~15% bronze/gold (`bronze`), ~7% ember (`arcane`),
+~3% status accents (`heal`/`harm`/`spirit`/`mystic`).
+
+**Every panel is torchlit**: outer drop shadow + inset warm top
+highlight + inset bottom depth shadow, plus a faint CSS-only grain so
+surfaces never read as flat color. The recipe lives once in
+`.chr-panel` (globals.css) and `.pixel-border*` (pixel.css) — don't
+hand-roll it per component.
+
+### UI 2.0 deferred
+
+- **`mystic` (blue magic accent)**: token exists, deliberately unused so
+  far — apply it when spell/magic-specific UI (spell slots, concentration,
+  magic-item rarity) gets its own visual pass. Never use it as a general
+  highlight.
+- **Real bitmap textures** (wood/parchment photography or painted tiles):
+  the CSS gradient + SVG-noise grain reads well at panel scale; revisit
+  only if a future art pass wants more literal carved-oak surfaces.
+- **`spirit` teal**: retained as-is for system feedback (MP, DC chips,
+  enemy HP). It's the remaining cool accent by design — the 3% tier —
+  not an oversight.
+
+---
+
+## UI 3.0 — Pixel RPG Experience
+
+The experience layer on top of UI 2.0. New building blocks:
+
+| Component | File | Purpose |
+|---|---|---|
+| `uiSceneStore` | `src/store/uiSceneStore.ts` | The UI State Machine — presentation phases with a legal-transition table. New screens add camera states here, never ad hoc reveal flags. |
+| `WorldRenderer` | `src/components/pixel/WorldRenderer.tsx` | The world behind every screen: procedural parallax scenes (`night-camp`/`dusk-vale`/`dawn-ridge`) with asset slots at `public/assets/sprites/environments/<scene>.png`. |
+| `SettingsModal` | `src/components/pixel/SettingsModal.tsx` | First mounted home of `AudioSettingsPanel` — opened from the Main Menu and AdventureLeftNav. |
+| Title screen | `src/app/pages/LandingPage.tsx` | JRPG boot: vista → logo → press-any-key → menu, driven by the state machine. |
+| Main Menu | `src/app/pages/MainMenuPage.tsx` | Renamed from DashboardPage; JRPG menu at the camp. `/dashboard` route path deliberately unchanged. |
+
+### UI 3.0 deferred (see UI_VISION.md roadmap for the full list)
+
+- Portraits (blink/breathing/emotions) and the party menu — blocked on
+  real art assets.
+- Per-feature material treatments (journal-as-tome, inventory-as-leather,
+  …) — the material language is documented in UI_VISION.md, implemented
+  feature-by-feature.
+- Real environment/sprite/audio assets — the slots and silent/procedural
+  fallbacks are wired; adding assets requires a licensing decision, never
+  a code change.
+- In-game ambience/weather scenes — waits for Phase 10 Living World data
+  (honesty rule); AdventureHub's `ambienceKind = 'none'` stands.
+- `/menu` route alias — a dedicated routing-cleanup phase.
+
+---
+
+## UI 4.1 — World Presence
+
+The world's idle state: whenever no real scene artwork exists, the
+Adventure story view renders a living pixel world BEHIND the dialogue
+(never stealing narration height — the readability pass's 378px
+stands). Files under `src/components/adventure/world/`:
+
+| File | Purpose |
+|---|---|
+| `AdventureWorldPreview.tsx` | Biome-aware idle scenes keyed by real LocationType (forest/village/dungeon/interior/mountains/default), ambient animation, readability vignette. Evolution path: → WorldRenderer → procedural scene renderer. |
+| `PlayerSprite.tsx` | The party leader standing in the world — idle breathe/blink only. Mount point for the future per-character sprite (portraits phase). |
+| `WeatherLayer.tsx` | Visualizes weather ONLY when given a real value; WorldState has no weather field yet, so it renders clear. Phase 10 wires in as one prop. |
+| `timeOfDay.ts` | Grades the Director's real free-text worldTime into morning/day/sunset/night (keyword table); no signal → neutral, exteriors only. |
+
+Honesty stance: biome furniture (trees, torches, houses) represents a
+location that genuinely exists; rain/snow remain impossible without a
+real weather field; time tint reflects only what the Director wrote.
+All motion is CSS, in the reduced-motion kill-lists.
+
+---
+
+*Last updated: UI 4.1 (World Presence)*

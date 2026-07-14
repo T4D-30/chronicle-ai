@@ -13,6 +13,8 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui'
+import { Icon, resolveIcon } from '@/components/pixel'
+import type { IconName } from '@/components/pixel'
 import { cn } from '@/lib/cn'
 import type { EquipmentItem } from '@/lib/engine'
 
@@ -22,20 +24,20 @@ type CombatSubMenu = 'root' | 'attack' | 'spell' | 'item'
 
 interface QuickAction {
   label: string
-  icon: string
+  icon: IconName
   text: string           // submitted to onSubmitAction
   'aria-label': string
 }
 
 const QUICK_ACTIONS: QuickAction[] = [
-  { label: 'Look',      icon: '👁',  text: 'I look around carefully.',                  'aria-label': 'Look around' },
-  { label: 'Inventory', icon: '🎒',  text: 'I check my inventory.',                     'aria-label': 'Check inventory' },
-  { label: 'Character', icon: '⚔️',  text: 'I review my character abilities and stats.','aria-label': 'Review character' },
-  { label: 'Atlas',     icon: '🗺',  text: 'I consult my map and review known locations.','aria-label': 'Consult map' },
-  { label: 'Journal',   icon: '📜',  text: 'I read my journal and recent notes.',        'aria-label': 'Read journal' },
-  { label: 'Quests',    icon: '⚡',  text: 'I review my active quests and objectives.',  'aria-label': 'Review quests' },
-  { label: 'Rest',      icon: '🌙',  text: 'I attempt to rest and recover.',             'aria-label': 'Rest' },
-  { label: 'Dice',      icon: '🎲',  text: 'I roll the dice.',                           'aria-label': 'Roll dice' },
+  { label: 'Look',      icon: 'look',      text: 'I look around carefully.',                  'aria-label': 'Look around' },
+  { label: 'Inventory', icon: 'inventory', text: 'I check my inventory.',                     'aria-label': 'Check inventory' },
+  { label: 'Character', icon: 'character', text: 'I review my character abilities and stats.','aria-label': 'Review character' },
+  { label: 'Atlas',     icon: 'atlas',     text: 'I consult my map and review known locations.','aria-label': 'Consult map' },
+  { label: 'Journal',   icon: 'journal',   text: 'I read my journal and recent notes.',        'aria-label': 'Read journal' },
+  { label: 'Quests',    icon: 'quest',     text: 'I review my active quests and objectives.',  'aria-label': 'Review quests' },
+  { label: 'Rest',      icon: 'rest',      text: 'I attempt to rest and recover.',             'aria-label': 'Rest' },
+  { label: 'Dice',      icon: 'dice',      text: 'I roll the dice.',                           'aria-label': 'Roll dice' },
 ]
 
 const MAX_INPUT = 500
@@ -170,7 +172,7 @@ function ExploreInput({
   handleKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void
 }) {
   return (
-    <div className="flex flex-col gap-0">
+    <div className="flex flex-col gap-0 max-w-3xl mx-auto w-full">
       {/* Quick-access shortcut buttons */}
       <div
         className="px-3 py-2 flex gap-1.5 flex-wrap"
@@ -194,7 +196,7 @@ function ExploreInput({
               'bg-void-900 border-void-700 text-void-400 hover:text-void-200',
             )}
           >
-            <span aria-hidden="true">{qa.icon}</span>
+            <Icon name={qa.icon} />
             <span>{qa.label}</span>
           </button>
         ))}
@@ -313,13 +315,13 @@ function CombatMenu({
 
 // ─── Root combat menu ─────────────────────────────────────────────────────────
 
-const COMBAT_ROOTS = [
-  { id: 'attack',  label: 'Attack',  icon: '⚔️',  sub: 'attack' as CombatSubMenu,  action: null },
-  { id: 'spell',   label: 'Spell',   icon: '✨',  sub: 'spell' as CombatSubMenu,   action: null },
-  { id: 'item',    label: 'Item',    icon: '🎒',  sub: 'item' as CombatSubMenu,    action: null },
-  { id: 'defend',  label: 'Defend',  icon: '🛡',  sub: null,  action: 'I take a defensive stance, focusing on protecting myself.' },
-  { id: 'move',    label: 'Move',    icon: '👣',  sub: null,  action: 'I reposition myself on the battlefield, moving to a better location.' },
-  { id: 'flee',    label: 'Flee',    icon: '🏃',  sub: null,  action: 'I attempt to flee the battle and escape from my enemies.' },
+const COMBAT_ROOTS: Array<{ id: string; label: string; icon: IconName; sub: CombatSubMenu | null; action: string | null }> = [
+  { id: 'attack',  label: 'Attack',  icon: 'attack', sub: 'attack' as CombatSubMenu,  action: null },
+  { id: 'spell',   label: 'Spell',   icon: 'spell',  sub: 'spell' as CombatSubMenu,   action: null },
+  { id: 'item',    label: 'Item',    icon: 'inventory', sub: 'item' as CombatSubMenu, action: null },
+  { id: 'defend',  label: 'Defend',  icon: 'defend', sub: null,  action: 'I take a defensive stance, focusing on protecting myself.' },
+  { id: 'move',    label: 'Move',    icon: 'move',   sub: null,  action: 'I reposition myself on the battlefield, moving to a better location.' },
+  { id: 'flee',    label: 'Flee',    icon: 'flee',   sub: null,  action: 'I attempt to flee the battle and escape from my enemies.' },
 ]
 
 function RootCombatMenu({
@@ -343,7 +345,7 @@ function RootCombatMenu({
         <CombatActionBtn
           key={item.id}
           ref={i === 0 ? firstBtnRef : undefined}
-          icon={item.icon}
+          icon={resolveIcon(item.icon)}
           label={item.label}
           variant={variantFor(item.id)}
           disabled={isDisabled}

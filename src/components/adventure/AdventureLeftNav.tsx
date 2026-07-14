@@ -28,18 +28,20 @@
  * factions list, keeping this card to a compact glance summary.
  */
 
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui'
-import { PixelPanel } from '@/components/pixel'
+import { PixelPanel, Icon, SettingsModal } from '@/components/pixel'
+import type { IconName } from '@/components/pixel'
 import type { AdventurePanel } from './AdventureHub'
 import type { Campaign, GameSession } from '@/lib/supabase'
 
-const NAV_ITEMS: Array<{ id: AdventurePanel; label: string; icon: string }> = [
-  { id: 'story',     label: 'Home',      icon: '🏠' },
-  { id: 'character', label: 'Characters',icon: '⚔️' },
-  { id: 'journal',   label: 'Journal',   icon: '📜' },
-  { id: 'quests',    label: 'Quests',    icon: '🗺️' },
-  { id: 'codex',     label: 'Codex',     icon: '📚' },
+const NAV_ITEMS: Array<{ id: AdventurePanel; label: string; icon: IconName }> = [
+  { id: 'story',     label: 'Home',      icon: 'home' },
+  { id: 'character', label: 'Characters',icon: 'character' },
+  { id: 'journal',   label: 'Journal',   icon: 'journal' },
+  { id: 'quests',    label: 'Quests',    icon: 'questsMap' },
+  { id: 'codex',     label: 'Codex',     icon: 'codex' },
 ]
 
 interface AdventureLeftNavProps {
@@ -72,6 +74,7 @@ export function AdventureLeftNav({
     ? worldState.locations.find((l) => l.id === worldState.currentLocationId)
     : null
   const discoveredCount = worldState.locations.filter((l) => l.discovered).length
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   return (
     <nav
@@ -80,7 +83,7 @@ export function AdventureLeftNav({
       aria-label="Adventure navigation"
     >
       <Link to="/dashboard" className="flex items-center gap-2 px-1 py-1 group">
-        <span className="text-xl" aria-hidden="true">🔥</span>
+        <Icon name="brand" className="text-xl" />
         <span className="font-display text-xs font-bold tracking-wide text-gradient-arcane group-hover:opacity-80 transition-opacity">
           CHRONICLE AI
         </span>
@@ -88,6 +91,11 @@ export function AdventureLeftNav({
 
       <div className="chr-divider" />
 
+      {/* JRPG pause-menu row treatment (UI 2.0): a carved frame per item
+          (bronze border), a soft glow on hover, and the currently-open
+          panel gets a torch-lit border — the same torch-glow class the
+          "Current Objective" card's glow prop uses (box-shadow flicker),
+          reused here rather than inventing a second glow mechanism. */}
       <div className="flex flex-col gap-1">
         {NAV_ITEMS.map((item) => {
           const isActive = activePanel === item.id
@@ -98,15 +106,15 @@ export function AdventureLeftNav({
               onClick={() => onSelectPanel(item.id)}
               aria-current={isActive ? 'page' : undefined}
               className={[
-                'flex items-center gap-2.5 px-3 py-2 rounded text-left transition-colors',
-                'font-body text-sm font-medium',
+                'flex items-center gap-2.5 px-3 py-2 rounded-sm text-left transition-all',
+                'font-body text-sm font-medium border',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-arcane-400',
                 isActive
-                  ? 'bg-arcane-900/40 text-arcane-300 border-l-2 border-arcane-500'
-                  : 'text-void-400 hover:text-void-200 hover:bg-void-800/50 border-l-2 border-transparent',
+                  ? 'bg-panel-800 text-arcane-300 border-bronze-500 torch-glow'
+                  : 'bg-transparent text-void-400 border-transparent hover:text-arcane-200 hover:bg-panel-800/60 hover:border-bronze-800 hover:shadow-bronze',
               ].join(' ')}
             >
-              <span className="text-base leading-none" aria-hidden="true">{item.icon}</span>
+              <Icon name={item.icon} className="text-base leading-none" />
               {item.label}
             </button>
           )
@@ -115,26 +123,25 @@ export function AdventureLeftNav({
           to={`/characters/${campaign.characterId}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-2.5 px-3 py-2 rounded text-left transition-colors font-body text-sm font-medium text-void-400 hover:text-void-200 hover:bg-void-800/50 border-l-2 border-transparent"
+          className="flex items-center gap-2.5 px-3 py-2 rounded-sm text-left transition-all font-body text-sm font-medium border border-transparent text-void-400 hover:text-arcane-200 hover:bg-panel-800/60 hover:border-bronze-800 hover:shadow-bronze"
         >
-          <span className="text-base leading-none" aria-hidden="true">🎒</span>
+          <Icon name="inventory" className="text-base leading-none" />
           Inventory
         </Link>
-        {/* No settings page exists anywhere in the app yet (confirmed —
-            no /settings route, AudioSettings.tsx is built but unmounted).
-            Rendered as an honest disabled placeholder rather than a
-            broken link, matching this phase's "no invented systems"
-            constraint. */}
+        {/* Live as of UI 3.0: opens the SettingsModal mounting the real
+            AudioSettingsPanel — no longer the disabled placeholder it
+            was while no settings surface existed. */}
         <button
           type="button"
-          disabled
-          title="Settings are not available yet"
-          className="flex items-center gap-2.5 px-3 py-2 rounded text-left font-body text-sm font-medium text-void-700 cursor-not-allowed border-l-2 border-transparent"
+          onClick={() => setSettingsOpen(true)}
+          className="flex items-center gap-2.5 px-3 py-2 rounded-sm text-left transition-all font-body text-sm font-medium border border-transparent text-void-400 hover:text-arcane-200 hover:bg-panel-800/60 hover:border-bronze-800 hover:shadow-bronze focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-arcane-400"
         >
-          <span className="text-base leading-none" aria-hidden="true">⚙️</span>
+          <Icon name="settings" className="text-base leading-none" />
           Settings
         </button>
       </div>
+
+      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
 
       <div className="chr-divider" />
 

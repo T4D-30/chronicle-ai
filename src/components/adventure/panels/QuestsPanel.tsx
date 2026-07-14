@@ -16,7 +16,7 @@
  */
 
 import { useMemo } from 'react'
-import { PixelPanel, PixelCard } from '@/components/pixel'
+import { PixelPanel, PixelCard, Window } from '@/components/pixel'
 import type { Campaign } from '@/lib/supabase'
 import type { PlotThread, ThreadStatus } from '@/types/campaign'
 
@@ -53,40 +53,34 @@ export function QuestsPanel({ campaign }: QuestsPanelProps) {
   const hasAny = threads.length > 0
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
-      <div className="flex-shrink-0 px-4 pt-4 pb-2">
-        <p className="font-pixel-display text-[10px] text-arcane-400 uppercase">Quest Log</p>
-      </div>
-
-      <div className="flex-1 overflow-y-auto min-h-0 px-4 pb-4" role="region" aria-label="Quest log">
-        {!hasAny ? (
-          <div className="flex flex-col items-center justify-center h-full text-center">
-            <PixelPanel variant="arcane" className="p-6 max-w-sm">
-              <p className="lore-text text-void-400 text-sm mb-3">
-                "Unfinished business shapes every hero."
-              </p>
-              <p className="text-void-600 text-xs">
-                Quests appear here as the Director recognises them in your
-                story — a request, a mystery, a clear goal. None have
-                emerged yet.
-              </p>
-            </PixelPanel>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-5">
-            {grouped.active.length > 0 && (
-              <QuestGroup title="Active" threads={grouped.active} />
-            )}
-            {grouped.resolved.length > 0 && (
-              <QuestGroup title="Resolved" threads={grouped.resolved} />
-            )}
-            {grouped.abandoned.length > 0 && (
-              <QuestGroup title="Abandoned" threads={grouped.abandoned} />
-            )}
-          </div>
-        )}
-      </div>
-    </div>
+    <Window title="Quest Log" icon="questsMap" regionLabel="Quest log">
+      {!hasAny ? (
+        <div className="flex flex-col items-center justify-center h-full text-center">
+          <PixelPanel variant="arcane" className="p-6 max-w-sm">
+            <p className="lore-text text-void-400 text-sm mb-3">
+              "Unfinished business shapes every hero."
+            </p>
+            <p className="text-void-600 text-xs">
+              Quests appear here as the Director recognises them in your
+              story — a request, a mystery, a clear goal. None have
+              emerged yet.
+            </p>
+          </PixelPanel>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-5">
+          {grouped.active.length > 0 && (
+            <QuestGroup title="Active" threads={grouped.active} />
+          )}
+          {grouped.resolved.length > 0 && (
+            <QuestGroup title="Resolved" threads={grouped.resolved} />
+          )}
+          {grouped.abandoned.length > 0 && (
+            <QuestGroup title="Abandoned" threads={grouped.abandoned} />
+          )}
+        </div>
+      )}
+    </Window>
   )
 }
 

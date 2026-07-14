@@ -116,43 +116,6 @@ describe('TextExtractionParser — Markdown (same path as TXT)', () => {
 })
 
 describe('TextExtractionParser — DOCX', () => {
-  /**
-   * KNOWN TEST-ENVIRONMENT CONSTRAINT (documented, not silently skipped):
-   *
-   * mammoth is a CommonJS package. Its package.json "browser" field
-   * remaps lib/unzip.js → browser/unzip.js — a bundler convention (Vite,
-   * Webpack, Rollup all honor it when building for a browser target).
-   * mammoth/lib/index.js itself uses a plain CJS `require("./unzip")`
-   * internally. Vitest's `vi.mock()` reliably intercepts ESM-level
-   * imports, but does not intercept this internal CJS require() call —
-   * confirmed by directly testing several mock path variants
-   * (`'mammoth/lib/unzip.js'`, `'mammoth/lib/unzip'`), all of which still
-   * resolved to the real lib/unzip.js at runtime. This is a genuine
-   * CJS-interop limitation of the test tooling, not a flaw in
-   * textExtractionParser.ts's own logic.
-   *
-   * What WAS directly verified (real bytes, real fixture, real mammoth
-   * browser code, zero mocking of the mechanism itself):
-   *   - readFileAsArrayBuffer() (the exact function textExtractionParser.ts
-   *     uses) produces a jsdom-realm ArrayBuffer that passes `instanceof
-   *     ArrayBuffer` correctly inside this test environment (a
-   *     Node-Buffer-derived ArrayBuffer does NOT — a separate, genuine
-   *     cross-realm identity gap that was found and ruled out as the
-   *     actual blocker here).
-   *   - mammoth's REAL, unmocked browser/unzip.js, called directly with
-   *     that real ArrayBuffer against the real fixture DOCX, successfully
-   *     opens the archive and finds word/document.xml — proving the
-   *     browser-path extraction mechanism itself is completely correct.
-   *   - The real production build (npm run build) was run during
-   *     development and succeeded — Vite's bundler-level "browser" field
-   *     resolution (a different, more capable mechanism than Vitest's
-   *     module interception) is exactly what mammoth's own documentation
-   *     describes for browser usage, and it works.
-   *
-   * The only thing NOT directly exercised end-to-end inside a Vitest run
-   * is the one CJS require() hop inside mammoth/lib/index.js itself —
-   * everything on either side of that hop is verified real.
-   */
   it('mammoth\'s real browser-build zip opener successfully reads the real fixture via a real FileReader-produced ArrayBuffer', async () => {
     // @ts-expect-error — mammoth/browser/unzip.js is an internal submodule
     // with no published type declarations; imported here deliberately to
@@ -174,17 +137,12 @@ describe('TextExtractionParser — DOCX', () => {
     expect(result.confidence).toBe('unavailable')
   })
 
-  it('the DOCX case dispatches to a real, non-stubbed extraction attempt (does not silently decline for a well-formed file without trying)', async () => {
-    // Confirms extractText() genuinely attempts mammoth extraction for a
-    // real DOCX (reaches the try block, not an early honest-decline like
-    // ManualDocumentParser). In THIS specific test environment, the CJS
-    // require() constraint documented above means the ultimate result is
-    // null — in the real production build, it is real text (see the
-    // direct mechanism test above for proof of why).
+  it('extracts text from a real DOCX through Mammoth\'s browser bundle', async () => {
     const bytes = readFixture('sample.docx')
     const file = makeFile('list.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', bytes)
     const result = await TextExtractionParser.extractText(file)
-    expect(result).toEqual({ text: null, confidence: 'unavailable' })
+    expect(result.text).toBe('Apple\n\nBanana')
+    expect(result.confidence).toBe('high')
   })
 })
 

@@ -8,36 +8,76 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Chronicle AI JRPG Design System
-        // Primary — deep void ink
+        // Chronicle AI Dark Fantasy Design System (UI 2.0)
+        //
+        // Repaint of the Phase 15 GBA-gold palette into a warmer,
+        // heavier dark-fantasy register (Darkest Dungeon / Octopath
+        // Traveler, not Golden Sun). Token NAMES and semantic ROLES are
+        // preserved wherever the role is unchanged — `arcane` still means
+        // "action available, never decorative" per the Style Guide's own
+        // rule, just painted in fire/ember tones instead of amber-gold —
+        // so every existing `bg-arcane-600`/`text-heal-400`/etc. class
+        // string in the codebase keeps working, only its rendered color
+        // changes. Two genuinely new roles get new tokens: `panel` (warm
+        // carved-wood/stone surface, distinct from the cooler `void`
+        // background) and `bronze` (the heavy border/frame family). A
+        // narrow blue magic accent gets a new name (`mystic`) rather than
+        // colliding with arcane's established meaning.
+
+        // Background — nearly-black navy/charcoal/slate
         void: {
-          50:  '#f0f0f5',
-          100: '#dcdce8',
-          200: '#b8b8d4',
-          300: '#8a8ab6',
-          400: '#5c5c98',
-          500: '#3a3a7a',
-          600: '#2e2e60',
-          700: '#1e1e45',
-          800: '#14142e',
-          900: '#0a0a1a',
-          950: '#050510',
+          50:  '#f5f0ea',
+          100: '#e4dcd0',
+          200: '#c9beb0',
+          300: '#9c9086',
+          400: '#6b625a',
+          500: '#4a423c',
+          600: '#322c28',
+          700: '#1b1a1e',  // dark slate
+          800: '#141315',  // charcoal stone
+          900: '#101014',
+          950: '#0a0a0f',  // nearly-black navy — page background
         },
-        // Accent — arcane amber / enchanted gold
+        // Panel surfaces — carved oak / worn stone (NEW: panels no
+        // longer share `void`'s cool background hue)
+        panel: {
+          500: '#4a3a2c',
+          600: '#3a2b20',
+          700: '#2a201a',
+          800: '#241a16',
+          900: '#1f1814',  // default panel background
+          950: '#170f0b',
+        },
+        // Border/frame family — heavy bronze, glowing gold corners (NEW)
+        bronze: {
+          200: '#f0d5a0',
+          300: '#e2b562',  // highlight
+          400: '#c89443',  // gold
+          600: '#7a5630',  // bronze
+          800: '#4a3423',  // dark bronze
+          900: '#241810',
+        },
+        // Accent — fire/ember warmth (repainted; still "action available")
         arcane: {
-          50:  '#fefbec',
-          100: '#fdf3c8',
-          200: '#fae48d',
-          300: '#f7cf4d',
-          400: '#f4b820',
-          500: '#e39a08',
-          600: '#c27505',
-          700: '#9a5208',
-          800: '#7d410d',
-          900: '#683611',
-          950: '#3c1b05',
+          50:  '#fceedd',
+          100: '#f9dcb8',
+          200: '#f2c48c',
+          300: '#e8a74a',  // fire gold — highlight tier
+          400: '#d77a26',  // ember — primary accent/CTA text/XP
+          500: '#c08a3a',
+          600: '#a86932',  // copper — CTA bg / hover
+          700: '#b45a1a',  // burnt orange — deeper border/bg tint
+          800: '#7a3d14',
+          900: '#4f280e',
+          950: '#2b1608',
         },
-        // Secondary — crystal teal / spirit blue
+        // Magic/spell accent — narrow use only, not a general CTA color (NEW)
+        mystic: {
+          400: '#5e83d7',
+          600: '#3d5fae',
+        },
+        // Secondary — crystal teal / spirit blue (unchanged — system
+        // feedback register, not part of the fire/bronze warmth pass)
         spirit: {
           50:  '#edfcfa',
           100: '#d2f7f3',
@@ -53,12 +93,21 @@ const config: Config = {
         },
         // Status
         harm: {
-          400: '#f87171',
-          600: '#dc2626',
+          400: '#b33131',  // blood red
+          600: '#7a1e1e',  // dark crimson
         },
         heal: {
-          400: '#4ade80',
-          600: '#16a34a',
+          400: '#5ea85b',  // nature green
+          600: '#3d7a3b',
+        },
+        // Warning — distinct from arcane. arcane means "action available or
+        // important reward" (Style Guide semantic rule); warning means
+        // "caution," a different signal. Folded into the fire family's
+        // duller, darker register so it reads as related-but-distinct from
+        // arcane's brighter ember/fire-gold CTA tones.
+        warning: {
+          400: '#a86932',
+          600: '#7a4a1f',
         },
       },
       fontFamily: {
@@ -92,16 +141,24 @@ const config: Config = {
         'full':  '9999px',
       },
       boxShadow: {
-        'arcane':  '0 0 20px rgba(243, 207, 77, 0.25), 0 0 40px rgba(243, 207, 77, 0.1)',
+        'arcane':  '0 0 20px rgba(215, 122, 38, 0.3), 0 0 40px rgba(215, 122, 38, 0.12)',
+        'bronze':  '0 0 16px rgba(226, 181, 98, 0.3), 0 0 32px rgba(200, 148, 67, 0.12)',
         'spirit':  '0 0 20px rgba(59, 202, 192, 0.25), 0 0 40px rgba(59, 202, 192, 0.1)',
-        'void':    '0 4px 32px rgba(5, 5, 16, 0.8)',
-        'panel':   '0 2px 16px rgba(5, 5, 16, 0.5), inset 0 1px 0 rgba(255,255,255,0.05)',
+        'void':    '0 4px 32px rgba(10, 10, 15, 0.85)',
+        // Warm-lighting recipe (Phase 15.1 lineage, UI 2.0 repaint): outer
+        // drop shadow for depth + inset top highlight suggesting torchlight
+        // falling on the panel from above. Panel primitives (globals.css /
+        // pixel.css) build on this same idea with a fuller inner+outer+
+        // highlight stack.
+        'panel':   '0 2px 16px rgba(10, 10, 15, 0.6), inset 0 1px 0 rgba(226, 181, 98, 0.06)',
       },
       backgroundImage: {
-        'void-gradient':    'linear-gradient(135deg, #0a0a1a 0%, #14142e 50%, #1e1e45 100%)',
-        'arcane-gradient':  'linear-gradient(135deg, #3c1b05 0%, #683611 50%, #9a5208 100%)',
+        'void-gradient':    'linear-gradient(135deg, #0a0a0f 0%, #141315 50%, #1b1a1e 100%)',
+        'panel-gradient':   'linear-gradient(135deg, #1f1814 0%, #241a16 55%, #2a201a 100%)',
+        'bronze-gradient':  'linear-gradient(135deg, #4a3423 0%, #7a5630 55%, #c89443 100%)',
+        'arcane-gradient':  'linear-gradient(135deg, #4f280e 0%, #a86932 55%, #d77a26 100%)',
         'spirit-gradient':  'linear-gradient(135deg, #092c2d 0%, #1a4a49 50%, #19706d 100%)',
-        'panel-border':     'linear-gradient(135deg, rgba(243,207,77,0.3) 0%, rgba(59,202,192,0.15) 100%)',
+        'panel-border':     'linear-gradient(135deg, rgba(226,181,98,0.35) 0%, rgba(215,122,38,0.15) 100%)',
       },
       animation: {
         'pulse-arcane': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',

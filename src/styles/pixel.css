@@ -29,38 +29,39 @@
 
 /* ── Pixel borders ─────────────────────────────────────────────────────────── */
 
-/* Classic GBA dialog border: hard outer edge, inner highlight, corner notches */
+/* Classic GBA dialog border, repainted heavy-bronze for UI 2.0: hard outer
+   edge, inner highlight, corner notches — same mechanics, warm frame. */
 .pixel-border {
-  border: 2px solid #1e1e45;
+  border: 2px solid #4a3423; /* bronze-800 */
   box-shadow:
-    0 0 0 2px #050510,               /* outer dark frame */
-    inset 0 0 0 2px #0a0a1a,         /* inner shadow line */
-    inset 2px 2px 0 2px rgba(247, 207, 77, 0.08); /* torchlight top-left */
+    0 0 0 2px #0a0a0f,               /* outer dark frame — void-950 */
+    inset 0 0 0 2px #170f0b,         /* inner shadow line — panel-950 */
+    inset 2px 2px 0 2px rgba(226, 181, 98, 0.10); /* torchlight top-left — bronze highlight */
   border-radius: 0;                   /* pixel UIs have no rounded corners */
 }
 
 .pixel-border-arcane {
-  border: 2px solid #c27505;
+  border: 2px solid #a86932; /* arcane-600 — copper */
   box-shadow:
-    0 0 0 2px #050510,
-    inset 0 0 0 2px #3c1b05,
-    inset 2px 2px 0 2px rgba(247, 207, 77, 0.15);
+    0 0 0 2px #0a0a0f,
+    inset 0 0 0 2px #2b1608,         /* arcane-950 */
+    inset 2px 2px 0 2px rgba(215, 122, 38, 0.18); /* ember glow */
   border-radius: 0;
 }
 
 .pixel-border-harm {
-  border: 2px solid #dc2626;
+  border: 2px solid #7a1e1e; /* harm-600 — dark crimson */
   box-shadow:
-    0 0 0 2px #050510,
-    inset 0 0 0 2px #450a0a,
-    inset 2px 2px 0 2px rgba(248, 113, 113, 0.12);
+    0 0 0 2px #0a0a0f,
+    inset 0 0 0 2px #2a0e0e,
+    inset 2px 2px 0 2px rgba(179, 49, 49, 0.15); /* blood-red glow */
   border-radius: 0;
 }
 
 .pixel-border-spirit {
   border: 2px solid #198c87;
   box-shadow:
-    0 0 0 2px #050510,
+    0 0 0 2px #0a0a0f,
     inset 0 0 0 2px #092c2d,
     inset 2px 2px 0 2px rgba(59, 202, 192, 0.12);
   border-radius: 0;
@@ -70,10 +71,10 @@
 
 .pixel-btn {
   border-radius: 0;
-  border: 2px solid #1e1e45;
+  border: 2px solid #4a3423; /* bronze-800 — carved plaque frame */
   box-shadow:
-    0 3px 0 0 #050510,                /* hard drop for "raised key" feel */
-    inset 1px 1px 0 1px rgba(255, 255, 255, 0.06);
+    0 3px 0 0 #241810,                /* hard drop, wood-dark not black — bronze-900 */
+    inset 1px 1px 0 1px rgba(226, 181, 98, 0.08); /* warm top-left glint */
   transition: transform 80ms steps(2), box-shadow 80ms steps(2);
   transform: translateY(0);
 }
@@ -85,7 +86,8 @@
 .pixel-btn:active:not(:disabled) {
   transform: translateY(3px);
   box-shadow:
-    0 0 0 0 #050510,
+    0 0 0 0 #0a0a0f,
+    inset 0 2px 4px rgba(36, 24, 16, 0.55), /* dark bronze inset — "pressed" feel */
     inset 1px 1px 0 1px rgba(0, 0, 0, 0.2);
 }
 
@@ -106,7 +108,7 @@
 }
 
 .torch-glow {
-  box-shadow: 0 0 24px 4px rgba(244, 184, 32, 0.12);
+  box-shadow: 0 0 24px 4px rgba(215, 122, 38, 0.16); /* ember glow, was amber */
   animation: torch-flicker 3.2s infinite steps(12);
 }
 
@@ -114,9 +116,9 @@
 
 .pixel-bar-track {
   border-radius: 0;
-  border: 2px solid #1e1e45;
+  border: 2px solid #4a3423; /* bronze-800 */
   box-shadow: inset 0 2px 0 0 rgba(0, 0, 0, 0.5);
-  background: #0a0a1a;
+  background: #170f0b; /* panel-950 */
   overflow: hidden;
 }
 
@@ -145,10 +147,10 @@
   pointer-events: none;
   font-family: 'Press Start 2P', monospace;
   text-shadow:
-    2px 2px 0 #050510,
-    -1px -1px 0 #050510,
-    1px -1px 0 #050510,
-    -1px 1px 0 #050510;
+    2px 2px 0 #0a0a0f,
+    -1px -1px 0 #0a0a0f,
+    1px -1px 0 #0a0a0f,
+    -1px 1px 0 #0a0a0f;
 }
 
 @keyframes crit-flash {
@@ -173,7 +175,7 @@
   content: '▶';
   display: inline-block;
   margin-right: 0.4em;
-  color: #f7cf4d;
+  color: #e8a74a; /* fire gold — arcane-300 */
   animation: cursor-blink 0.9s infinite steps(1);
 }
 
@@ -187,12 +189,14 @@
   100% { transform: translate(calc(var(--drift-x, 20px) * 1.8), calc(var(--drift-y, -30px) * 1.6)); opacity: 0; }
 }
 
+/* Fireflies double as drifting campfire embers in UI 2.0 — same drift
+   mechanics, ember-orange glow instead of amber. */
 .particle-firefly {
   position: absolute;
   width: 3px;
   height: 3px;
-  background: #f7cf4d;
-  box-shadow: 0 0 6px 2px rgba(247, 207, 77, 0.6);
+  background: #d77a26; /* ember — arcane-400 */
+  box-shadow: 0 0 6px 2px rgba(215, 122, 38, 0.6);
   animation: firefly-drift var(--duration, 7s) infinite steps(24);
   animation-delay: var(--delay, 0s);
 }
@@ -239,6 +243,102 @@
   animation: fog-drift 24s infinite ease-in-out;
 }
 
+/* ── World Renderer parallax (UI 3.0) ──────────────────────────────────────── */
+
+/* Slow horizontal drift for scenery silhouette bands. Layers set
+   --drift (amplitude) and --drift-duration so nearer bands move more
+   and faster than distant ones — the whole-scene motion is measured in
+   tens of seconds per UI_VISION.md's atmosphere rules. */
+@keyframes world-drift {
+  0%, 100% { transform: translateX(calc(var(--drift, 1%) * -1)); }
+  50%      { transform: translateX(var(--drift, 1%)); }
+}
+
+.world-band {
+  animation: world-drift var(--drift-duration, 60s) ease-in-out infinite;
+}
+
+/* Cloud/fog sheet drifting one direction and wrapping. */
+@keyframes cloud-drift {
+  0%   { transform: translateX(-12%); }
+  100% { transform: translateX(12%); }
+}
+
+.world-clouds {
+  animation: cloud-drift var(--drift-duration, 90s) ease-in-out infinite alternate;
+}
+
+/* ── World-presence idle animations (UI 4.1) ───────────────────────────────── */
+
+/* Slow tree sway — rotation anchored at the trunk base. transform-box
+   makes the origin work on SVG groups. */
+@keyframes tree-sway {
+  0%, 100% { transform: rotate(-1.2deg); }
+  50%      { transform: rotate(1.2deg); }
+}
+
+.world-sway {
+  animation: tree-sway var(--sway-duration, 6s) ease-in-out infinite;
+  animation-delay: var(--sway-delay, 0s);
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+
+/* Chimney smoke — puffs rise, spread, and fade. */
+@keyframes smoke-rise {
+  0%   { transform: translateY(0) scale(1); opacity: 0.45; }
+  100% { transform: translateY(-14px) scale(1.9); opacity: 0; }
+}
+
+.world-smoke {
+  animation: smoke-rise var(--smoke-duration, 5s) linear infinite;
+  animation-delay: var(--smoke-delay, 0s);
+  transform-box: fill-box;
+}
+
+/* Area-transition overlay fades (Presentation 3). Inline styles carry
+   the final state; killing these under reduced motion yields an
+   instant area swap, never a stuck overlay. */
+@keyframes overlay-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes overlay-fade-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+.overlay-fade-in {
+  animation: overlay-fade-in 240ms linear;
+}
+
+.overlay-fade-out {
+  animation: overlay-fade-out 240ms linear;
+}
+
+/* Idle breathing — a barely-there vertical settle, anchored at the feet. */
+@keyframes sprite-breathe {
+  0%, 100% { transform: scaleY(1); }
+  50%      { transform: scaleY(1.03); }
+}
+
+.sprite-breathe {
+  animation: sprite-breathe 3.4s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+
+/* Idle blink — eyes closed for a single beat every few seconds. */
+@keyframes sprite-blink {
+  0%, 92%, 100% { opacity: 1; }
+  94%, 97%      { opacity: 0; }
+}
+
+.sprite-blink {
+  animation: sprite-blink 5.2s steps(1) infinite;
+}
+
 /* ── Water shimmer ─────────────────────────────────────────────────────────── */
 
 @keyframes water-shimmer {
@@ -276,8 +376,31 @@
   display: inline-block;
   width: 4px;
   height: 4px;
-  background: #f4b820;
+  background: #d77a26; /* ember — arcane-400 */
   animation: pixel-type 0.6s infinite steps(2);
+}
+
+/* ── Suggested-action sparkle (Phase 15.1) ─────────────────────────────────── */
+
+@keyframes pixel-sparkle {
+  0%, 100% { transform: scale(1); filter: brightness(1); }
+  50%      { transform: scale(1.05); filter: brightness(1.3); }
+}
+
+.pixel-sparkle:hover,
+.pixel-sparkle:focus-visible {
+  animation: pixel-sparkle 400ms steps(4);
+}
+
+/* ── Dialogue turn reveal (Phase 15.1) ─────────────────────────────────────── */
+
+@keyframes dialogue-reveal {
+  0%   { opacity: 0; transform: translateY(6px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.dialogue-reveal {
+  animation: dialogue-reveal 220ms steps(6) forwards;
 }
 
 /* ── XP gain popup (Phase 10.1) ────────────────────────────────────────────── */
@@ -319,7 +442,7 @@
   left: 50%;
   width: 2px;
   height: 40%;
-  background: linear-gradient(to top, transparent, #f7cf4d, transparent);
+  background: linear-gradient(to top, transparent, #e8a74a, transparent); /* fire gold */
   transform-origin: bottom center;
   animation: level-up-ray 900ms steps(18) forwards;
 }
@@ -355,7 +478,18 @@
   .pixel-cursor::before,
   .xp-gain-popup,
   .level-up-burst,
-  .level-up-ray {
+  .level-up-ray,
+  .pixel-sparkle:hover,
+  .pixel-sparkle:focus-visible,
+  .dialogue-reveal,
+  .world-band,
+  .world-clouds,
+  .world-sway,
+  .world-smoke,
+  .sprite-breathe,
+  .sprite-blink,
+  .overlay-fade-in,
+  .overlay-fade-out {
     animation: none !important;
   }
   .pixel-bar-fill {

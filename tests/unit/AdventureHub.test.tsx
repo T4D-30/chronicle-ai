@@ -7,13 +7,18 @@
  *  - Session controls (pause, resume, end)
  *  - Error banner rendering
  */
-import { render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, it, expect, vi } from 'vitest'
 import { AdventureHub } from '@/components/adventure/AdventureHub'
 import type { AdventureState, AdventureActions } from '@/components/adventure/useAdventureSession'
 import { DEFAULT_DIRECTOR_CONFIG, DEFAULT_WORLD_STATE } from '@/types/campaign'
+import { initCombat } from '@/lib/engine'
+import { STEP_MS } from '@/components/adventure/overworld/PlayerController'
+import { TRANSITION_PHASE_MS } from '@/components/adventure/overworld/WorldTransition'
+
+const DEBUG_ENABLED = import.meta.env.VITE_ENABLE_DEBUG_PANEL === 'true'
 
 const MOCK_CAMPAIGN = {
   id: 'camp-1', userId: 'user-1', title: 'The Shattered Throne',
@@ -85,6 +90,18 @@ function renderHub(stateOverrides: Partial<AdventureState> = {}, actionOverrides
   )
 }
 
+// Phase 14.1: PartyStatusPanel/CharacterSidebar/WorldStatusSidebar now live
+// behind tabs in a single consolidated AdventureRightSidebar (see that
+// component's header comment for why) instead of three always-visible
+// asides. Tests that need one of those panels' content select its tab
+// first — "Status" is the sidebar's default tab, so only tests needing
+// Character or World content need this helper.
+async function selectSidebarTab(name: RegExp) {
+  const user = userEvent.setup()
+  const tabs = screen.getByTestId('adventure-right-sidebar-tabs')
+  await user.click(within(tabs).getByRole('button', { name }))
+}
+
 describe('AdventureHub — layout', () => {
   it('renders the adventure hub container', () => {
     renderHub()
@@ -113,10 +130,11 @@ describe('AdventureHub — layout', () => {
     expect(screen.getByRole('tablist', { name: 'Adventure panels' })).toBeInTheDocument()
   })
 
-  it('renders 7 panel tabs (debug hidden without VITE_ENABLE_DEBUG_PANEL)', () => {
+  it('renders the expected bottom panel tabs for the current debug flag', () => {
     renderHub()
-    const tabs = screen.getAllByRole('tab')
-    expect(tabs).toHaveLength(7)  // debug tab absent when flag unset
+    const tabNav = screen.getByRole('tablist', { name: 'Adventure panels' })
+    const tabs = within(tabNav).getAllByRole('tab')
+    expect(tabs).toHaveLength(DEBUG_ENABLED ? 9 : 8)
   })
 
   it('starts with the Story tab active', () => {
@@ -129,9 +147,12 @@ describe('AdventureHub — layout', () => {
     expect(screen.getByTestId('adventure-panel-area')).toBeInTheDocument()
   })
 
-  it('shows the character sidebar on desktop (always-visible aside)', () => {
+  it('shows the right sidebar on desktop, with the character sheet a tab away (Phase 14.1 consolidation)', async () => {
     renderHub()
-    expect(screen.getByTestId('adventure-character-sidebar')).toBeInTheDocument()
+    expect(screen.getByTestId('adventure-right-sidebar-wrapper')).toBeInTheDocument()
+    await selectSidebarTab(/Character/i)
+    const sidebar = screen.getByTestId('adventure-right-sidebar')
+    expect(within(sidebar).getByText('Aldric Sorn')).toBeInTheDocument()
   })
 })
 
@@ -253,9 +274,15 @@ describe('AdventureHub — panel switching', () => {
     expect(screen.queryByRole('button', { name: 'Level Up' })).not.toBeInTheDocument()
   })
 
-  it('does not render Debug tab without VITE_ENABLE_DEBUG_PANEL flag', () => {
+  it('renders the Debug tab only when VITE_ENABLE_DEBUG_PANEL is true', () => {
     renderHub()
-    expect(screen.queryByRole('tab', { name: /Debug/i })).not.toBeInTheDocument()
+    const tabNav = screen.getByRole('tablist', { name: 'Adventure panels' })
+    const debugTab = within(tabNav).queryByRole('tab', { name: /Debug/i })
+    if (DEBUG_ENABLED) {
+      expect(debugTab).toBeInTheDocument()
+    } else {
+      expect(debugTab).not.toBeInTheDocument()
+    }
   })
 
   it('marks the newly active tab as selected', async () => {
@@ -264,6 +291,93 @@ describe('AdventureHub — panel switching', () => {
     await user.click(screen.getByRole('tab', { name: /Dice/i }))
     expect(screen.getByRole('tab', { name: /Story/i })).toHaveAttribute('aria-selected', 'false')
     expect(screen.getByRole('tab', { name: /Dice/i })).toHaveAttribute('aria-selected', 'true')
+  })
+
+  it('hands an overworld encounter to combat and restores the current area and movement afterward', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(0)
+    const actions = makeActions()
+    const enemy = {
+      id: 'forest-wolf',
+      name: 'Forest Wolf',
+      isPlayer: false as const,
+      maxHp: 11,
+      currentHp: 11,
+      armorClass: 13,
+      attackBonus: 4,
+      damageDie: 'd6' as const,
+      damageBonus: 2,
+      dexMod: 2,
+    }
+    const combatState = initCombat(
+      { id: 'player', name: MOCK_CHARACTER.sheet.name, isPlayer: true as const, sheet: MOCK_CHARACTER.sheet },
+      [enemy],
+    )
+
+    try {
+      const { rerender } = render(
+        <MemoryRouter>
+          <AdventureHub state={makeState()} actions={actions} />
+        </MemoryRouter>,
+      )
+
+      const step = (key: string) => {
+        fireEvent.keyDown(window, { key })
+        act(() => {
+          vi.advanceTimersByTime(STEP_MS + 10)
+        })
+      }
+
+      fireEvent.click(screen.getByRole('tab', { name: /World/i }))
+      expect(screen.getByTestId('overworld-mode')).toBeInTheDocument()
+
+      // Monastery spawn (7,8) -> forest gate (6,0).
+      step('ArrowLeft')
+      for (let i = 0; i < 8; i++) step('ArrowUp')
+      act(() => {
+        vi.advanceTimersByTime(TRANSITION_PHASE_MS + 5)
+      })
+      act(() => {
+        vi.advanceTimersByTime(TRANSITION_PHASE_MS + 5)
+      })
+      expect(screen.getByTestId('overworld-scene')).toHaveAttribute('data-map', 'forest-path')
+
+      // Forest spawn (5,10) -> ambush (3,3). The real encounter adapter
+      // must hand the fixture enemy to the existing combat action.
+      for (let i = 0; i < 2; i++) step('ArrowUp')
+      step('ArrowLeft')
+      step('ArrowLeft')
+      for (let i = 0; i < 5; i++) step('ArrowUp')
+      expect(actions.startCombat).toHaveBeenCalledOnce()
+      expect(actions.startCombat).toHaveBeenCalledWith([
+        expect.objectContaining({ id: 'wolf-1', name: 'Forest Wolf' }),
+      ])
+
+      rerender(
+        <MemoryRouter>
+          <AdventureHub state={makeState({ combatState })} actions={actions} />
+        </MemoryRouter>,
+      )
+      expect(screen.getByTestId('combat-panel')).toBeInTheDocument()
+      expect(screen.queryByTestId('overworld-mode')).not.toBeInTheDocument()
+
+      rerender(
+        <MemoryRouter>
+          <AdventureHub state={makeState({ combatState: null })} actions={actions} />
+        </MemoryRouter>,
+      )
+      expect(screen.getByTestId('overworld-mode')).toBeInTheDocument()
+      expect(screen.getByTestId('overworld-scene')).toHaveAttribute('data-map', 'forest-path')
+      expect(screen.getByTestId('overworld-player')).toHaveAttribute('data-x', '3')
+      expect(screen.getByTestId('overworld-player')).toHaveAttribute('data-y', '3')
+      expect(actions.startCombat).toHaveBeenCalledOnce()
+
+      step('ArrowUp')
+      expect(screen.getByTestId('overworld-player')).toHaveAttribute('data-y', '2')
+      expect(actions.startCombat).toHaveBeenCalledOnce()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
 
@@ -312,25 +426,28 @@ describe('AdventureHub — story panel', () => {
 })
 
 describe('AdventureHub — world status sidebar (Phase 9.1)', () => {
-  it('renders the world status sidebar', () => {
+  it('renders the world status sidebar', async () => {
     renderHub()
+    await selectSidebarTab(/World/i)
     expect(screen.getByTestId('world-status-sidebar')).toBeInTheDocument()
   })
 
-  it('shows current turn number and campaign tone/difficulty', () => {
+  it('shows current turn number and campaign tone/difficulty', async () => {
     renderHub()
+    await selectSidebarTab(/World/i)
     const sidebar = screen.getByTestId('world-status-sidebar')
     expect(sidebar).toHaveTextContent('3') // turn number
     expect(sidebar).toHaveTextContent('heroic')
     expect(sidebar).toHaveTextContent('standard')
   })
 
-  it('shows "Exploring" status when not in combat', () => {
+  it('shows "Exploring" status when not in combat', async () => {
     renderHub({ combatState: null })
+    await selectSidebarTab(/World/i)
     expect(screen.getByTestId('world-status-sidebar')).toHaveTextContent('Exploring')
   })
 
-  it('shows "In Combat" status when combat is active', () => {
+  it('shows "In Combat" status when combat is active', async () => {
     renderHub({
       combatState: {
         enemies: [{ id: 'e1', name: 'Goblin', currentHp: 5, maxHp: 7, armorClass: 12 }],
@@ -339,28 +456,32 @@ describe('AdventureHub — world status sidebar (Phase 9.1)', () => {
         playerDeathFailures: 0, log: [], xpAwarded: 0,
       } as unknown as AdventureState['combatState'],
     })
+    await selectSidebarTab(/World/i)
     expect(screen.getByTestId('world-status-sidebar')).toHaveTextContent('In Combat')
   })
 
-  it('does not show a fabricated weather or location field', () => {
+  it('does not show a fabricated weather or location field', async () => {
     renderHub()
+    await selectSidebarTab(/World/i)
     const sidebar = screen.getByTestId('world-status-sidebar')
     // Honest limitation notice must be present — no invented weather/time data
     expect(sidebar).toHaveTextContent(/Phase 10/i)
   })
 
-  it('shows worldTime only when the Director has actually set one', () => {
+  it('shows worldTime only when the Director has actually set one', async () => {
     renderHub() // DEFAULT_WORLD_STATE has worldTime: null
+    await selectSidebarTab(/World/i)
     expect(screen.queryByText('Time')).not.toBeInTheDocument()
   })
 
-  it('renders worldTime when present in campaign world state', () => {
+  it('renders worldTime when present in campaign world state', async () => {
     renderHub({
       campaign: {
         ...MOCK_CAMPAIGN,
         worldState: { ...DEFAULT_WORLD_STATE, worldTime: 'Dusk, third day of travel' },
       },
     })
+    await selectSidebarTab(/World/i)
     // Scoped to the world-status-sidebar specifically: as of the
     // Adventure Hub redesign, the same real worldTime value can ALSO
     // legitimately appear in AdventureLeftNav's World Status card and
@@ -371,7 +492,7 @@ describe('AdventureHub — world status sidebar (Phase 9.1)', () => {
     expect(within(sidebar).getByText('Dusk, third day of travel')).toBeInTheDocument()
   })
 
-  it('shows discovered location and known NPC counts from real world state', () => {
+  it('shows discovered location and known NPC counts from real world state', async () => {
     renderHub({
       campaign: {
         ...MOCK_CAMPAIGN,
@@ -385,6 +506,7 @@ describe('AdventureHub — world status sidebar (Phase 9.1)', () => {
         },
       },
     })
+    await selectSidebarTab(/World/i)
     const sidebar = screen.getByTestId('world-status-sidebar')
     // Only 1 of 2 locations is discovered — must reflect that, not the raw total
     expect(sidebar).toHaveTextContent('Locations')
@@ -393,7 +515,7 @@ describe('AdventureHub — world status sidebar (Phase 9.1)', () => {
 })
 
 describe('AdventureHub — current location (Phase 9.2, real data only)', () => {
-  it('shows the current location name when currentLocationId resolves to a known location', () => {
+  it('shows the current location name when currentLocationId resolves to a known location', async () => {
     renderHub({
       campaign: {
         ...MOCK_CAMPAIGN,
@@ -404,15 +526,17 @@ describe('AdventureHub — current location (Phase 9.2, real data only)', () => 
         },
       },
     })
+    await selectSidebarTab(/World/i)
     expect(screen.getByTestId('current-location-row')).toHaveTextContent('Rivergate')
   })
 
-  it('does not show a location row when currentLocationId is null', () => {
+  it('does not show a location row when currentLocationId is null', async () => {
     renderHub()
+    await selectSidebarTab(/World/i)
     expect(screen.queryByTestId('current-location-row')).not.toBeInTheDocument()
   })
 
-  it('does not show a location row when currentLocationId does not resolve to any known location', () => {
+  it('does not show a location row when currentLocationId does not resolve to any known location', async () => {
     renderHub({
       campaign: {
         ...MOCK_CAMPAIGN,
@@ -423,6 +547,7 @@ describe('AdventureHub — current location (Phase 9.2, real data only)', () => 
         },
       },
     })
+    await selectSidebarTab(/World/i)
     expect(screen.queryByTestId('current-location-row')).not.toBeInTheDocument()
   })
 })
@@ -489,21 +614,21 @@ describe('AdventureHub — redesign: scene panel integration (story view only)',
 })
 
 describe('AdventureHub — redesign: party status panel integration', () => {
-  it('renders the party status sidebar', () => {
+  it('renders the party status sidebar (Status is the sidebar\'s default tab)', () => {
     renderHub()
-    expect(screen.getByTestId('adventure-party-status-sidebar')).toBeInTheDocument()
+    expect(screen.getByTestId('party-status-panel')).toBeInTheDocument()
   })
 
   it('shows the real character name in the party status sidebar', () => {
     renderHub()
-    const sidebar = screen.getByTestId('adventure-party-status-sidebar')
+    const sidebar = screen.getByTestId('party-status-panel')
     expect(within(sidebar).getByText('Aldric Sorn')).toBeInTheDocument()
   })
 
   it('clicking "View Full Journal" in the party status panel switches to the Journal tab', async () => {
     const user = userEvent.setup()
     renderHub()
-    const sidebar = screen.getByTestId('adventure-party-status-sidebar')
+    const sidebar = screen.getByTestId('party-status-panel')
     await user.click(within(sidebar).getByRole('button', { name: /View Full Journal/i }))
     expect(screen.getByRole('tab', { name: /Journal/i })).toHaveAttribute('aria-selected', 'true')
   })
@@ -545,7 +670,7 @@ describe('AdventureHub — redesign: empty state', () => {
 
   it('the party status panel\'s recent events also show an honest empty state on a fresh session', () => {
     renderHub({ turns: [] })
-    const sidebar = screen.getByTestId('adventure-party-status-sidebar')
+    const sidebar = screen.getByTestId('party-status-panel')
     expect(within(sidebar).getByTestId('recent-events-empty')).toBeInTheDocument()
   })
 

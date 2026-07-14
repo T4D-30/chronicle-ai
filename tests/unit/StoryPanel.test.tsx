@@ -5,7 +5,7 @@
  * Input, suggested actions, and session-status gating moved to ActionBar.
  * Tests cover: empty state, turn rendering, streaming indicator.
  */
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi } from 'vitest'
 import { StoryPanel } from '@/components/adventure/panels/StoryPanel'
@@ -189,5 +189,82 @@ describe('StoryPanel — dice check popup (Phase 10.1, full dice transparency)',
     vi.advanceTimersByTime(2000)
     expect(onClearCheckResult).not.toHaveBeenCalled()
     vi.useRealTimers()
+  })
+})
+
+describe('StoryPanel — reader-aware scrolling (dialogue-readability pass)', () => {
+  /** jsdom reports zero layout, so fake a scrollable region: 1000px of
+   *  content in a 400px container. scrollTop is freely settable. */
+  function makeScrollable(el: HTMLElement, { scrollHeight = 1000, clientHeight = 400 } = {}) {
+    Object.defineProperty(el, 'scrollHeight', { value: scrollHeight, configurable: true })
+    Object.defineProperty(el, 'clientHeight', { value: clientHeight, configurable: true })
+  }
+
+  function turnN(n: number): NarrativeTurn {
+    return { ...TURN, id: `t${n}`, turnNumber: n, playerInput: `Action ${n}` }
+  }
+
+  function rerenderWithTurns(
+    rerender: (ui: React.ReactElement) => void,
+    turns: NarrativeTurn[],
+  ) {
+    rerender(
+      <StoryPanel
+        campaign={CAMPAIGN}
+        turns={turns}
+        narrationStatus="idle"
+        streamingText=""
+        onCancelStream={vi.fn()}
+      />,
+    )
+  }
+
+  it('auto-follows new narration when the reader is at the bottom', () => {
+    const { rerender } = renderPanel({ turns: [turnN(1)] })
+    const scroll = screen.getByTestId('story-scroll')
+    makeScrollable(scroll)
+
+    // Reader sits at the bottom (1000 - 600 - 400 = 0 from bottom)
+    scroll.scrollTop = 600
+    fireEvent.scroll(scroll)
+
+    rerenderWithTurns(rerender, [turnN(1), turnN(2)])
+    expect(scroll.scrollTop).toBe(1000) // jumped to scrollHeight
+  })
+
+  it('preserves the reader’s position when they have scrolled up to reread', () => {
+    const { rerender } = renderPanel({ turns: [turnN(1)] })
+    const scroll = screen.getByTestId('story-scroll')
+    makeScrollable(scroll)
+
+    // Reader scrolled well above the 40px follow threshold
+    scroll.scrollTop = 100
+    fireEvent.scroll(scroll)
+
+    rerenderWithTurns(rerender, [turnN(1), turnN(2)])
+    expect(scroll.scrollTop).toBe(100) // untouched — no yank
+  })
+
+  it('resumes following once the reader returns near the bottom', () => {
+    const { rerender } = renderPanel({ turns: [turnN(1)] })
+    const scroll = screen.getByTestId('story-scroll')
+    makeScrollable(scroll)
+
+    scroll.scrollTop = 100
+    fireEvent.scroll(scroll) // stopped following
+    scroll.scrollTop = 570   // 30px from bottom — inside the 40px threshold
+    fireEvent.scroll(scroll) // following again
+
+    rerenderWithTurns(rerender, [turnN(1), turnN(2)])
+    expect(scroll.scrollTop).toBe(1000)
+  })
+
+  it('follows by default on short content that has never been scrolled', () => {
+    const { rerender } = renderPanel({ turns: [turnN(1)] })
+    const scroll = screen.getByTestId('story-scroll')
+    makeScrollable(scroll, { scrollHeight: 300, clientHeight: 400 })
+
+    rerenderWithTurns(rerender, [turnN(1), turnN(2)])
+    expect(scroll.scrollTop).toBe(300) // clamped by the browser in reality
   })
 })

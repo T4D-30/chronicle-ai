@@ -12,7 +12,7 @@ import { useEffect, useRef } from 'react'
 import type { Campaign, NarrativeTurn } from '@/lib/supabase'
 import type { NarrationStatus } from '../useAdventureSession'
 import type { summariseCharacterAction } from '@/lib/engine'
-import { PixelPanel } from '@/components/pixel'
+import { PixelPanel, StoryText } from '@/components/pixel'
 
 interface StoryPanelProps {
   campaign: Campaign
@@ -36,15 +36,41 @@ export function StoryPanel({
   onClearCheckResult,
 }: StoryPanelProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
+  // Reader-aware follow state (dialogue-readability pass). A ref, not
+  // React state: scroll events must never cause re-renders. True while
+  // the reader is at/near the bottom (they want to follow new
+  // narration); flips false the moment they scroll up to reread, and
+  // back true when they return within the threshold.
+  const followRef = useRef(true)
 
   const isStreaming = narrationStatus === 'streaming'
 
-  // Auto-scroll to bottom when new content arrives
+  /** How close to the bottom (px) still counts as "following". */
+  const FOLLOW_THRESHOLD = 40
+
+  function handleScroll() {
+    const el = scrollRef.current
+    if (!el) return
+    followRef.current =
+      el.scrollHeight - el.scrollTop - el.clientHeight <= FOLLOW_THRESHOLD
+  }
+
+  // Follow new narration ONLY if the reader is already near the bottom.
+  // A reader who scrolled up to reread keeps their position exactly —
+  // no yanking mid-stream. Streaming appends jump instantly ("auto",
+  // token-by-token smoothness would fight itself); completed turns
+  // glide ("smooth"). jsdom has no element scrollTo — fall back to
+  // direct scrollTop assignment.
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+    const el = scrollRef.current
+    if (!el || !followRef.current) return
+    const behavior: ScrollBehavior = isStreaming ? 'auto' : 'smooth'
+    if (typeof el.scrollTo === 'function') {
+      el.scrollTo({ top: el.scrollHeight, behavior })
+    } else {
+      el.scrollTop = el.scrollHeight
     }
-  }, [turns, streamingText])
+  }, [turns, streamingText, isStreaming])
 
   // Auto-dismiss the dice-check popup after its display window. The
   // component owns this timing (not the hook) — same division of
@@ -58,26 +84,32 @@ export function StoryPanel({
 
   return (
     <div className="flex-1 min-h-0 flex flex-col">
-      {/* Campaign header */}
+      {/* Campaign header — bronze frame, gold title (UI 2.0's "Story Box"
+          language), replacing the old cold-teal chr-panel-spirit framing. */}
       <div className="flex-shrink-0 px-4 pt-4 pb-2">
-        <div className="chr-panel-spirit p-3 rounded-lg">
-          <p className="stat-label text-spirit-400 mb-0.5">{campaign.title.toUpperCase()}</p>
+        <div className="chr-panel p-3 rounded-lg max-w-3xl mx-auto w-full">
+          <p className="stat-label text-bronze-400 mb-0.5">{campaign.title.toUpperCase()}</p>
           {campaign.description && (
             <p className="text-void-400 text-xs line-clamp-1">{campaign.description}</p>
           )}
         </div>
       </div>
 
-      {/* Turn history + streaming */}
+      {/* Turn history + streaming — capped to a comfortable reading width
+          (max-w-3xl) even though the story column itself is wider now
+          (Phase 14.1); unconstrained line length on a wide desktop column
+          hurts readability, so the extra width becomes breathing room
+          around a centered reading column instead of longer lines. */}
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto min-h-0 px-4 py-2 flex flex-col gap-3"
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto min-h-0 px-4 py-2"
         data-testid="story-scroll"
       >
         {turns.length === 0 && !streamingText && !isStreaming ? (
           <div className="flex flex-col items-center justify-center h-full gap-6 text-center">
-            <div className="chr-panel-arcane p-6 rounded-lg max-w-sm w-full">
-              <p className="stat-label text-arcane-400 mb-3">YOUR STORY BEGINS</p>
+            <div className="chr-panel p-6 rounded-lg max-w-sm w-full">
+              <p className="stat-label text-bronze-400 mb-3">YOUR STORY BEGINS</p>
               <p className="lore-text text-void-300 text-sm mb-4">
                 "Every hero's story begins with a single choice."
               </p>
@@ -89,7 +121,7 @@ export function StoryPanel({
             </div>
           </div>
         ) : (
-          <>
+          <div className="flex flex-col gap-5 max-w-3xl mx-auto w-full">
             {turns.map((turn) => <TurnBlock key={turn.id} turn={turn} />)}
 
             {/* Resolved dice check for the most recent action — Phase 10.1 */}
@@ -97,9 +129,9 @@ export function StoryPanel({
 
             {/* Live streaming text */}
             {isStreaming && streamingText && (
-              <div className="chr-panel-spirit p-3 rounded-lg">
+              <div className="chr-panel p-3 rounded-lg">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="stat-label text-spirit-500">Director speaking…</span>
+                  <span className="stat-label text-bronze-400">Director speaking…</span>
                   <button
                     type="button"
                     onClick={onCancelStream}
@@ -108,36 +140,46 @@ export function StoryPanel({
                     Cancel
                   </button>
                 </div>
-                <p className="lore-text text-sm">
+                <StoryText className="text-sm">
                   {streamingText}
                   <span className="animate-pulse text-arcane-400" aria-hidden="true">▋</span>
-                </p>
+                </StoryText>
               </div>
             )}
 
             {/* Loading indicator — streaming started but no tokens yet */}
             {isStreaming && !streamingText && (
-              <div className="chr-panel-spirit p-3 rounded-lg">
+              <div className="chr-panel p-3 rounded-lg">
                 <div className="flex items-center gap-2">
                   <div className="flex gap-1" aria-hidden="true">
-                    <span className="w-1.5 h-1.5 rounded-full bg-arcane-400 animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <span className="w-1.5 h-1.5 rounded-full bg-arcane-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <span className="w-1.5 h-1.5 rounded-full bg-arcane-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                    <span className="pixel-type-dot" style={{ animationDelay: '0ms' }} />
+                    <span className="pixel-type-dot" style={{ animationDelay: '150ms' }} />
+                    <span className="pixel-type-dot" style={{ animationDelay: '300ms' }} />
                   </div>
-                  <span className="stat-label text-arcane-500" role="status">The Director is narrating…</span>
+                  <span className="stat-label text-bronze-400" role="status">The Director is narrating…</span>
                 </div>
               </div>
             )}
-          </>
+          </div>
         )}
       </div>
     </div>
   )
 }
 
+/**
+ * Dialogue-box treatment (Phase 15.2, repainted UI 2.0): player input and
+ * AI narration each get their own bordered box instead of bare paragraph
+ * text, closer to how RPG dialogue boxes separate speakers. Player input
+ * keeps its distinct fire-toned chr-panel-arcane framing ("you acted");
+ * AI narration moved from the old cold-teal chr-panel-spirit to the base
+ * bronze chr-panel — the "Story Box" bronze-frame/gold-title language now
+ * used consistently across StoryPanel. dialogue-reveal (pixel.css) gives
+ * each turn a brief fade/rise on mount, reduced-motion safe.
+ */
 function TurnBlock({ turn }: { turn: NarrativeTurn }) {
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2 dialogue-reveal">
       {turn.playerInput && (
         <div className="flex items-start gap-2">
           <span
@@ -146,11 +188,17 @@ function TurnBlock({ turn }: { turn: NarrativeTurn }) {
           >
             <span className="text-arcane-400 text-xs">⚔</span>
           </span>
-          <p className="text-arcane-200 text-sm font-body leading-relaxed">{turn.playerInput}</p>
+          <p className="chr-panel-arcane px-3 py-2 rounded-lg text-arcane-200 text-sm font-body leading-relaxed">
+            {turn.playerInput}
+          </p>
         </div>
       )}
       {turn.aiNarration && (
-        <p className="lore-text text-sm pl-8 text-void-200">{turn.aiNarration}</p>
+        <div className="pl-8">
+          <StoryText className="chr-panel block px-3 py-2.5 rounded-lg text-sm text-void-200">
+            {turn.aiNarration}
+          </StoryText>
+        </div>
       )}
       <div className="pl-8">
         <span className="stat-label text-void-700">Turn {turn.turnNumber}</span>

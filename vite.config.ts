@@ -43,6 +43,14 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: './tests/setup.ts',
     css: true,
+    alias: [{
+      // Vitest otherwise resolves Mammoth's Node entrypoint, whose unzip
+      // adapter rejects browser ArrayBuffer input before extraction starts.
+      // The application is browser-only here, so tests must exercise the
+      // same browser bundle that Vite selects for production.
+      find: /^mammoth$/,
+      replacement: resolve(__dirname, './node_modules/mammoth/mammoth.browser.js'),
+    }],
     // Integration tests require a real local Supabase/Postgres instance and
     // are excluded from the default unit test run. Run them explicitly via
     // `npm run test:integration`.

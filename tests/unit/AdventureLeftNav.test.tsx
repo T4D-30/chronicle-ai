@@ -76,16 +76,30 @@ describe('AdventureLeftNav — rendering', () => {
   })
 })
 
-describe('AdventureLeftNav — Settings placeholder (no real route exists)', () => {
-  it('renders Settings as a disabled button, not a link to a nonexistent route', () => {
+describe('AdventureLeftNav — Settings (live as of UI 3.0)', () => {
+  it('renders Settings as an enabled button that opens the settings modal', async () => {
+    const user = userEvent.setup()
     renderNav()
     const settingsButton = screen.getByRole('button', { name: /Settings/i })
-    expect(settingsButton).toBeDisabled()
+    expect(settingsButton).toBeEnabled()
+    await user.click(settingsButton)
+    expect(screen.getByTestId('settings-modal')).toBeInTheDocument()
+    // The modal mounts the real AudioSettingsPanel
+    expect(screen.getByTestId('mute-toggle')).toBeInTheDocument()
   })
 
-  it('does not render a Settings link', () => {
+  it('does not render a Settings link (modal, not a route)', () => {
     renderNav()
     expect(screen.queryByRole('link', { name: /Settings/i })).not.toBeInTheDocument()
+  })
+
+  it('Escape closes the settings modal', async () => {
+    const user = userEvent.setup()
+    renderNav()
+    await user.click(screen.getByRole('button', { name: /Settings/i }))
+    expect(screen.getByTestId('settings-modal')).toBeInTheDocument()
+    await user.keyboard('{Escape}')
+    expect(screen.queryByTestId('settings-modal')).not.toBeInTheDocument()
   })
 })
 

@@ -67,10 +67,10 @@ Adventure Hub — the main play screen.
 
 ### What you'll see
 
-- **Center**: the story so far, and a text box to type what you do next
-- **Right sidebar** (wider screens): your character's stats, HP, conditions
-- **Far right** (wide screens): world status — current turn, tone, difficulty, and (once the Director sets it) your current location
-- **Tab bar**: Story, Character, Dice, Journal, Quests, Atlas, Codex
+- **World tab**: the primary playable overworld, with contextual interaction prompts and dialogue docked over the still-visible scene
+- **Story tab**: the story so far, suggested actions, and a text box to type what you do next
+- **Sidebars** (wider screens): navigation plus a consolidated character/party/world-status panel
+- **Tab bar**: Story, World, Character, Dice, Journal, Quests, Atlas, Codex
 
 ### How to play
 
@@ -92,6 +92,11 @@ never rolls a different outcome than what actually happened.
 You'll also see **quick-action buttons** (Look, Inventory, Character,
 Atlas, Journal, Quests, Rest, Dice) for common actions without typing, and
 **suggested actions** the Director offers after each turn.
+
+In the **World** tab, move with the arrow keys or WASD, interact with
+Enter/Space/E, and press Escape for the pause menu. The layout adapts to
+small screens, but overworld movement is currently keyboard-only; touch
+movement controls are not yet implemented.
 
 ## 5. Combat
 
