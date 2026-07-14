@@ -92,6 +92,13 @@ export function OverworldScene({
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       if (locked) return
+      // Typing in a form field (e.g. the Story HUD's free input, which
+      // is present while movement is free) must never move the player
+      // or trigger interactions.
+      const target = e.target as HTMLElement | null
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return
+      }
       const direction = directionForKey(e.key)
       if (direction) {
         e.preventDefault()

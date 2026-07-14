@@ -7,17 +7,20 @@
  * all game consequences flow through the adapter into the existing
  * Adventure Controller.
  *
- * Dialogue mode: ANY interact intent opens the dialogue window with
- * the entity as the speaker — the window displays the Director's real
- * response (streaming text live, then the completed turn's narration).
- * While open, the scene is locked (movement and turning frozen);
- * closing restores movement. Choices and free-form input submit
- * through the same actions.submitAction contract as ActionBar.
+ * Story surface: the persistent StoryHud (B2). ANY interact intent
+ * puts it in dialogue mode with the entity as the speaker — showing
+ * the Director's real response (streaming live, then the completed
+ * turn's narration) with the scene locked; closing restores movement.
+ * Outside dialogue it shows the current ambient beat (exit/rest/
+ * examine narration) WITHOUT locking movement, collapsing to a free-
+ * input strip when there is no fresh beat. Choices and free-form
+ * input submit through the same actions.submitAction contract as
+ * ActionBar. DialogueWindow is superseded (kept until cleanup).
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { OverworldScene } from './OverworldScene'
-import { DialogueWindow } from './DialogueWindow'
+import { StoryHud } from './StoryHud'
 import { PauseMenu } from './PauseMenu'
 import type { PauseTab } from './PauseMenu'
 import { WorldTransition, TRANSITION_PHASE_MS } from './WorldTransition'
@@ -77,6 +80,15 @@ export function OverworldMode({
   // Narration older than the dialogue is stale — only show responses
   // that arrive after it opened.
   const turnCountAtOpen = useRef(0)
+  // Ambient story beats: only turns that arrive AFTER this count are
+  // fresh. Initialized to the mount-time count so remounting (combat
+  // return, tab churn) never replays an old turn as new narration —
+  // history belongs to the Journal. Dismissing a beat (or closing a
+  // dialogue that consumed it) advances the watermark.
+  const [seenTurnCount, setSeenTurnCount] = useState(() => state.turns.length)
+  // Live turn count for handlers registered in effects (avoids stale closures).
+  const turnsLenRef = useRef(state.turns.length)
+  turnsLenRef.current = state.turns.length
 
   const [localPauseTab, setLocalPauseTab] = useState<PauseTab | null>(null)
   const pauseTab = controlledPauseTab !== undefined ? controlledPauseTab : localPauseTab
@@ -123,6 +135,8 @@ export function OverworldMode({
       if (e.key !== 'Escape') return
       e.preventDefault()
       if (dialogue) {
+        // Closing consumes the beat so it doesn't re-show ambiently.
+        setSeenTurnCount(turnsLenRef.current)
         setDialogue(null)
         return
       }
@@ -173,11 +187,25 @@ export function OverworldMode({
   const map = OVERWORLD_MAPS[area.mapId] ?? monasteryCourtyard
 
   const latestTurn = state.turns[state.turns.length - 1]
+  // Dialogue mode: only responses newer than the dialogue's opening.
   const responseText = isStreaming
     ? state.streamingText
     : state.turns.length > turnCountAtOpen.current
       ? latestTurn?.aiNarration ?? ''
       : ''
+  // Ambient mode: the current beat — streaming text live, else the
+  // latest narration if it arrived after the seen watermark.
+  const ambientText = isStreaming
+    ? state.streamingText
+    : state.turns.length > seenTurnCount
+      ? latestTurn?.aiNarration ?? ''
+      : ''
+
+  function closeStoryHud() {
+    // Either door consumes the current beat: it won't re-show ambiently.
+    setSeenTurnCount(turnsLenRef.current)
+    setDialogue(null)
+  }
 
   return (
     <div className="relative w-full h-full" data-testid="overworld-mode">
@@ -205,18 +233,19 @@ export function OverworldMode({
         />
       )}
 
-      {dialogue && (
-        <DialogueWindow
-          speaker={dialogue.speaker}
-          text={responseText}
-          streaming={isStreaming}
-          suggestedActions={isStreaming ? [] : state.suggestedActions}
-          busy={busy}
-          onChoose={(text) => actions.submitAction(text)}
-          onSubmitFree={(text) => actions.submitAction(text)}
-          onClose={() => setDialogue(null)}
-        />
-      )}
+      {/* The persistent story dock (B2) — supersedes DialogueWindow.
+          Dialogue mode locks the scene (via `locked` above); ambient
+          beats leave movement free (only busy/streaming locks). */}
+      <StoryHud
+        speaker={dialogue?.speaker ?? null}
+        text={dialogue ? responseText : ambientText}
+        streaming={isStreaming}
+        suggestedActions={isStreaming ? [] : state.suggestedActions}
+        busy={busy}
+        onChoose={(text) => actions.submitAction(text)}
+        onSubmitFree={(text) => actions.submitAction(text)}
+        onClose={closeStoryHud}
+      />
     </div>
   )
 }
