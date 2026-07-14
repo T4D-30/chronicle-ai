@@ -46,6 +46,13 @@ interface OverworldModeProps {
   actions: AdventureActions
   area?: OverworldArea
   onAreaChange?: (area: OverworldArea) => void
+  /** Controlled pause-overlay tab — AdventureHub owns this since the
+   *  unified screen (B1) so the bottom tab nav can open the same
+   *  overlay the Esc key does. Omit both to keep it local (tests,
+   *  standalone use). */
+  pauseTab?: PauseTab | null
+  onPauseTabChange?: (tab: PauseTab | null) => void
+  onLevelUp?: () => void
 }
 
 export function OverworldMode({
@@ -53,6 +60,9 @@ export function OverworldMode({
   actions,
   area: controlledArea,
   onAreaChange,
+  pauseTab: controlledPauseTab,
+  onPauseTabChange,
+  onLevelUp,
 }: OverworldModeProps) {
   const [dialogue, setDialogue] = useState<{ speaker: string } | null>(null)
   // Current area — presentation state; named-location persistence
@@ -68,7 +78,18 @@ export function OverworldMode({
   // that arrive after it opened.
   const turnCountAtOpen = useRef(0)
 
-  const [pauseTab, setPauseTab] = useState<PauseTab | null>(null)
+  const [localPauseTab, setLocalPauseTab] = useState<PauseTab | null>(null)
+  const pauseTab = controlledPauseTab !== undefined ? controlledPauseTab : localPauseTab
+  const setPauseTab = useCallback(
+    (next: PauseTab | null) => {
+      if (onPauseTabChange) {
+        onPauseTabChange(next)
+      } else {
+        setLocalPauseTab(next)
+      }
+    },
+    [onPauseTabChange],
+  )
 
   const isStreaming = state.narrationStatus === 'streaming'
   const busy = state.isActionInFlight || isStreaming
@@ -105,11 +126,11 @@ export function OverworldMode({
         setDialogue(null)
         return
       }
-      setPauseTab((current) => (current ? null : 'character'))
+      setPauseTab(pauseTab ? null : 'character')
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [dialogue])
+  }, [dialogue, pauseTab, setPauseTab])
 
   // Timer-driven fade: out → swap at full black → in → clear.
   useEffect(() => {
@@ -180,6 +201,7 @@ export function OverworldMode({
           tab={pauseTab}
           onSelectTab={setPauseTab}
           onClose={() => setPauseTab(null)}
+          onLevelUp={onLevelUp}
         />
       )}
 

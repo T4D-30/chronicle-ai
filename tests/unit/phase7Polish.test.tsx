@@ -94,7 +94,7 @@ describe('AdventureHub — touch targets', () => {
   it('renders the expected adventure panel tabs for the current debug flag', () => {
     renderHub()
     const tabs = within(screen.getByTestId('adventure-tab-nav')).getAllByRole('tab')
-    expect(tabs).toHaveLength(DEBUG_ENABLED ? 9 : 8)
+    expect(tabs).toHaveLength(DEBUG_ENABLED ? 8 : 7)
   })
 
   it('tab nav has safe-area-bottom class for iOS notch', () => {

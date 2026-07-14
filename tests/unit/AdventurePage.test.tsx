@@ -200,10 +200,13 @@ describe('AdventurePage — ready state', () => {
     expect(within(statusBar).getByText(/The Shattered Throne/)).toBeInTheDocument()
   })
 
-  it('shows the character name in the character sidebar', async () => {
+  it('shows the character name in the Character overlay (unified screen B1)', async () => {
+    const user = userEvent.setup()
     renderPage()
     await waitFor(() => screen.getByTestId('adventure-hub'))
-    // CharacterSidebar is always visible on desktop
+    // Since the unified Adventure screen, the character sheet opens as a
+    // pause overlay over the world instead of a permanent sidebar.
+    await user.click(screen.getByRole('tab', { name: /Character/i }))
     expect(screen.getAllByText('Aldric Sorn').length).toBeGreaterThan(0)
   })
 

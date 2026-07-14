@@ -131,6 +131,24 @@ describe('OverworldMode — pause menu', () => {
     expect(screen.getByTestId('mute-toggle')).toBeInTheDocument() // real AudioSettingsPanel
   })
 
+  it('offers the real DicePanel as a pause tab (unified screen B1)', () => {
+    renderMode()
+    fireEvent.keyDown(window, { key: 'Escape' })
+    fireEvent.click(screen.getByTestId('pause-tab-dice'))
+    expect(screen.getByText('Roll Mode')).toBeInTheDocument() // real DicePanel
+  })
+
+  it('shows the Debug tab only when VITE_ENABLE_DEBUG_PANEL is true', () => {
+    renderMode()
+    fireEvent.keyDown(window, { key: 'Escape' })
+    const debugTab = screen.queryByTestId('pause-tab-debug')
+    if (import.meta.env.VITE_ENABLE_DEBUG_PANEL === 'true') {
+      expect(debugTab).toBeInTheDocument()
+    } else {
+      expect(debugTab).not.toBeInTheDocument()
+    }
+  })
+
   it('the Resume button closes the menu', () => {
     renderMode()
     fireEvent.keyDown(window, { key: 'Escape' })
