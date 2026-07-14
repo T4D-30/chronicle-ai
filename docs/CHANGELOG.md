@@ -51,3 +51,10 @@ This is the append-only historical record for completed phases and milestones. D
 - Summary: Corrected the final Overworld 9/9 handoff so combat returns to the exact encounter tile and facing rather than the area's spawn. The active encounter zone is retained locally across the combat remount, preventing an immediate combat retrigger; leaving and re-entering the fixture trigger still rearms it as designed.
 - Major architectural decisions: Tile, facing, and active-zone state remain local presentation state lifted through the existing `AdventureHub` overworld area. No durable state, Supabase, controller, AI Director, rules, world-tick, or combat-resolution contract changed.
 - Verification results: `npx tsc --noEmit` passed; focused overworld tests passed 80/80; `npx vitest run` passed 2,243 tests across 102 files with the documented benign Mammoth/jsdom warnings; `npm run build:check` passed; the authenticated Chrome walkthrough passed again at desktop and 390×844 with exact-tile return, no immediate retrigger, restored movement, reduced motion, focus behavior, dialogue overflow, and zero console errors.
+
+## 2026-07-13 — Mammoth DOCX CI Rejection Correction
+
+- Branch: `feature/presentation-playable-overworld`
+- Summary: Aligned Vitest's Mammoth resolution with the browser bundle used by the application. Corrupt DOCX input now completes through the parser's graceful unavailable result without an unhandled rejection, while the real DOCX fixture is extracted end to end and asserted as high-confidence text.
+- Major architectural decisions: None. This is a test-environment module-resolution correction; production document parsing behavior and AI, rules, persistence, world-tick, and combat contracts are unchanged.
+- Verification results: focused parser tests passed 18/18 without unhandled errors; `npx vitest run` passed all 2,243 tests across 102 files with exit code 0; `npx tsc --noEmit` passed; `npm run build:check` passed.

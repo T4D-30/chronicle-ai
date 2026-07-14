@@ -12,7 +12,7 @@ See `docs/DECISIONS.md` for the append-only rationale behind foundational decisi
 
 ## Active Work
 
-The playable-overworld milestone is complete and fully verified. The World tab provides the playable map, NPC dialogue stays docked over the visible map, contextual interactions use grounded intents, the pause menu reuses existing panels, and encounters hand off to the existing combat flow. Combat return preserves the current map, exact tile, facing, and consumed encounter trigger in local presentation state so movement resumes without an immediate retrigger. The overworld remains presentation/input only: meaningful actions use existing `AdventureActions` (`submitAction` and `startCombat`). Story and World remain separate AdventureHub tabs in this milestone; merging them into one unified Adventure screen is the next presentation phase, not part of Overworld 9/9.
+The playable-overworld milestone is complete and fully verified. The World tab provides the playable map, NPC dialogue stays docked over the visible map, contextual interactions use grounded intents, the pause menu reuses existing panels, and encounters hand off to the existing combat flow. Combat return preserves the current map, exact tile, facing, and consumed encounter trigger in local presentation state so movement resumes without an immediate retrigger. The overworld remains presentation/input only: meaningful actions use existing `AdventureActions` (`submitAction` and `startCombat`). Story and World remain separate AdventureHub tabs in this milestone; merging them into one unified Adventure screen is the next presentation phase, not part of Overworld 9/9. PR verification is clean: Vitest now exercises Mammoth's browser DOCX bundle directly, and all 102 test files complete without unhandled rejections.
 
 Primary files in scope:
 - `src/components/adventure/AdventureHub.tsx`
@@ -31,6 +31,7 @@ Primary files in scope:
 
 - The continuity-document pass is committed separately as `cee5258`.
 - Playable Overworld 9/9 is committed separately as `23893bb`, with the exact-position combat-return correction following on the same tracked feature branch.
+- The Mammoth CI-only unhandled-rejection correction is a separate commit on the same PR branch.
 - Draft PR #3 is open against `main`; the working tree is expected to be clean after this handoff update.
 - No preview route, preview page, scratch file, migration, Edge Function, AI Director, rules-engine, persistence, world-tick, or combat-resolution change is present in the reviewed worktree.
 
