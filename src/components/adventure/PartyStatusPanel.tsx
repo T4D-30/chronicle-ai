@@ -1,12 +1,15 @@
 /**
  * PartyStatusPanel — Phase 11.5 (Adventure Hub redesign)
  *
- * The right-column "party/status" panel from the redesign reference.
- * Deliberately does NOT duplicate CharacterSidebar's detailed stat block
- * (ability modifiers, passives, equipment) — that remains the
- * "Character" tab's job, reachable via the left nav / bottom tabs
- * unchanged. This panel is the always-visible, at-a-glance summary: who
- * you are, your HP, your XP progress, and what just happened.
+ * STATUS: currently UNRENDERED. This was the dashboard-era right-column
+ * "party/status" summary; the Unified Adventure Screen removed the side
+ * columns, and this component is retained (with its tests) pending the
+ * world-status-surface decision — see KNOWN_LIMITATIONS. If revived, it
+ * would live in a pause-overlay tab, not a permanent column. It
+ * deliberately does NOT duplicate CharacterSidebar's detailed stat block
+ * (ability modifiers, passives, equipment) — that is the Character
+ * overlay's job. This panel is the at-a-glance summary: who you are,
+ * your HP, your XP progress, and what just happened.
  *
  * SOLO PARTY, HONESTLY REPRESENTED: Chronicle AI has no multiplayer/party
  * system (explicitly out of scope for this phase and unbuilt anywhere in

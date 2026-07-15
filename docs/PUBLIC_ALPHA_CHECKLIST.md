@@ -25,7 +25,7 @@ itself ready for a stranger to play solo and have a good time?*
 - [x] Quest Log shows real Director-tracked content, not placeholders
 - [x] Codex shows real NPC memory, not placeholders
 - [x] Exploration actions that call for a real skill check roll one deterministically before the Director narrates — full dice transparency, not just combat, and now visible to the player as a real popup (Phase 10.1)
-- [x] Adventure Hub is a 3-column pixel-art RPG dashboard on desktop (left nav / center scene / right party status), with the mobile/tablet bottom-tab experience fully intact — every existing behavior (submit action, quick actions, suggested actions, dice transparency, combat entry, Journal/Quests/Codex/Atlas/Dice access) verified unchanged (Phase 11)
+- [x] Adventure Hub is the unified Adventure Screen: the playable world (World Layer) is the always-mounted primary surface, `StoryHud` docks story/dialogue over it, `ActionStrip` offers contextual actions (Talk/Inspect/Collect/Enter, Rest, Menu), and Character/Dice/Journal/Quests/Atlas/Codex/Settings open as pause-overlay panels from the bottom tab nav or Esc — every behavior (submit action, suggested actions, dice-backed resolution, combat entry and exact-position return, panel access) verified across desktop and 390×844 (originally the Phase 11 dashboard, recomposed by the Unified Adventure Screen milestone)
 
 ## 2. Test Coverage
 
