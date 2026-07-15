@@ -349,7 +349,7 @@ instead of hand-rolling panel/button/icon/text markup.
 | `Icon` | `src/components/pixel/Icon.tsx` | Named registry over the emoji glyphs already used as icons (`<Icon name="dice" />`). See the file for the full `IconName` list. A real SVG pixel-icon set can swap in later behind the same API. |
 | `Typography` | `src/components/pixel/Typography.tsx` | `LargeTitle`, `LocationTitle`, `SectionHeader`, `SubHeader`, `NpcName`, `Dialogue`, `StoryText`, `SystemText`, `StatLabel`, `TinyLabel`, `StatNumber` — named wrappers over the Text Hierarchy above. UI 2.0 tiers: headers gold, subheaders copper, body parchment, numbers ivory. |
 | `Button` variants | `src/components/ui/Button.tsx` | Adds `navigation`, `menuAction`, `suggested`, `iconOnly` to the existing `arcane`/`spirit`/`ghost`/`danger` set — see the file's own header comment for the full role-to-variant mapping. |
-| `locationIcons` | `src/components/adventure/locationIcons.ts` | Shared `LOCATION_ICON`/`LOCATION_TYPE_LABEL` maps (single source of truth for AtlasPanel and AdventureScenePanel). |
+| `locationIcons` | `src/components/adventure/locationIcons.ts` | Shared `LOCATION_ICON`/`LOCATION_TYPE_LABEL` maps (single source of truth for the Atlas panels and any location-labeled UI). |
 | Animations | `src/styles/pixel.css` | `pixel-type-dot` (typing indicator), `pixel-sparkle` (hover/focus flourish), `dialogue-reveal` (turn-block entrance) — all reduced-motion safe (see the kill-list at the bottom of that file; add new animations there too). |
 
 ### Deferred (not migrated in Phase 15)
@@ -362,9 +362,8 @@ avoid destabilizing large, heavily-tested surfaces in one pass:
   `CharacterSidebar` still hand-roll their own headers (83/25/18/18
   tests respectively — a real retrofit risk for a single phase).
 - **`Icon` migration**: `AtlasPanel`'s `LOCATION_ICON` consumers,
-  `QuestsPanel`'s `STATUS_META`, `CodexPanel`'s alive/dead glyphs, and
-  `ActionBar`'s weapon/spell/item submenu icons still use raw emoji
-  literals directly.
+  `QuestsPanel`'s `STATUS_META`, and `CodexPanel`'s alive/dead glyphs
+  still use raw emoji literals directly.
 - **Real SVG pixel-icon asset set**: `Icon` centralizes existing emoji;
   it does not introduce new artwork or an asset pipeline.
 - **Weather / mood fields**: still do not exist on `WorldState` — the
@@ -420,7 +419,7 @@ The experience layer on top of UI 2.0. New building blocks:
 |---|---|---|
 | `uiSceneStore` | `src/store/uiSceneStore.ts` | The UI State Machine — presentation phases with a legal-transition table. New screens add camera states here, never ad hoc reveal flags. |
 | `WorldRenderer` | `src/components/pixel/WorldRenderer.tsx` | The world behind every screen: procedural parallax scenes (`night-camp`/`dusk-vale`/`dawn-ridge`) with asset slots at `public/assets/sprites/environments/<scene>.png`. |
-| `SettingsModal` | `src/components/pixel/SettingsModal.tsx` | First mounted home of `AudioSettingsPanel` — opened from the Main Menu and AdventureLeftNav. |
+| `SettingsModal` | `src/components/pixel/SettingsModal.tsx` | First mounted home of `AudioSettingsPanel` — opened from the Main Menu; in play, audio settings surface through the pause overlay's Settings tab. |
 | Title screen | `src/app/pages/LandingPage.tsx` | JRPG boot: vista → logo → press-any-key → menu, driven by the state machine. |
 | Main Menu | `src/app/pages/MainMenuPage.tsx` | Renamed from DashboardPage; JRPG menu at the camp. `/dashboard` route path deliberately unchanged. |
 

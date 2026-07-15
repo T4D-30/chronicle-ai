@@ -1,9 +1,9 @@
 /**
  * StoryHud — Unified Adventure Screen (Presentation 4, B2)
  *
- * The persistent JRPG story dock at the bottom of the world. It
- * generalizes DialogueWindow (which it supersedes as OverworldMode's
- * story surface) into two modes on one surface:
+ * The persistent JRPG story dock at the bottom of the world — grown
+ * out of (and replacing) the removed DialogueWindow — with two modes
+ * on one surface:
  *
  * - **Dialogue** (`speaker` set): an NPC conversation — speaker label,
  *   the Director's REAL response (streaming live, then the completed
@@ -16,8 +16,8 @@
  *   fresh beat it collapses to a slim free-input strip.
  *
  * Both modes offer the session's real suggested actions as choices and
- * the same free-form input contract as ActionBar (onChoose/onSubmitFree
- * — grounded via actions.submitAction upstream). The HUD never shows
+ * the presentation layer's shared free-form input contract
+ * (onChoose/onSubmitFree — grounded via actions.submitAction upstream). The HUD never shows
  * more than the current/latest beat — history lives in the Journal —
  * and never exceeds ~35% of the viewport (world stays primary).
  *

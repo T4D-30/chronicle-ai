@@ -6,8 +6,8 @@
  * character state, renders fixture map content, and emits typed
  * intents; the adapter grounds those intents as plain-text actions
  * through the EXISTING Adventure Controller (actions.submitAction —
- * the same mechanism ActionBar's quick actions and AtlasMapPanel's
- * movement buttons already use). It never mutates game state, never
+ * the same mechanism the StoryHud, ActionStrip, and AtlasMapPanel's
+ * movement buttons use). It never mutates game state, never
  * writes to Supabase, never bypasses the controller.
  *
  * Movement is deliberately NOT an emitted intent: tile position is

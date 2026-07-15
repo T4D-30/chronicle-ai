@@ -39,7 +39,7 @@ interface AdventureStatusBarProps {
  * here means that specific tier, not just "any parent." Returns null
  * (rendered as nothing) rather than guessing when no region-typed
  * ancestor exists — same honesty rule every other real-data field here
- * already follows (see WorldStatusSidebar, AdventureScenePanel).
+ * already follows (see WorldStatusSidebar).
  */
 function findRegionAncestor(
   locationId: string | null,

@@ -14,7 +14,8 @@
  *   caller applies these via applyWorldStateUpdate()/updateWorldState() in
  *   useAdventureSession.ts. This module only parses/passes through the raw
  *   update object; it does not apply it.
- * - Surfaces suggestedActions to the action bar — ✅ implemented here
+ * - Surfaces suggestedActions as choice chips on the unified Adventure
+ *   surface (StoryHud) — ✅ implemented here
  * - Logs mapUpdate signals — still 🔲 not implemented; Atlas (Phase 6) has
  *   no map canvas to update. This remains genuinely deferred, unlike the
  *   two items above which were stale claims left over from Phase 2.4 and
@@ -103,7 +104,7 @@ function sanitizeString(value: string, maxLength: number): string {
 
 /**
  * Extract a fallback narration from an error, suitable for display in the
- * StoryPanel when the Edge Function fails.
+ * story surface (StoryHud) when the Edge Function fails.
  */
 export function buildFallbackNarration(error: unknown): string {
   if (error instanceof Error) {

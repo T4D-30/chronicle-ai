@@ -4,8 +4,8 @@
  * THE single boundary between the overworld presentation layer and the
  * game: every typed OverworldIntent becomes a call on the EXISTING
  * AdventureActions surface — nothing else. Interact and exit intents
- * ground as plain-text actions through actions.submitAction (the exact
- * mechanism ActionBar's quick actions already use), so the Adventure
+ * ground as plain-text actions through actions.submitAction (the same
+ * mechanism the StoryHud, ActionStrip, and AtlasMapPanel use), so the Adventure
  * Controller, rules engine, and Director resolve every outcome.
  * Encounter intents call the existing actions.startCombat with the
  * trigger's fixture enemies. No Supabase, no state mutation, no new

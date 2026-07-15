@@ -4,8 +4,8 @@
  * Covers: honest empty state (no fake locations), real discovered
  * siblings render as cards, current location gets the player marker,
  * undiscovered locations never leak, and movement buttons call
- * onSubmitAction with the expected text (mirroring how
- * ActionBar.test.tsx already asserts quick-action click behavior).
+ * onSubmitAction with the expected text (the same plain-text grounding
+ * contract the StoryHud and ActionStrip tests assert).
  */
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'

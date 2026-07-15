@@ -17,8 +17,8 @@
  * yet, never a placeholder map image.
  *
  * MOVEMENT: the N/S/E/W buttons call the EXISTING onSubmitAction callback
- * with plain text ("I move north.") — the identical mechanism ActionBar's
- * quick-action buttons already use (see QUICK_ACTIONS in ActionBar.tsx).
+ * with plain text ("I move north.") — the identical plain-text grounding
+ * the StoryHud and ActionStrip use.
  * This introduces no new controller/AI Director surface — it's the same
  * submitAction pipe, more pre-written text entering it. LocationState has
  * no compass-heading field, so these are honestly generic prompts for the

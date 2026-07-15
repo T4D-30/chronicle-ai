@@ -72,7 +72,7 @@ Natural 20: extra benefit beyond the intended outcome. Natural 1: a complication
 
 Turn-based, initiative = d20 + DEX modifier. Presented as a JRPG-style battle screen (Phase 5) over the same D&D-adjacent mechanics used everywhere else — the Constitution's "visually presented as Pokémon/JRPG, mechanically resolved as D&D" principle, unchanged.
 
-Action menu: Attack (with weapon submenu reading real equipped gear), Spell (submenu reading prepared spells, with an honest empty state and cantrip fallback when none are prepared), Item, Defend, Move, Flee — all implemented in `ActionBar.tsx` (Phase 8.3), all resolve through the same engine, all narrated by the Director after the fact, never before.
+Action menu: Attack (with weapon submenu reading real equipped gear), Spell (submenu reading prepared spells, with an honest empty state and cantrip fallback when none are prepared), Item, Defend, Move, Flee — all implemented in the combat panel (`CombatPanel.tsx`; originally built in Phase 8.3), all resolve through the same engine, all narrated by the Director after the fact, never before.
 
 Damage numbers, crit flash, and animated HP bars (Phase 9.1) are pure presentation layered over real `AttackResult` data returned by the engine — see `CombatPanel.tsx`. The Director never sees or influences a combat roll; combat resolution is client-side and complete before any AI call happens for that exchange.
 
