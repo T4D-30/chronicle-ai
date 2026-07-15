@@ -24,7 +24,7 @@ import { AtlasPanel } from '../panels/AtlasPanel'
 import { CodexPanel } from '../panels/CodexPanel'
 import { DebugPanel } from '../panels/DebugPanel'
 import { DicePanel } from '../DicePanel'
-import { AudioSettingsPanel, Icon } from '@/components/pixel'
+import { AudioSettingsPanel, TextSettingsPanel, Icon } from '@/components/pixel'
 import type { IconName } from '@/components/pixel'
 import type { AdventureState } from '../useAdventureSession'
 
@@ -158,8 +158,9 @@ export function PauseMenu({ state, tab, onSelectTab, onClose, onLevelUp }: Pause
         {tab === 'atlas' && <AtlasPanel campaign={campaign} />}
         {tab === 'codex' && <CodexPanel campaign={campaign} />}
         {tab === 'settings' && (
-          <div className="p-4 max-w-sm">
+          <div className="p-4 max-w-sm space-y-4 overflow-y-auto max-h-full">
             <AudioSettingsPanel />
+            <TextSettingsPanel />
           </div>
         )}
         {tab === 'debug' && DEBUG_ENABLED && <DebugPanel state={state} />}

@@ -33,8 +33,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui'
 import { NpcName } from '@/components/pixel'
 import { SpeakerPortrait } from './SpeakerPortrait'
-
-const CHAR_MS = 18
+import { useUiSettingsStore, TEXT_SPEED_CHAR_MS } from '@/store/uiSettingsStore'
 
 function prefersReducedMotion(): boolean {
   return (
@@ -78,13 +77,17 @@ export function StoryHud({
   const [visibleChars, setVisibleChars] = useState(0)
   const [freeText, setFreeText] = useState('')
   const timerRef = useRef<number | null>(null)
+  // Player-adjustable reveal rate (B3). Reduced motion still wins below.
+  const textSpeed = useUiSettingsStore((s) => s.textSpeed)
+  const charMs = TEXT_SPEED_CHAR_MS[textSpeed]
 
   const isDialogue = !!speaker
   const hasBeat = text.length > 0 || streaming
 
-  // Typewriter over completed text only.
+  // Typewriter over completed text only. Precedence: reduced motion >
+  // 'instant' setting > timed reveal at the player's chosen rate.
   useEffect(() => {
-    if (streaming || prefersReducedMotion()) {
+    if (streaming || prefersReducedMotion() || charMs === 0) {
       setVisibleChars(text.length)
       return
     }
@@ -97,11 +100,11 @@ export function StoryHud({
         }
         return n + 1
       })
-    }, CHAR_MS)
+    }, charMs)
     return () => {
       if (timerRef.current) window.clearInterval(timerRef.current)
     }
-  }, [text, streaming])
+  }, [text, streaming, charMs])
 
   const shown = streaming ? text : text.slice(0, visibleChars)
   const revealed = streaming || visibleChars >= text.length
