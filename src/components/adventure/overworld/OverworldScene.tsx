@@ -26,6 +26,7 @@ import { bodyKindFor, weaponKindFor } from '../world/characterAppearance'
 import { FACING_DELTA, entityAt, exitAt, encounterAt } from './overworldTypes'
 import type {
   FacingDirection,
+  OverworldEntity,
   OverworldIntent,
   OverworldMap,
   TileCoord,
@@ -44,6 +45,9 @@ interface OverworldSceneProps {
   initialFacing?: FacingDirection
   initialZoneKey?: string | null
   onPlayerStateChange?: (state: { pos: TileCoord; facing: FacingDirection }) => void
+  /** Reports the entity the player currently faces (or null) so the
+   *  hub-side Action Layer can offer its verbs as buttons (B3). */
+  onFacedChange?: (entity: OverworldEntity | null) => void
 }
 
 export function OverworldScene({
@@ -56,6 +60,7 @@ export function OverworldScene({
   initialFacing,
   initialZoneKey = null,
   onPlayerStateChange,
+  onFacedChange,
 }: OverworldSceneProps) {
   const { pos, facing, tryMove } = useOverworldPlayer({
     map,
@@ -76,6 +81,13 @@ export function OverworldScene({
     onPlayerStateChange?.({ pos, facing })
   }, [pos, facing, onPlayerStateChange])
 
+  // `faced` identity is stable per entity (entityAt returns the map's
+  // own entity objects), so this fires only when the faced target
+  // actually changes.
+  useEffect(() => {
+    onFacedChange?.(faced)
+  }, [faced, onFacedChange])
+
   useEffect(() => {
     const exit = exitAt(map, pos)
     const encounter = encounterAt(map, pos)
@@ -92,11 +104,19 @@ export function OverworldScene({
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       if (locked) return
-      // Typing in a form field (e.g. the Story HUD's free input, which
-      // is present while movement is free) must never move the player
-      // or trigger interactions.
+      // Keys aimed at UI controls must never reach the world: typing in
+      // the Story HUD's free input (present while movement is free)
+      // must not move the player, and Enter/Space activating a focused
+      // button (e.g. an ActionStrip verb) must not ALSO fire the
+      // keyboard interact path — that would double-submit the action.
       const target = e.target as HTMLElement | null
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'BUTTON' ||
+          target.isContentEditable)
+      ) {
         return
       }
       const direction = directionForKey(e.key)

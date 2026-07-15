@@ -24,6 +24,9 @@
  * Typewriter rules (inherited): streaming text renders as-is;
  * completed text reveals at ~18ms/char; clicking the text skips to
  * full; prefers-reduced-motion renders instantly.
+ *
+ * Positioning is owned by OverworldMode's bottom dock (which stacks
+ * the ActionStrip above this HUD) — this component is width-only.
  */
 
 import { useEffect, useRef, useState } from 'react'
@@ -96,7 +99,7 @@ export function StoryHud({
 
   return (
     <div
-      className="absolute inset-x-0 bottom-0 z-20 p-3 menu-enter"
+      className="w-full p-3 menu-enter"
       data-testid="story-hud"
       data-mode={isDialogue ? 'dialogue' : 'ambient'}
       role={isDialogue ? 'dialog' : 'region'}

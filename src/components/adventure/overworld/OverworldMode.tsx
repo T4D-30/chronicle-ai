@@ -21,6 +21,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { OverworldScene } from './OverworldScene'
 import { StoryHud } from './StoryHud'
+import { ActionStrip } from './ActionStrip'
 import { PauseMenu } from './PauseMenu'
 import type { PauseTab } from './PauseMenu'
 import { WorldTransition, TRANSITION_PHASE_MS } from './WorldTransition'
@@ -28,8 +29,12 @@ import type { TransitionPhase } from './WorldTransition'
 import { handleOverworldIntent } from './overworldAdapter'
 import { OVERWORLD_MAPS, monasteryCourtyard } from './maps'
 import type { OverworldIntent } from './overworldTypes'
-import type { FacingDirection, TileCoord } from './overworldTypes'
+import type { FacingDirection, InteractionVerb, OverworldEntity, TileCoord } from './overworldTypes'
 import type { AdventureState, AdventureActions } from '../useAdventureSession'
+
+/** Grounded text for the standing Rest action — the same text the old
+ *  ActionBar quick action used; the controller/rules resolve it. */
+const REST_ACTION_TEXT = 'I attempt to rest and recover.'
 
 export interface OverworldArea {
   mapId: string
@@ -68,6 +73,8 @@ export function OverworldMode({
   onLevelUp,
 }: OverworldModeProps) {
   const [dialogue, setDialogue] = useState<{ speaker: string } | null>(null)
+  // The entity the player faces — drives the contextual ActionStrip (B3).
+  const [faced, setFaced] = useState<OverworldEntity | null>(null)
   // Current area — presentation state; named-location persistence
   // happens ONLY via the exit intent's grounded text through the
   // controller, never per tile. AdventureHub may own this so combat
@@ -207,6 +214,14 @@ export function OverworldMode({
     setDialogue(null)
   }
 
+  // ActionStrip verbs route through the SAME intent path the keyboard
+  // uses — identical grounding, dialogue behavior, and adapter contract.
+  function onActionVerb(entity: OverworldEntity, verb: InteractionVerb) {
+    const text = entity.intentText[verb]
+    if (!text) return
+    onIntent({ type: 'interact', verb, entityId: entity.id, entityName: entity.name, text })
+  }
+
   return (
     <div className="relative w-full h-full" data-testid="overworld-mode">
       <OverworldScene
@@ -219,6 +234,7 @@ export function OverworldMode({
         initialFacing={area.facing}
         initialZoneKey={area.activeZoneKey}
         onPlayerStateChange={commitPlayerState}
+        onFacedChange={setFaced}
       />
 
       <WorldTransition phase={transition} />
@@ -233,19 +249,35 @@ export function OverworldMode({
         />
       )}
 
-      {/* The persistent story dock (B2) — supersedes DialogueWindow.
-          Dialogue mode locks the scene (via `locked` above); ambient
-          beats leave movement free (only busy/streaming locks). */}
-      <StoryHud
-        speaker={dialogue?.speaker ?? null}
-        text={dialogue ? responseText : ambientText}
-        streaming={isStreaming}
-        suggestedActions={isStreaming ? [] : state.suggestedActions}
-        busy={busy}
-        onChoose={(text) => actions.submitAction(text)}
-        onSubmitFree={(text) => actions.submitAction(text)}
-        onClose={closeStoryHud}
-      />
+      {/* The bottom dock: contextual ActionStrip (B3) stacked above the
+          persistent Story HUD (B2). Dialogue mode locks the scene (via
+          `locked` above) and hides the strip — actions live in the HUD
+          then; ambient beats leave movement free (only busy/streaming
+          locks). */}
+      <div className="absolute inset-x-0 bottom-0 z-20 flex flex-col">
+        {!dialogue && (
+          <div className="self-end px-3">
+            <ActionStrip
+              faced={faced}
+              locked={locked}
+              busy={busy}
+              onVerb={onActionVerb}
+              onRest={() => actions.submitAction(REST_ACTION_TEXT)}
+              onMenu={() => setPauseTab('character')}
+            />
+          </div>
+        )}
+        <StoryHud
+          speaker={dialogue?.speaker ?? null}
+          text={dialogue ? responseText : ambientText}
+          streaming={isStreaming}
+          suggestedActions={isStreaming ? [] : state.suggestedActions}
+          busy={busy}
+          onChoose={(text) => actions.submitAction(text)}
+          onSubmitFree={(text) => actions.submitAction(text)}
+          onClose={closeStoryHud}
+        />
+      </div>
     </div>
   )
 }

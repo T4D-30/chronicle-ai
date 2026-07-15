@@ -10,7 +10,8 @@
 import { TILE_PX } from './TileMap'
 import type { OverworldEntity, InteractionVerb } from './overworldTypes'
 
-const VERB_LABEL: Record<InteractionVerb, string> = {
+/** Shared verb labels — also used by the ActionStrip (B3). */
+export const VERB_LABEL: Record<InteractionVerb, string> = {
   talk: 'Talk',
   inspect: 'Inspect',
   collect: 'Collect',
