@@ -4,8 +4,8 @@
  * The first mounted home for the long-built-but-unmounted
  * AudioSettingsPanel (audio framework has existed since Phase 9; the
  * panel simply had no surface). Opened from the Main Menu's Settings
- * item and AdventureLeftNav's Settings entry — which stops being a
- * disabled placeholder the moment this exists.
+ * item; in play, audio settings surface through the pause overlay's
+ * Settings tab instead.
  *
  * Accessibility mechanics mirror ConfirmDialog (the proven pattern in
  * this codebase): role=dialog + aria-modal, focus trap, Escape to

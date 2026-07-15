@@ -103,7 +103,7 @@ function sanitizeString(value: string, maxLength: number): string {
 
 /**
  * Extract a fallback narration from an error, suitable for display in the
- * StoryPanel when the Edge Function fails.
+ * story surface (StoryHud) when the Edge Function fails.
  */
 export function buildFallbackNarration(error: unknown): string {
   if (error instanceof Error) {

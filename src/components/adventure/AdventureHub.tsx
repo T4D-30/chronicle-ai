@@ -19,16 +19,15 @@
  *   └───────────────────────────────────────────────┘
  *
  * There is no separate Story screen anymore: story presentation docks
- * over the world (DialogueWindow today; the persistent Story HUD lands
- * in B2). Every other panel — Character, Dice, Journal, Quests, Atlas,
+ * over the world (StoryHud — NPC dialogue and ambient beats). Every
+ * other panel — Character, Dice, Journal, Quests, Atlas,
  * Codex, Settings, flagged Debug — opens through the SAME pause overlay
  * the Esc key uses, over the frozen world, never replacing it. The
  * bottom tab nav and the pause menu are two doors into one surface.
  *
- * The old dashboard-style side columns (AdventureLeftNav,
- * AdventureRightSidebar) are no longer rendered: the world is primary
- * and their content lives in the overlay panels. Files kept for a
- * later cleanup decision.
+ * The old dashboard-style side columns were superseded and removed
+ * in the unified-screen cleanup: the world is primary and their
+ * content lives in the overlay panels.
  *
  * Constitution Law 1: the bottom tab nav is ALWAYS visible.
  * Constitution Law 3: character values come from the engine, never prose.

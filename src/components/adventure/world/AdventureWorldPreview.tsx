@@ -10,8 +10,9 @@
  * nothing here hardcodes assumptions that block that path (scenes are
  * a config map, layers are composable, all animation is CSS).
  *
- * MOUNTING: a BACKGROUND layer behind the story content inside
- * AdventureScenePanel — absolutely positioned, aria-hidden,
+ * MOUNTING: designed as a BACKGROUND layer behind story content
+ * (historically inside the removed AdventureScenePanel; currently
+ * unmounted) — absolutely positioned, aria-hidden,
  * pointer-events-none — so dialogue keeps the full height the
  * readability pass won while the blank space becomes a living world.
  *
@@ -337,7 +338,7 @@ export function AdventureWorldPreview({
       )}
 
       {/* Ground band + biome furniture, horizon at ~58% (above the
-          ActionBar overlay zone so the world stays visible). */}
+          bottom input-overlay zone so the world stays visible). */}
       <svg
         className="absolute inset-x-0 w-full"
         style={{ top: '46%', height: '54%' }}

@@ -17,11 +17,10 @@ const cn = (...inputs: Parameters<typeof clsx>) => twMerge(clsx(inputs))
  *   Suggested Action → `suggested`   (new — verbatim from AdventureHub's
  *                                      suggested-action chips)
  *   Pixel Icon       → `iconOnly`    (new — compact square icon button)
- *   Combat           → intentionally not duplicated here. ActionBar's
- *                       `CombatActionBtn` already owns this role (a
- *                       stacked icon+label JRPG menu button with 4 color
- *                       sub-variants) and isn't migrated onto generic
- *                       Button in this pass — see Phase 15 plan.
+ *   Combat           → intentionally not duplicated here. CombatPanel
+ *                       owns its own stacked icon+label JRPG menu
+ *                       buttons and isn't migrated onto generic Button
+ *                       — see Phase 15 plan.
  */
 export type ButtonVariant =
   | 'arcane'

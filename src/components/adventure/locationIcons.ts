@@ -2,9 +2,9 @@
  * locationIcons — Phase 15.2
  *
  * Extracted from AtlasPanel.tsx (Phase 6), which defined these maps
- * locally. AdventureScenePanel's redesign (Phase 15.2) needs the same
- * per-LocationType glyph for its "biome icon" — sharing this module keeps
- * one source of truth instead of a second, drifting copy.
+ * locally, so later location-labeled UI could share the same
+ * per-LocationType glyphs — one source of truth instead of a second,
+ * drifting copy.
  */
 
 import type { LocationType } from '@/types/campaign'

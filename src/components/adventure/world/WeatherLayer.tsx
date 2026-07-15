@@ -8,7 +8,7 @@
  * wiring it is a one-line prop, not a redesign. Rendering rain or snow
  * without a real weather value is fabricated world state and is
  * deliberately impossible through the public component API
- * (AdventureScenePanel passes no weather).
+ * (no caller passes a weather value today).
  *
  * Presentation only; reuses the existing reduced-motion-safe particle
  * system.

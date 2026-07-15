@@ -192,10 +192,8 @@ describe('AdventurePage — ready state', () => {
   it('shows the campaign title in the status bar', async () => {
     renderPage()
     await waitFor(() => expect(screen.getByTestId('adventure-hub')).toBeInTheDocument())
-    // Scoped to the status bar: as of the Adventure Hub redesign, the
-    // campaign title can also legitimately appear in the new
-    // AdventureScenePanel's location title (see AdventureHub.test.tsx's
-    // own equivalent fix for the full rationale).
+    // Scoped to the status bar so the query stays unambiguous if the
+    // campaign title ever appears in another legitimate surface too.
     const statusBar = screen.getByTestId('adventure-status-bar')
     expect(within(statusBar).getByText(/The Shattered Throne/)).toBeInTheDocument()
   })

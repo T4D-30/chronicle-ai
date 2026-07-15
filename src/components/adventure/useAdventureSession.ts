@@ -61,7 +61,8 @@ export interface AdventureState {
   /**
    * The most recently resolved exploration skill check, if the last
    * submitted action classified into a real category. Cleared on the next
-   * submission. Drives the dice-result popup in StoryPanel — this is real
+   * submission. Drives the dice-result popup (currently without a surface
+   * on the unified screen — see KNOWN_LIMITATIONS) — this is real
    * Phase 9.3 data (previously computed and sent to the Director, but never
    * surfaced to the player) rather than a new roll. Phase 10.1.
    */
@@ -407,7 +408,7 @@ export function useAdventureSession(campaignId: string): [AdventureState, Advent
     setState((s) => ({ ...s, combatState: null }))
   }, [])
 
-  /** Dismisses the current dice-check popup. Called by StoryPanel once its display timer elapses. */
+  /** Dismisses the current dice-check popup. (Its pre-unified-screen consumer was removed; a new surface is follow-up work.) */
   const clearCheckResult = useCallback(() => {
     setState((s) => ({ ...s, lastCheckResult: null }))
   }, [])

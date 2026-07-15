@@ -14,8 +14,8 @@
  * Outside dialogue it shows the current ambient beat (exit/rest/
  * examine narration) WITHOUT locking movement, collapsing to a free-
  * input strip when there is no fresh beat. Choices and free-form
- * input submit through the same actions.submitAction contract as
- * ActionBar. DialogueWindow is superseded (kept until cleanup).
+ * input submit through the presentation layer's one grounding
+ * contract: actions.submitAction.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
