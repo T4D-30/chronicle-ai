@@ -1,44 +1,51 @@
 # ChronAI Project State
 
-- Last updated: 2026-07-13
-- Current branch: `feature/presentation-playable-overworld`
-- Current milestone: Playable Overworld complete (9/9)
-- Current roadmap position: `docs/ROADMAP.md` > Presentation > Playable Overworld.
-- Current PR: [#3 — Complete Playable Overworld 9/9](https://github.com/T4D-30/chronicle-ai/pull/3) (draft).
+- Last updated: 2026-07-14
+- Current branch: `feature/presentation-unified-adventure-screen`
+- Current milestone: Unified Adventure Screen (B1–B5) — complete, pending review/PR.
+- Current roadmap position: `docs/ROADMAP.md` > Presentation > Unified Adventure Screen.
+- Current PR: Not open yet.
 
 ## Recent Architectural Decisions
 
-See `docs/DECISIONS.md` for the append-only rationale behind foundational decisions, including the AI/rules/database boundary, presentation ownership limits, WorldRenderer, overworld state, and extending existing architecture instead of creating parallel systems.
+See `docs/DECISIONS.md` for the append-only rationale behind foundational decisions, including the AI/rules/database boundary, presentation ownership limits, WorldRenderer, overworld state, extending existing architecture instead of creating parallel systems, and the unified Adventure screen superseding the tabbed Story/World split.
 
 ## Active Work
 
-The playable-overworld milestone is complete and fully verified. The World tab provides the playable map, NPC dialogue stays docked over the visible map, contextual interactions use grounded intents, the pause menu reuses existing panels, and encounters hand off to the existing combat flow. Combat return preserves the current map, exact tile, facing, and consumed encounter trigger in local presentation state so movement resumes without an immediate retrigger. The overworld remains presentation/input only: meaningful actions use existing `AdventureActions` (`submitAction` and `startCombat`). Story and World remain separate AdventureHub tabs in this milestone; merging them into one unified Adventure screen is the next presentation phase, not part of Overworld 9/9. PR verification is clean: Vitest now exercises Mammoth's browser DOCX bundle directly, and all 102 test files complete without unhandled rejections.
+The Unified Adventure Screen milestone recomposed the main play experience into one screen with three integrated layers, in five independently verified commits:
+
+1. **B1 — Unified shell** (`26bcc3d`): Story and World tabs merged into a single Adventure surface; OverworldMode is the always-mounted primary view; Character, Dice, Journal, Quests, Atlas, Codex, Settings, and flagged Debug open through the existing pause overlay over the frozen world (bottom nav and Esc are two doors into the same overlay); combat still swaps the surface (Law 5) and disables overlay tabs.
+2. **B2 — Story HUD** (`61b9809`): `StoryHud` generalizes DialogueWindow into the persistent bottom dock — NPC dialogue (locked) plus ambient story beats (movement free), turn-count watermarking so old turns never replay as fresh narration, ≤35% viewport, free-form input restored.
+3. **B3 — Action Layer** (`6c3f092`): `ActionStrip` offers the faced entity's verbs, Rest, and Menu; verb clicks route through the same typed interact intents as the keyboard; button/input key events can no longer reach the world handler (no double submission).
+4. **B4 — Overlay completion** (`80695e4`): every overlay verified over the frozen world with position preserved; bottom-nav tabs gained explicit `aria-label`s (they had no accessible name below `sm`).
+5. **B5** — final integration walkthrough and this documentation pass.
+
+No Adventure Controller, rules-engine, AI Director, persistence, world-tick, or Supabase contract changed. Superseded presentation components (`AdventureLeftNav`, `AdventureRightSidebar`, `StoryPanel`, `AdventureScenePanel`, `ActionBar`, `DialogueWindow`) are no longer rendered but remain in the tree pending an explicit cleanup decision.
 
 Primary files in scope:
 - `src/components/adventure/AdventureHub.tsx`
-- `src/components/adventure/overworld/*`
-- `src/components/adventure/overworld/maps/*`
-- `tests/unit/Overworld*.test.tsx`
-- `tests/unit/overworld*.test.ts`
+- `src/components/adventure/overworld/StoryHud.tsx`
+- `src/components/adventure/overworld/ActionStrip.tsx`
+- `src/components/adventure/overworld/{OverworldMode,OverworldScene,PauseMenu,InteractionLayer}.tsx`
+- `tests/unit/{AdventureHub,StoryHud,OverworldActionStrip,OverworldDialogue,OverworldPauseMenu,AdventurePage,phase7Polish}.test.tsx`
 
 ## Remaining Work
 
-1. Review and merge draft PR #3 when approved; do not merge automatically.
-2. After merge, create the unified Adventure Screen feature branch from the landed work.
-3. Do not claim touch play; the responsive layout is verified at 390×844, but overworld movement remains keyboard-only.
+1. Open a PR for `feature/presentation-unified-adventure-screen` when requested; do not merge automatically.
+2. Decide the cleanup phase for the superseded components listed above (deletion needs explicit approval).
+3. The old WorldStatusSidebar content (world time, discovered-location/NPC counts) has no surface on the unified screen — decide whether it becomes a pause-overlay tab in a later phase.
+4. Overworld movement remains keyboard-only; touch controls are a future phase.
 
 ## Current Git Status
 
-- The continuity-document pass is committed separately as `cee5258`.
-- Playable Overworld 9/9 is committed separately as `23893bb`, with the exact-position combat-return correction following on the same tracked feature branch.
-- The Mammoth CI-only unhandled-rejection correction is a separate commit on the same PR branch.
-- Draft PR #3 is open against `main`; the working tree is expected to be clean after this handoff update.
-- No preview route, preview page, scratch file, migration, Edge Function, AI Director, rules-engine, persistence, world-tick, or combat-resolution change is present in the reviewed worktree.
+- `main` contains the merged Playable Overworld (PR #3).
+- This branch adds the five unified-screen commits plus this documentation commit; the working tree is expected to be clean after this handoff update.
+- No migration, Edge Function, AI Director, rules-engine, persistence, world-tick, or combat-resolution change is present.
 
 ## Known Temporary Files
 
-- None.
+- None. (An untracked `.claude/settings.json` permission file may appear locally from tooling; it is not part of the project.)
 
 ## Next Recommended Task
 
-Create `feature/presentation-unified-adventure-screen` from the landed work and merge the separate Story and World experiences as the next presentation milestone. Recompose the existing overworld, dialogue, actions, pause panels, and combat handoff without changing Director, rules, or persistence contracts.
+Review the unified-screen branch, open the PR, and after merge pick the next roadmap phase — Dialogue Cinematics builds directly on the new StoryHud, or the superseded-component cleanup can land first as a small hygiene phase.

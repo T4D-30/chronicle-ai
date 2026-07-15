@@ -67,10 +67,19 @@ Adventure Hub — the main play screen.
 
 ### What you'll see
 
-- **World tab**: the primary playable overworld, with contextual interaction prompts and dialogue docked over the still-visible scene
-- **Story tab**: the story so far, suggested actions, and a text box to type what you do next
-- **Sidebars** (wider screens): navigation plus a consolidated character/party/world-status panel
-- **Tab bar**: Story, World, Character, Dice, Journal, Quests, Atlas, Codex
+One unified screen — the playable world is always the main view:
+
+- **The world**: the playable overworld fills the screen — your
+  character, NPCs, paths, and exits, with contextual interaction
+  prompts above whatever you're facing
+- **The story HUD** (bottom): narration and NPC dialogue dock over the
+  world — suggested actions and a "What do you do?" box live here, so
+  story and world never hide each other
+- **The action strip** (above the HUD): context buttons for whatever
+  you face (Talk, Inspect, Collect, Enter), plus Rest and Menu
+- **Tab bar**: Adventure, Character, Dice, Journal, Quests, Atlas,
+  Codex — everything except Adventure opens as an overlay on top of
+  the paused world (Escape does the same)
 
 ### How to play
 
@@ -89,14 +98,13 @@ narration, movement, or dialogue doesn't roll anything — not every line
 of play needs to be mechanical. The AI never invents a dice result and
 never rolls a different outcome than what actually happened.
 
-You'll also see **quick-action buttons** (Look, Inventory, Character,
-Atlas, Journal, Quests, Rest, Dice) for common actions without typing, and
-**suggested actions** the Director offers after each turn.
+You'll also see **suggested actions** the Director offers after each
+turn, and the action strip's context buttons for whatever you're facing.
 
-In the **World** tab, move with the arrow keys or WASD, interact with
-Enter/Space/E, and press Escape for the pause menu. The layout adapts to
-small screens, but overworld movement is currently keyboard-only; touch
-movement controls are not yet implemented.
+Move with the arrow keys or WASD, interact with Enter/Space/E, and
+press Escape for the menu. The layout adapts to small screens, but
+overworld movement is currently keyboard-only; touch movement controls
+are not yet implemented.
 
 ## 5. Combat
 

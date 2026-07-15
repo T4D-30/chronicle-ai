@@ -30,9 +30,9 @@ Supabase stores durable truth: profiles, characters, campaigns, sessions, turns,
 
 React, Vite, Tailwind, pixel components, and Zustand presentation state render real data and collect player intent. UI may stage temporary presentation state, but authoritative game state belongs to the engine/controller/persistence path.
 
-### Overworld
+### Overworld (Unified Adventure Screen)
 
-The playable overworld is a presentation and input layer. Fixture maps, tile position, camera, dialogue windows, transitions, and pause overlays are UI state; meaningful interactions become existing `AdventureActions` calls. Per-tile movement is not persisted.
+The playable overworld is the primary surface of the unified Adventure screen — a presentation and input layer composed of three integrated parts: the world (fixture maps, tile position, camera, transitions), the Story HUD (NPC dialogue and ambient narration beats docked over the world, watermarked by turn count so history never replays as fresh), and the contextual ActionStrip (faced-entity verbs, Rest, Menu). Character, Dice, Journal, Quests, Atlas, Codex, Settings, and flagged Debug panels open through the pause overlay over the frozen world; the bottom tab nav and Esc drive the same overlay. All of it is UI state; meaningful interactions become existing `AdventureActions` calls through the overworld adapter. Per-tile movement is not persisted; combat swaps the surface and returns with exact position/facing preserved in hub-owned presentation state.
 
 ### Combat
 
