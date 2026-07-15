@@ -60,7 +60,7 @@ This file is the master build order for future implementation. `docs/PROJECT_STA
 
 - Goal: Upgrade dialogue from functional windows to cinematic RPG conversations with portraits, pacing, transitions, and accessible controls.
 - Dependencies: Unified Adventure Screen (StoryHud), AI Director narration contract, UI Vision.
-- Status: Planned.
+- Status: v1 complete (speaker portraits with procedural fallback, enter/advance transitions, player-adjustable text speed). Deferred to a later pass: real portrait art, emotion variants, camera zooms, letterboxing.
 - Estimated complexity: Medium.
 - Acceptance criteria: Dialogue presents real Director output, supports choices/free input, preserves escape routes, respects reduced motion, and never creates facts outside the action pipeline.
 

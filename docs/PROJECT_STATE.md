@@ -2,9 +2,9 @@
 
 - Last updated: 2026-07-15
 - Current branch: `feature/presentation-dialogue-cinematics`
-- Current milestone: Dialogue Cinematics v1 — in progress (B1–B4). Unified Adventure Screen (PR #4), its hygiene pass (PR #5), and Unified Check Result Feedback (PR #6) are merged to `main`.
+- Current milestone: Dialogue Cinematics v1 — complete, pending review (draft PR). Unified Adventure Screen (PR #4), its hygiene pass (PR #5), and Unified Check Result Feedback (PR #6) are merged to `main`.
 - Current roadmap position: `docs/ROADMAP.md` > Presentation > Dialogue Cinematics.
-- Current PR: none yet (draft PR opens after B4).
+- Current PR: draft PR for `feature/presentation-dialogue-cinematics`.
 
 ## Recent Architectural Decisions
 
