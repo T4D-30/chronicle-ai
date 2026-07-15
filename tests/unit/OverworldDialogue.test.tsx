@@ -1,89 +1,19 @@
 /**
- * Dialogue Mode Tests — Presentation 3 (Playable Overworld)
+ * Dialogue Mode Tests — Unified Adventure Screen
  *
- * DialogueWindow mechanics (typewriter, reduced-motion fallback,
- * choices, free-form, close — the component is superseded by StoryHud
- * since B2 but kept until cleanup, so its contract stays tested) and
- * OverworldMode orchestration through the StoryHud surface (interact
- * opens dialogue + locks the scene; closing restores movement; ambient
- * beats never lock movement and old turns never replay as fresh).
+ * OverworldMode orchestration through the StoryHud surface: a talk
+ * intent opens dialogue and locks the scene; closing restores
+ * movement; ambient beats never lock movement and old turns never
+ * replay as fresh. (StoryHud's own component mechanics live in
+ * StoryHud.test.tsx; the superseded DialogueWindow and its block were
+ * removed in the unified-screen cleanup.)
  */
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { DialogueWindow } from '@/components/adventure/overworld/DialogueWindow'
 import { OverworldMode } from '@/components/adventure/overworld/OverworldMode'
 import { STEP_MS } from '@/components/adventure/overworld/PlayerController'
 import type { AdventureState, AdventureActions } from '@/components/adventure/useAdventureSession'
 import { DEFAULT_DIRECTOR_CONFIG, DEFAULT_WORLD_STATE } from '@/types/campaign'
-
-// ─── DialogueWindow ───────────────────────────────────────────────────────────
-
-function renderWindow(props: Partial<Parameters<typeof DialogueWindow>[0]> = {}) {
-  const defaults = {
-    speaker: 'Brother Aldwin',
-    text: 'Peace, traveler.',
-    streaming: false,
-    suggestedActions: [] as string[],
-    busy: false,
-    onChoose: vi.fn(),
-    onSubmitFree: vi.fn(),
-    onClose: vi.fn(),
-  }
-  const merged = { ...defaults, ...props }
-  return { ...render(<DialogueWindow {...merged} />), props: merged }
-}
-
-describe('DialogueWindow', () => {
-  beforeEach(() => { vi.useFakeTimers() })
-  afterEach(() => { vi.useRealTimers() })
-
-  it('shows the speaker label', () => {
-    renderWindow()
-    expect(screen.getByTestId('dialogue-speaker')).toHaveTextContent('Brother Aldwin')
-  })
-
-  it('typewrites completed text and can be skipped to full by clicking', () => {
-    renderWindow({ text: 'Peace, traveler.' })
-    expect(screen.getByTestId('dialogue-text')).not.toHaveTextContent('Peace, traveler.')
-    act(() => vi.advanceTimersByTime(18 * 6))
-    expect(screen.getByTestId('dialogue-text').textContent?.length).toBeGreaterThan(0)
-    fireEvent.click(screen.getByTestId('dialogue-text'))
-    expect(screen.getByTestId('dialogue-text')).toHaveTextContent('Peace, traveler.')
-  })
-
-  it('renders full text instantly under prefers-reduced-motion', () => {
-    const original = window.matchMedia
-    window.matchMedia = vi.fn().mockReturnValue({ matches: true }) as unknown as typeof window.matchMedia
-    renderWindow({ text: 'Peace, traveler.' })
-    expect(screen.getByTestId('dialogue-text')).toHaveTextContent('Peace, traveler.')
-    window.matchMedia = original
-  })
-
-  it('renders streaming text as-is without the typewriter', () => {
-    renderWindow({ text: 'The monk considers…', streaming: true })
-    expect(screen.getByTestId('dialogue-text')).toHaveTextContent('The monk considers…')
-  })
-
-  it('choices call onChoose; free-form submits via onSubmitFree', () => {
-    const { props } = renderWindow({
-      suggestedActions: ['Ask about the mill'],
-      text: 'x',
-    })
-    fireEvent.click(screen.getByTestId('dialogue-text')) // reveal
-    fireEvent.click(screen.getByRole('button', { name: 'Ask about the mill' }))
-    expect(props.onChoose).toHaveBeenCalledWith('Ask about the mill')
-
-    fireEvent.change(screen.getByTestId('dialogue-free-input'), { target: { value: 'I bow.' } })
-    fireEvent.submit(screen.getByTestId('dialogue-free-input').closest('form')!)
-    expect(props.onSubmitFree).toHaveBeenCalledWith('I bow.')
-  })
-
-  it('close button calls onClose', () => {
-    const { props } = renderWindow()
-    fireEvent.click(screen.getByTestId('dialogue-close'))
-    expect(props.onClose).toHaveBeenCalledOnce()
-  })
-})
 
 // ─── OverworldMode orchestration ─────────────────────────────────────────────
 

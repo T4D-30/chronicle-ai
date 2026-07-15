@@ -52,11 +52,6 @@ const DEBUG_ENABLED = import.meta.env.VITE_ENABLE_DEBUG_PANEL === 'true'
  *  panels it can open. Settings stays pause-menu-only (as before). */
 export type AdventureTab = 'adventure' | PauseTab
 
-/** @deprecated Pre-unified-screen panel union. Kept only so the
- *  superseded AdventureLeftNav (no longer rendered since the unified
- *  Adventure screen) still compiles until a cleanup phase removes it. */
-export type AdventurePanel = 'story' | 'overworld' | AdventureTab
-
 const TAB_DEFS: Array<{ id: AdventureTab; label: string; icon: IconName }> = [
   { id: 'adventure', label: 'Adventure', icon: 'move' },
   { id: 'character', label: 'Character', icon: 'character' },
