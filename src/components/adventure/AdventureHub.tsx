@@ -230,6 +230,9 @@ export function AdventureHub({ state, actions }: AdventureHubProps) {
               role="tab"
               aria-selected={isActive}
               aria-controls={tab.id === 'adventure' ? 'panel-adventure' : 'pause-panel'}
+              // Below `sm` the label span is display:none and the icon is
+              // decorative, so the button needs an explicit name.
+              aria-label={tab.label}
               type="button"
               disabled={isCombatLocked}
               onClick={() => setOverlayTab(tab.id === 'adventure' ? null : tab.id)}
