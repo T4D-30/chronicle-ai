@@ -22,6 +22,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { OverworldScene } from './OverworldScene'
 import { StoryHud } from './StoryHud'
 import { ActionStrip } from './ActionStrip'
+import { CheckResultDock } from './CheckResultDock'
 import { PauseMenu } from './PauseMenu'
 import type { PauseTab } from './PauseMenu'
 import { WorldTransition, TRANSITION_PHASE_MS } from './WorldTransition'
@@ -249,11 +250,11 @@ export function OverworldMode({
         />
       )}
 
-      {/* The bottom dock: contextual ActionStrip (B3) stacked above the
-          persistent Story HUD (B2). Dialogue mode locks the scene (via
-          `locked` above) and hides the strip — actions live in the HUD
-          then; ambient beats leave movement free (only busy/streaming
-          locks). */}
+      {/* The bottom dock: contextual ActionStrip (B3) and the dice
+          transparency dock stacked above the persistent Story HUD (B2).
+          Dialogue mode locks the scene (via `locked` above) and hides
+          the strip — actions live in the HUD then; ambient beats leave
+          movement free (only busy/streaming locks). */}
       <div className="absolute inset-x-0 bottom-0 z-20 flex flex-col">
         {!dialogue && (
           <div className="self-end px-3">
@@ -264,6 +265,18 @@ export function OverworldMode({
               onVerb={onActionVerb}
               onRest={() => actions.submitAction(REST_ACTION_TEXT)}
               onMenu={() => setPauseTab('character')}
+            />
+          </div>
+        )}
+
+        {/* Law 6: the resolved dice check for the most recent action —
+            the real engine summary, docked over the world without ever
+            blocking it or locking movement. */}
+        {state.lastCheckResult && (
+          <div className="self-end px-3 pt-1">
+            <CheckResultDock
+              result={state.lastCheckResult}
+              onDismiss={actions.clearCheckResult}
             />
           </div>
         )}
