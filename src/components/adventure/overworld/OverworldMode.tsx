@@ -7,8 +7,8 @@
  * all game consequences flow through the adapter into the existing
  * Adventure Controller.
  *
- * Story surface: the persistent StoryHud (B2). ANY interact intent
- * puts it in dialogue mode with the entity as the speaker — showing
+ * Story surface: the persistent StoryHud (B2). Talk intents put it in
+ * dialogue mode with the NPC as the speaker — showing
  * the Director's real response (streaming live, then the completed
  * turn's narration) with the scene locked; closing restores movement.
  * Outside dialogue it shows the current ambient beat (exit/rest/
@@ -171,7 +171,7 @@ export function OverworldMode({
   }, [transition, commitArea])
 
   function onIntent(intent: OverworldIntent) {
-    if (intent.type === 'interact') {
+    if (intent.type === 'interact' && intent.verb === 'talk') {
       turnCountAtOpen.current = state.turns.length
       setDialogue({ speaker: intent.entityName })
     }

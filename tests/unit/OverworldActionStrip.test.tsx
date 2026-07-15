@@ -69,6 +69,12 @@ function walkToFaceMonk() {
   for (let i = 0; i < 4; i++) step('ArrowLeft')
 }
 
+/** Monastery spawn (7,8) → (4,4), facing the shrine at (3,4). */
+function walkToFaceShrine() {
+  for (let i = 0; i < 4; i++) step('ArrowUp')
+  for (let i = 0; i < 3; i++) step('ArrowLeft')
+}
+
 describe('OverworldMode — ActionStrip (B3)', () => {
   beforeEach(() => {
     vi.useFakeTimers()
@@ -108,6 +114,23 @@ describe('OverworldMode — ActionStrip (B3)', () => {
     expect(screen.getByTestId('action-verb-talk')).toBeInTheDocument()
     step('ArrowDown') // turn/move away
     expect(screen.queryByTestId('action-verb-talk')).not.toBeInTheDocument()
+  })
+
+  it('keeps non-talk interactions ambient and movement available', () => {
+    const actions = makeActions()
+    render(<OverworldMode state={makeState()} actions={actions} />)
+    walkToFaceShrine()
+
+    fireEvent.click(screen.getByTestId('action-verb-inspect'))
+
+    expect(actions.submitAction).toHaveBeenCalledWith(
+      'I examine the old shrine in the courtyard closely.',
+    )
+    expect(screen.getByTestId('story-hud')).toHaveAttribute('data-mode', 'ambient')
+    expect(screen.queryByTestId('story-hud-speaker')).not.toBeInTheDocument()
+
+    step('ArrowRight')
+    expect(screen.getByTestId('overworld-player')).toHaveAttribute('data-x', '5')
   })
 
   it('Rest submits its grounded action text through the controller', () => {

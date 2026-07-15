@@ -16,7 +16,7 @@ The Unified Adventure Screen milestone recomposed the main play experience into 
 
 1. **B1 — Unified shell** (`26bcc3d`): Story and World tabs merged into a single Adventure surface; OverworldMode is the always-mounted primary view; Character, Dice, Journal, Quests, Atlas, Codex, Settings, and flagged Debug open through the existing pause overlay over the frozen world (bottom nav and Esc are two doors into the same overlay); combat still swaps the surface (Law 5) and disables overlay tabs.
 2. **B2 — Story HUD** (`61b9809`): `StoryHud` generalizes DialogueWindow into the persistent bottom dock — NPC dialogue (locked) plus ambient story beats (movement free), turn-count watermarking so old turns never replay as fresh narration, ≤35% viewport, free-form input restored.
-3. **B3 — Action Layer** (`6c3f092`): `ActionStrip` offers the faced entity's verbs, Rest, and Menu; verb clicks route through the same typed interact intents as the keyboard; button/input key events can no longer reach the world handler (no double submission).
+3. **B3 — Action Layer** (`a0ea223`): `ActionStrip` offers the faced entity's verbs, Rest, and Menu; verb clicks route through the same typed interact intents as the keyboard; button/input key events can no longer reach the world handler (no double submission). Talk opens locked NPC dialogue; Inspect/Collect/Enter remain ambient interactions.
 4. **B4 — Overlay completion** (`80695e4`): every overlay verified over the frozen world with position preserved; bottom-nav tabs gained explicit `aria-label`s (they had no accessible name below `sm`).
 5. **B5** — final integration walkthrough and this documentation pass.
 
