@@ -4,68 +4,61 @@
  * The permanent in-game shell. This is the layout that every future gameplay
  * feature will live inside — not a transient session page.
  *
- * Layout (Phase 14.1 layout refinement — at most 3 columns at any breakpoint):
+ * Unified Adventure Screen (Presentation 4, B1):
  *   ┌───────────────────────────────────────────────┐
- *   │  Status Bar (campaign, session, session)       │
- *   ├─────────┬───────────────────────┬─────────────┤
- *   │  Left   │  Main panel area      │  Right       │
- *   │  nav    │  (Story / Dice / etc) │  sidebar     │
- *   │ (lg+)   │  wider story column   │  (tabbed,    │
- *   │         │                       │   md+)       │
- *   ├─────────┴───────────────────────┴─────────────┤
- *   │  Bottom tab nav (always visible)               │
- *   └─────────────────────────────────────────────────┘
+ *   │  Status Bar (campaign, session controls)       │
+ *   ├───────────────────────────────────────────────┤
+ *   │                                               │
+ *   │  WORLD — OverworldMode, full-bleed, always    │
+ *   │  the primary surface (CombatPanel swaps in    │
+ *   │  during combat — Law 5)                       │
+ *   │                                               │
+ *   │  overlays: pause menu (panels), dialogue      │
+ *   ├───────────────────────────────────────────────┤
+ *   │  Bottom tab nav (always visible — Law 1)      │
+ *   └───────────────────────────────────────────────┘
  *
- * The right sidebar (AdventureRightSidebar) consolidates what used to be
- * three separate always-visible columns (party status, character detail,
- * world status) behind tabs — see that component's header comment. On
- * mobile/tablet (below `md`) all of it remains reachable via the bottom
- * tab nav's Character tab, unchanged.
+ * There is no separate Story screen anymore: story presentation docks
+ * over the world (DialogueWindow today; the persistent Story HUD lands
+ * in B2). Every other panel — Character, Dice, Journal, Quests, Atlas,
+ * Codex, Settings, flagged Debug — opens through the SAME pause overlay
+ * the Esc key uses, over the frozen world, never replacing it. The
+ * bottom tab nav and the pause menu are two doors into one surface.
+ *
+ * The old dashboard-style side columns (AdventureLeftNav,
+ * AdventureRightSidebar) are no longer rendered: the world is primary
+ * and their content lives in the overlay panels. Files kept for a
+ * later cleanup decision.
  *
  * Constitution Law 1: the bottom tab nav is ALWAYS visible.
  * Constitution Law 3: character values come from the engine, never prose.
+ * Constitution Law 5: combat keeps its own visual mode.
  */
 
 import { useState, useEffect } from 'react'
 import { AdventureStatusBar } from './AdventureStatusBar'
-import { CharacterSidebar } from './CharacterSidebar'
-import { AdventureLeftNav } from './AdventureLeftNav'
-import { AdventureScenePanel } from './AdventureScenePanel'
-import { AdventureRightSidebar } from './AdventureRightSidebar'
-import { DicePanel } from './DicePanel'
-import { StoryPanel } from './panels/StoryPanel'
-import { JournalPanel } from './panels/JournalPanel'
-import { QuestsPanel } from './panels/QuestsPanel'
-import { AtlasPanel } from './panels/AtlasPanel'
 import { DEFAULT_OVERWORLD_AREA, OverworldMode } from './overworld/OverworldMode'
 import type { OverworldArea } from './overworld/OverworldMode'
-import { AtlasMapPanel } from './panels/AtlasMapPanel'
-import { CodexPanel } from './panels/CodexPanel'
-import { DebugPanel } from './panels/DebugPanel'
+import type { PauseTab } from './overworld/PauseMenu'
 import { CombatPanel } from './panels/CombatPanel'
-import { ActionBar } from './ActionBar'
 import { AmbientOverlay, useAudio, Icon } from '@/components/pixel'
 import type { AmbienceKind, IconName } from '@/components/pixel'
-import { Button } from '@/components/ui'
 import { LevelUpModal } from '@/components/character/LevelUpModal'
 import type { AdventureState, AdventureActions } from './useAdventureSession'
 
-export type AdventurePanel =
-  | 'story'
-  | 'overworld'
-  | 'character'
-  | 'dice'
-  | 'journal'
-  | 'quests'
-  | 'atlas'
-  | 'codex'
-  | 'debug'
-
 const DEBUG_ENABLED = import.meta.env.VITE_ENABLE_DEBUG_PANEL === 'true'
 
-const TAB_DEFS: Array<{ id: AdventurePanel; label: string; icon: IconName }> = [
-  { id: 'story',     label: 'Story',     icon: 'story' },
-  { id: 'overworld', label: 'World',     icon: 'move' },
+/** Bottom-nav tabs: the unified Adventure surface plus the overlay
+ *  panels it can open. Settings stays pause-menu-only (as before). */
+export type AdventureTab = 'adventure' | PauseTab
+
+/** @deprecated Pre-unified-screen panel union. Kept only so the
+ *  superseded AdventureLeftNav (no longer rendered since the unified
+ *  Adventure screen) still compiles until a cleanup phase removes it. */
+export type AdventurePanel = 'story' | 'overworld' | AdventureTab
+
+const TAB_DEFS: Array<{ id: AdventureTab; label: string; icon: IconName }> = [
+  { id: 'adventure', label: 'Adventure', icon: 'move' },
   { id: 'character', label: 'Character', icon: 'character' },
   { id: 'dice',      label: 'Dice',      icon: 'dice' },
   { id: 'journal',   label: 'Journal',   icon: 'journal' },
@@ -73,7 +66,7 @@ const TAB_DEFS: Array<{ id: AdventurePanel; label: string; icon: IconName }> = [
   { id: 'atlas',     label: 'Atlas',     icon: 'world' },
   { id: 'codex',     label: 'Codex',     icon: 'codex' },
   // Debug tab only shown when VITE_ENABLE_DEBUG_PANEL=true
-  ...(DEBUG_ENABLED ? [{ id: 'debug' as AdventurePanel, label: 'Debug', icon: 'debug' as IconName }] : []),
+  ...(DEBUG_ENABLED ? [{ id: 'debug' as AdventureTab, label: 'Debug', icon: 'debug' as IconName }] : []),
 ]
 
 interface AdventureHubProps {
@@ -82,12 +75,25 @@ interface AdventureHubProps {
 }
 
 export function AdventureHub({ state, actions }: AdventureHubProps) {
-  const [activePanel, setActivePanel] = useState<AdventurePanel>('story')
+  // Which pause-overlay panel is open over the world (null = playing).
+  // Owned here — not in OverworldMode — so the bottom tab nav and the
+  // Esc key drive the same overlay.
+  const [overlayTab, setOverlayTab] = useState<PauseTab | null>(null)
   const [saveConfirmed, setSaveConfirmed] = useState(false)
+  const [levelUpOpen, setLevelUpOpen] = useState(false)
+  // Overworld area + exact position/facing — lifted so combat handoff
+  // can unmount/remount the world without losing where the player was.
   const [overworldArea, setOverworldArea] = useState<OverworldArea>(DEFAULT_OVERWORLD_AREA)
   const { setContext } = useAudio()
 
   const { campaign, character, session, combatState } = state
+
+  // Combat owns the screen (Law 5): any open overlay closes when combat
+  // starts so it can't silently reopen over the post-combat world.
+  useEffect(() => {
+    if (combatState) setOverlayTab(null)
+  }, [!!combatState])
+
   if (!campaign || !character || !session) return null
 
   const isSessionActive = session.status === 'active'
@@ -158,89 +164,57 @@ export function AdventureHub({ state, actions }: AdventureHubProps) {
       {state.readyToLevel && (
         <div className="flex-shrink-0 px-4 py-2 bg-heal-600/20 border-b border-heal-600/30 flex items-center gap-2">
           <span className="text-heal-300 text-xs font-body font-semibold" role="status">
-            ⬆ Level up available — visit your character sheet to level up!
+            ⬆ Level up available — open your Journal to level up!
           </span>
         </div>
       )}
 
-      {/* ── Main content area ────────────────────────────────────────── */}
-      <div className="flex-1 flex overflow-hidden min-h-0">
-        {/* Left navigation — new in the redesign, desktop-only (lg+).
-            Drives the SAME activePanel state as the bottom tab nav below;
-            see AdventureLeftNav's own header comment for why the bottom
-            tabs are not removed or replaced. Hidden in overworld mode —
-            the world is the primary visual area there (Presentation 3);
-            everything remains reachable via the bottom tabs (Law 1) and
-            the pause menu. */}
-        <aside
-          className={[
-            activePanel === 'overworld' ? 'hidden' : 'hidden lg:flex',
-            'w-56 flex-col border-r border-void-700/50 bg-void-900/40 overflow-hidden flex-shrink-0',
-          ].join(' ')}
-          data-testid="adventure-left-sidebar"
-        >
-          <AdventureLeftNav
-            campaign={campaign}
-            session={session}
-            activePanel={activePanel}
-            onSelectPanel={setActivePanel}
-            onEndSession={() => void actions.end()}
-            isSessionDone={isSessionDone}
-            isActionInFlight={state.isActionInFlight}
+      {/* ── The world — the one main surface (combat swaps in, Law 5) ── */}
+      <main
+        className="flex-1 overflow-hidden min-w-0 min-h-0 relative"
+        data-testid="adventure-panel-area"
+      >
+        <AmbientOverlay kind={ambienceKind} />
+        {combatState ? (
+          <CombatPanel
+            playerSheet={character.sheet}
+            enemies={combatState.enemies}
+            lastNarration={state.streamingText || state.lastDirectorResult?.narration}
+            worldStateUpdates={state.lastDirectorResult?.worldStateUpdates ?? {}}
+            onCombatEnd={(result) => void actions.commitCombatResult(result)}
           />
-        </aside>
-
-        {/* Panel area — Combat Panel overrides normal panels when in combat */}
-        <main
-          className="flex-1 overflow-hidden min-w-0 relative"
-          data-testid="adventure-panel-area"
-        >
-          <AmbientOverlay kind={ambienceKind} />
-          {combatState ? (
-            <CombatPanel
-              playerSheet={character.sheet}
-              enemies={combatState.enemies}
-              lastNarration={state.streamingText || state.lastDirectorResult?.narration}
-              worldStateUpdates={state.lastDirectorResult?.worldStateUpdates ?? {}}
-              onCombatEnd={(result) => void actions.commitCombatResult(result)}
-            />
-          ) : (
-            <ActivePanelContent
-              panel={activePanel}
+        ) : (
+          <div id="panel-adventure" role="tabpanel" aria-label="Adventure" className="h-full overflow-hidden">
+            <OverworldMode
               state={state}
               actions={actions}
-              overworldArea={overworldArea}
-              onOverworldAreaChange={setOverworldArea}
+              area={overworldArea}
+              onAreaChange={setOverworldArea}
+              pauseTab={overlayTab}
+              onPauseTabChange={setOverlayTab}
+              onLevelUp={() => setLevelUpOpen(true)}
             />
-          )}
-        </main>
+          </div>
+        )}
+      </main>
 
-        {/* Right sidebar — Phase 14.1: consolidates the party-status,
-            character-detail, and world-status columns into one tabbed
-            column so the hub never shows more than 3 main columns at once
-            (left nav / story / this sidebar). Shown from `md` so tablet
-            widths get it too; the story column keeps the rest of the
-            width for readability. Everything it shows remains reachable
-            on mobile via the Character tab in the bottom nav, unchanged. */}
-        <aside
-          className={[
-            activePanel === 'overworld' ? 'hidden' : 'hidden md:flex',
-            'w-72 flex-col border-l border-void-700/50 bg-void-900/40 overflow-hidden flex-shrink-0',
-          ].join(' ')}
-          data-testid="adventure-right-sidebar-wrapper"
-        >
-          <AdventureRightSidebar
-            campaign={campaign}
-            character={character}
-            session={session}
-            turns={state.turns}
-            combatState={combatState}
-            onViewJournal={() => setActivePanel('journal')}
-          />
-        </aside>
-      </div>
+      <LevelUpModal
+        open={levelUpOpen}
+        character={character}
+        isSaving={state.isActionInFlight}
+        onCancel={() => setLevelUpOpen(false)}
+        onConfirm={async (patch) => {
+          await actions.levelUpCharacter(patch)
+          setLevelUpOpen(false)
+        }}
+      />
 
-      {/* ── Bottom tab nav — always visible (Law 1) — combat mode shows combat indicator ─ */}
+      {/* ── Bottom tab nav — always visible (Law 1). "Adventure" returns
+          to the world; every other tab opens the pause overlay OVER the
+          world (world stays mounted — position, facing, and map are
+          preserved). Overlay tabs are disabled during combat: combat
+          keeps its own visual mode (Law 5), exactly as before when tab
+          clicks were silently overridden by the combat panel. ── */}
       <nav
         className="flex-shrink-0 flex border-t border-void-700/50 bg-void-900/90 backdrop-blur-sm safe-area-bottom"
         role="tablist"
@@ -248,19 +222,24 @@ export function AdventureHub({ state, actions }: AdventureHubProps) {
         data-testid="adventure-tab-nav"
       >
         {TAB_DEFS.map((tab) => {
-          const isActive = activePanel === tab.id
+          const isActive = tab.id === 'adventure' ? overlayTab === null : overlayTab === tab.id
+          const isCombatLocked = !!combatState && tab.id !== 'adventure'
           return (
             <button
               key={tab.id}
               role="tab"
               aria-selected={isActive}
-              aria-controls={`panel-${tab.id}`}
+              aria-controls={tab.id === 'adventure' ? 'panel-adventure' : 'pause-panel'}
+              // Below `sm` the label span is display:none and the icon is
+              // decorative, so the button needs an explicit name.
+              aria-label={tab.label}
               type="button"
-              onClick={() => setActivePanel(tab.id)}
+              disabled={isCombatLocked}
+              onClick={() => setOverlayTab(tab.id === 'adventure' ? null : tab.id)}
               className={[
                 'flex-1 flex flex-col items-center gap-0.5 py-3 px-1 min-h-[44px] transition-colors',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-arcane-400 focus-visible:ring-inset',
-                'text-[9px] font-pixel-display',
+                'text-[9px] font-pixel-display disabled:opacity-40',
                 isActive
                   ? 'text-arcane-400 border-t-2 border-arcane-500 -mt-px bg-arcane-900/20 torch-flicker'
                   : 'text-void-500 hover:text-void-300',
@@ -273,194 +252,5 @@ export function AdventureHub({ state, actions }: AdventureHubProps) {
         })}
       </nav>
     </div>
-  )
-}
-
-// ── Panel dispatcher ─────────────────────────────────────────────────────────
-
-function ActivePanelContent({
-  panel,
-  state,
-  actions,
-  overworldArea,
-  onOverworldAreaChange,
-}: {
-  panel: AdventurePanel
-  state: AdventureState
-  actions: AdventureActions
-  overworldArea: OverworldArea
-  onOverworldAreaChange: (area: OverworldArea) => void
-}) {
-  const { campaign, character, turns, session } = state
-  const [levelUpOpen, setLevelUpOpen] = useState(false)
-  const [atlasView, setAtlasView] = useState<'list' | 'map'>('list')
-
-  if (!campaign || !character || !session) return null
-
-  const content = (() => {
-    switch (panel) {
-    case 'story':
-      return (
-        <div id="panel-story" role="tabpanel" className="h-full flex flex-col">
-          <AdventureScenePanel campaign={campaign} character={character}>
-          <StoryPanel
-            campaign={campaign}
-            turns={turns}
-            narrationStatus={state.narrationStatus}
-            streamingText={state.streamingText}
-            onCancelStream={actions.cancelStream}
-            lastCheckResult={state.lastCheckResult}
-            onClearCheckResult={actions.clearCheckResult}
-          />
-          {/* Suggested action chips above the input bar — no visual
-              heading (dialogue-readability pass); the aria-label keeps
-              the semantics the removed "Suggested" label provided. */}
-          {state.suggestedActions.length > 0 && state.narrationStatus !== 'streaming' && (
-            <div className="flex-shrink-0 px-4 pb-1 pt-2 max-w-3xl mx-auto w-full">
-              <div className="flex gap-2 flex-wrap" role="group" aria-label="Suggested actions">
-                {state.suggestedActions.map((action, i) => (
-                  <Button
-                    key={i}
-                    type="button"
-                    variant="suggested"
-                    disabled={state.narrationStatus === 'streaming' || state.isActionInFlight}
-                    onClick={() => actions.submitAction(action)}
-                    className="pixel-sparkle"
-                  >
-                    {action}
-                  </Button>
-                ))}
-              </div>
-            </div>
-          )}
-          <ActionBar
-            sessionStatus={session.status}
-            isInCombat={!!state.combatState}
-            isStreaming={state.narrationStatus === 'streaming'}
-            isSubmitting={state.isActionInFlight}
-            equippedWeapons={character.sheet.equipment.filter((e) => e.slot === 'weapon' && e.equipped)}
-            preparedSpells={character.spells?.prepared ?? []}
-            inventoryItems={character.inventory.map((i) => ({ id: i.id, name: i.name }))}
-            onSubmitAction={actions.submitAction}
-            onCancelStream={actions.cancelStream}
-          />
-          </AdventureScenePanel>
-        </div>
-      )
-    case 'overworld':
-      // Presentation 3: the playable overworld. Combat handoff is
-      // automatic — when combatState exists the hub swaps this panel
-      // for CombatPanel, and combat's end returns here.
-      return (
-        <div id="panel-overworld" role="tabpanel" className="h-full overflow-hidden">
-          <OverworldMode
-            state={state}
-            actions={actions}
-            area={overworldArea}
-            onAreaChange={onOverworldAreaChange}
-          />
-        </div>
-      )
-    case 'character':
-      return (
-        <div id="panel-character" role="tabpanel" className="h-full overflow-hidden">
-          <CharacterSidebar character={character} />
-        </div>
-      )
-    case 'dice':
-      return (
-        <div id="panel-dice" role="tabpanel" className="h-full overflow-hidden">
-          <DicePanel />
-        </div>
-      )
-    case 'journal':
-      return (
-        <div id="panel-journal" role="tabpanel" className="h-full overflow-hidden">
-          <JournalPanel
-            session={session}
-            campaign={campaign}
-            turns={turns}
-            lastCombatResult={state.lastCombatResult}
-            readyToLevel={state.readyToLevel}
-            character={character}
-            onLevelUp={() => setLevelUpOpen(true)}
-          />
-        </div>
-      )
-    case 'quests':
-      return (
-        <div id="panel-quests" role="tabpanel" className="h-full">
-          <QuestsPanel campaign={campaign} />
-        </div>
-      )
-    case 'atlas':
-      return (
-        <div id="panel-atlas" role="tabpanel" className="h-full flex flex-col">
-          {/* List/Map toggle — Phase 15.3. AtlasPanel (search/filter/detail)
-              is untouched; AtlasMapPanel is a purely additive second view
-              over the same real WorldState.locations data. */}
-          <div className="flex-shrink-0 flex gap-1.5 px-3 pt-3" role="group" aria-label="Atlas view">
-            <Button
-              type="button"
-              variant={atlasView === 'list' ? 'arcane' : 'ghost'}
-              size="sm"
-              onClick={() => setAtlasView('list')}
-              aria-pressed={atlasView === 'list'}
-            >
-              List
-            </Button>
-            <Button
-              type="button"
-              variant={atlasView === 'map' ? 'arcane' : 'ghost'}
-              size="sm"
-              onClick={() => setAtlasView('map')}
-              aria-pressed={atlasView === 'map'}
-            >
-              Map
-            </Button>
-          </div>
-          <div className="flex-1 min-h-0">
-            {atlasView === 'list' ? (
-              <AtlasPanel campaign={campaign} />
-            ) : (
-              <AtlasMapPanel
-                campaign={campaign}
-                onSubmitAction={actions.submitAction}
-                isDisabled={state.narrationStatus === 'streaming' || state.isActionInFlight || session.status !== 'active'}
-              />
-            )}
-          </div>
-        </div>
-      )
-    case 'codex':
-      return (
-        <div id="panel-codex" role="tabpanel" className="h-full">
-          <CodexPanel campaign={campaign} />
-        </div>
-      )
-    case 'debug':
-      // Only reachable when VITE_ENABLE_DEBUG_PANEL=true (tab hidden otherwise)
-      return DEBUG_ENABLED ? (
-        <div id="panel-debug" role="tabpanel" className="h-full overflow-hidden">
-          <DebugPanel state={state} />
-        </div>
-      ) : null
-    }
-  })()
-
-  return (
-    <>
-      {content}
-      <LevelUpModal
-        open={levelUpOpen}
-        character={character}
-        isSaving={state.isActionInFlight}
-        onCancel={() => setLevelUpOpen(false)}
-        onConfirm={async (patch) => {
-          await actions.levelUpCharacter(patch)
-          setLevelUpOpen(false)
-        }}
-      />
-    </>
   )
 }

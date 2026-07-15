@@ -2,8 +2,11 @@
  * Dialogue Mode Tests — Presentation 3 (Playable Overworld)
  *
  * DialogueWindow mechanics (typewriter, reduced-motion fallback,
- * choices, free-form, close) and OverworldMode orchestration (interact
- * opens dialogue + locks the scene; closing restores movement).
+ * choices, free-form, close — the component is superseded by StoryHud
+ * since B2 but kept until cleanup, so its contract stays tested) and
+ * OverworldMode orchestration through the StoryHud surface (interact
+ * opens dialogue + locks the scene; closing restores movement; ambient
+ * beats never lock movement and old turns never replay as fresh).
  */
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
@@ -157,8 +160,8 @@ describe('OverworldMode — dialogue orchestration', () => {
     expect(actions.submitAction).toHaveBeenCalledWith(
       'I approach the monk in the courtyard and greet him.',
     )
-    expect(screen.getByTestId('dialogue-window')).toBeInTheDocument()
-    expect(screen.getByTestId('dialogue-speaker')).toHaveTextContent('Brother Aldwin')
+    expect(screen.getByTestId('story-hud')).toHaveAttribute('data-mode', 'dialogue')
+    expect(screen.getByTestId('story-hud-speaker')).toHaveTextContent('Brother Aldwin')
 
     // Movement is frozen while the dialogue is open
     const before = screen.getByTestId('overworld-player').getAttribute('data-x')
@@ -175,11 +178,95 @@ describe('OverworldMode — dialogue orchestration', () => {
       </div>,
     )
     walkToMonkAndTalk()
-    fireEvent.click(screen.getByTestId('dialogue-close'))
-    expect(screen.queryByTestId('dialogue-window')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByTestId('story-hud-close'))
+    expect(screen.getByTestId('story-hud')).toHaveAttribute('data-mode', 'ambient')
 
     fireEvent.keyDown(window, { key: 'ArrowRight' })
     act(() => vi.advanceTimersByTime(STEP_MS + 10))
     expect(screen.getByTestId('overworld-player')).toHaveAttribute('data-x', '4')
+  })
+})
+
+// ─── StoryHud ambient orchestration (B2) ─────────────────────────────────────
+
+describe('OverworldMode — ambient story beats (B2)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(0)
+  })
+  afterEach(() => { vi.useRealTimers() })
+
+  const TURN = {
+    id: 't1', sessionId: 's1', turnNumber: 0, playerInput: 'I head out.',
+    aiNarration: 'The gate creaks open onto the forest path.', diceRolls: [],
+    mode: 'exploration' as const, createdAt: '',
+  }
+
+  it('the HUD is always present, collapsed to the input strip when idle', () => {
+    render(<OverworldMode state={makeState()} actions={makeActions()} />)
+    expect(screen.getByTestId('story-hud')).toHaveAttribute('data-mode', 'ambient')
+    expect(screen.queryByTestId('story-hud-text')).not.toBeInTheDocument()
+    expect(screen.getByPlaceholderText('What do you do?')).toBeInTheDocument()
+  })
+
+  it('does NOT replay turns that existed at mount as fresh narration', () => {
+    render(<OverworldMode state={makeState({ turns: [TURN] })} actions={makeActions()} />)
+    expect(screen.queryByTestId('story-hud-text')).not.toBeInTheDocument()
+  })
+
+  it('shows a turn that arrives after mount as the current beat, without locking movement', () => {
+    const actions = makeActions()
+    const { rerender } = render(<OverworldMode state={makeState()} actions={actions} />)
+    rerender(<OverworldMode state={makeState({ turns: [TURN] })} actions={actions} />)
+
+    fireEvent.click(screen.getByTestId('story-hud-text')) // skip typewriter
+    expect(screen.getByTestId('story-hud-text')).toHaveTextContent(
+      'The gate creaks open onto the forest path.',
+    )
+    // Ambient narration must NOT freeze the player
+    fireEvent.keyDown(window, { key: 'ArrowUp' })
+    act(() => vi.advanceTimersByTime(STEP_MS + 10))
+    expect(screen.getByTestId('overworld-player')).toHaveAttribute('data-y', '7')
+  })
+
+  it('dismissing a beat collapses the HUD and the beat does not return', () => {
+    const actions = makeActions()
+    const { rerender } = render(<OverworldMode state={makeState()} actions={actions} />)
+    rerender(<OverworldMode state={makeState({ turns: [TURN] })} actions={actions} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss narration' }))
+    expect(screen.queryByTestId('story-hud-text')).not.toBeInTheDocument()
+    rerender(<OverworldMode state={makeState({ turns: [TURN] })} actions={actions} />)
+    expect(screen.queryByTestId('story-hud-text')).not.toBeInTheDocument()
+  })
+
+  it('shows streaming text live in the ambient HUD (movement locked by busy rule)', () => {
+    render(
+      <OverworldMode
+        state={makeState({ narrationStatus: 'streaming', streamingText: 'A cold wind ri' })}
+        actions={makeActions()}
+      />,
+    )
+    expect(screen.getByTestId('story-hud-text')).toHaveTextContent('A cold wind ri')
+    fireEvent.keyDown(window, { key: 'ArrowUp' })
+    act(() => vi.advanceTimersByTime(STEP_MS + 10))
+    expect(screen.getByTestId('overworld-player')).toHaveAttribute('data-y', '8')
+  })
+
+  it('free-form actions from the HUD submit through the controller contract', () => {
+    const actions = makeActions()
+    render(<OverworldMode state={makeState()} actions={actions} />)
+    fireEvent.change(screen.getByTestId('story-hud-free-input'), { target: { value: 'I listen at the door.' } })
+    fireEvent.submit(screen.getByTestId('story-hud-free-input').closest('form')!)
+    expect(actions.submitAction).toHaveBeenCalledWith('I listen at the door.')
+  })
+
+  it('typing movement keys into the HUD input does not move the player', () => {
+    render(<OverworldMode state={makeState()} actions={makeActions()} />)
+    const input = screen.getByTestId('story-hud-free-input')
+    input.focus()
+    fireEvent.keyDown(input, { key: 'w' })
+    fireEvent.keyDown(input, { key: 'ArrowUp' })
+    act(() => vi.advanceTimersByTime(STEP_MS + 10))
+    expect(screen.getByTestId('overworld-player')).toHaveAttribute('data-y', '8')
   })
 })

@@ -1,16 +1,19 @@
 /**
  * PauseMenu — Presentation 3 (Playable Overworld)
  *
- * Esc/Tab over the paused map: a JRPG pause overlay REUSING the
- * existing panels — CharacterSidebar, JournalPanel, QuestsPanel,
- * AtlasPanel, CodexPanel, AudioSettingsPanel — over a dimmed backdrop.
- * This is what removes the need for permanent dashboard-style side
- * columns in overworld mode: everything those columns offered is one
- * keypress away, over the world instead of beside it.
+ * Esc over the paused map: a JRPG pause overlay REUSING the existing
+ * panels — CharacterSidebar, JournalPanel, QuestsPanel, AtlasPanel,
+ * CodexPanel, DicePanel, AudioSettingsPanel (+ DebugPanel when the
+ * debug flag is on) — over a dimmed backdrop. Since the unified
+ * Adventure screen (B1), this overlay is THE panel surface: the hub's
+ * bottom tab nav routes here too, so everything the old dashboard-style
+ * columns and tab panels offered opens over the world instead of
+ * replacing it.
  *
- * The Level Up flow deliberately stays on the story-mode Journal tab
- * (SessionSummaryPanel hides its button when no handler is passed) —
- * the pause menu reads state, it does not own modals.
+ * Level Up: the hub passes `onLevelUp` through to JournalPanel so the
+ * flow stays reachable from the Journal overlay — the modal itself
+ * stays owned by the hub (the pause menu reads state, it does not own
+ * modals).
  */
 
 import { useEffect, useRef } from 'react'
@@ -19,19 +22,33 @@ import { JournalPanel } from '../panels/JournalPanel'
 import { QuestsPanel } from '../panels/QuestsPanel'
 import { AtlasPanel } from '../panels/AtlasPanel'
 import { CodexPanel } from '../panels/CodexPanel'
+import { DebugPanel } from '../panels/DebugPanel'
+import { DicePanel } from '../DicePanel'
 import { AudioSettingsPanel, Icon } from '@/components/pixel'
 import type { IconName } from '@/components/pixel'
 import type { AdventureState } from '../useAdventureSession'
 
-export type PauseTab = 'character' | 'journal' | 'quests' | 'atlas' | 'codex' | 'settings'
+export type PauseTab =
+  | 'character'
+  | 'dice'
+  | 'journal'
+  | 'quests'
+  | 'atlas'
+  | 'codex'
+  | 'settings'
+  | 'debug'
+
+const DEBUG_ENABLED = import.meta.env.VITE_ENABLE_DEBUG_PANEL === 'true'
 
 const PAUSE_TABS: Array<{ id: PauseTab; label: string; icon: IconName }> = [
   { id: 'character', label: 'Character', icon: 'character' },
+  { id: 'dice',      label: 'Dice',      icon: 'dice' },
   { id: 'journal',   label: 'Journal',   icon: 'journal' },
   { id: 'quests',    label: 'Quests',    icon: 'questsMap' },
   { id: 'atlas',     label: 'Atlas',     icon: 'world' },
   { id: 'codex',     label: 'Codex',     icon: 'codex' },
   { id: 'settings',  label: 'Settings',  icon: 'settings' },
+  ...(DEBUG_ENABLED ? [{ id: 'debug' as PauseTab, label: 'Debug', icon: 'debug' as IconName }] : []),
 ]
 
 interface PauseMenuProps {
@@ -39,9 +56,10 @@ interface PauseMenuProps {
   tab: PauseTab
   onSelectTab: (tab: PauseTab) => void
   onClose: () => void
+  onLevelUp?: () => void
 }
 
-export function PauseMenu({ state, tab, onSelectTab, onClose }: PauseMenuProps) {
+export function PauseMenu({ state, tab, onSelectTab, onClose, onLevelUp }: PauseMenuProps) {
   const { campaign, character, session } = state
   const dialogRef = useRef<HTMLDivElement>(null)
 
@@ -121,8 +139,10 @@ export function PauseMenu({ state, tab, onSelectTab, onClose }: PauseMenuProps) 
       </nav>
 
       {/* Panel content — the EXISTING components, unmodified */}
-      <div className="flex-1 min-w-0 min-h-0 overflow-hidden" data-testid="pause-panel">
+      {/* id targeted by the hub bottom-nav tabs' aria-controls */}
+      <div id="pause-panel" className="flex-1 min-w-0 min-h-0 overflow-hidden" data-testid="pause-panel">
         {tab === 'character' && character && <CharacterSidebar character={character} />}
+        {tab === 'dice' && <DicePanel />}
         {tab === 'journal' && (
           <JournalPanel
             session={session}
@@ -131,6 +151,7 @@ export function PauseMenu({ state, tab, onSelectTab, onClose }: PauseMenuProps) 
             lastCombatResult={state.lastCombatResult}
             readyToLevel={state.readyToLevel}
             character={character}
+            onLevelUp={onLevelUp}
           />
         )}
         {tab === 'quests' && <QuestsPanel campaign={campaign} />}
@@ -141,6 +162,7 @@ export function PauseMenu({ state, tab, onSelectTab, onClose }: PauseMenuProps) 
             <AudioSettingsPanel />
           </div>
         )}
+        {tab === 'debug' && DEBUG_ENABLED && <DebugPanel state={state} />}
       </div>
     </div>
   )

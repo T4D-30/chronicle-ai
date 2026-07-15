@@ -91,3 +91,13 @@ Reasoning: Long-lived development requires recognizable ownership boundaries and
 Alternatives Considered: Building feature-specific controllers, duplicate review flows, separate combat systems, or one-off UI frameworks for each milestone.
 Consequences: New work must first look for the existing owner, helper, service, component, or contract to extend; parallel systems require explicit approval.
 Related Files: `AGENTS.md`, `CODEX.md`, `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`
+
+# Decision
+Date: 2026-07-14
+Status: Active
+Area: Adventure presentation
+Decision: The Adventure experience is one unified screen — world primary, story docked as a HUD, actions contextual, panels as overlays — replacing the tabbed Story/World split.
+Reasoning: A premium RPG presentation keeps the world visually primary at all times; separate Story and World tabs forced players to choose between narrative and place, and dashboard-style side columns competed with the scene.
+Alternatives Considered: Keeping Story and World as separate tabs; a centered story card over the world; permanent sidebars beside a smaller world viewport.
+Consequences: StoryHud (dialogue + ambient beats, turn-count watermarked) and ActionStrip are the standing story/action surfaces; the pause overlay is the single panel surface reachable from both the bottom nav and Esc; superseded components (AdventureLeftNav, AdventureRightSidebar, StoryPanel, AdventureScenePanel, ActionBar, DialogueWindow) stay unrendered until an approved cleanup phase; full turn history lives in the Journal overlay.
+Related Files: `docs/UI_VISION.md`, `docs/ARCHITECTURE.md`, `src/components/adventure/AdventureHub.tsx`, `src/components/adventure/overworld/*`

@@ -48,10 +48,18 @@ This file is the master build order for future implementation. `docs/PROJECT_STA
 - Estimated complexity: High.
 - Acceptance criteria: Overworld interactions use existing `submitAction`/`startCombat`, tile position stays presentation-only, temporary preview artifacts are removed, and full verification passes.
 
+### Unified Adventure Screen
+
+- Goal: Merge the separate Story and World experiences into one screen with three integrated layers — the playable world as the primary surface, a docked JRPG story HUD, and a contextual action strip — with every other panel opening as an overlay over the frozen world.
+- Dependencies: Playable Overworld, Combat Presentation, Pixel RPG UI.
+- Status: Complete.
+- Estimated complexity: Medium.
+- Acceptance criteria: One Adventure surface (no Story/World tabs), StoryHud shows real Director output (dialogue and ambient beats) without hiding the world or exceeding ~35% of the viewport, ActionStrip verbs route through the existing adapter, panels open via the pause overlay with position/facing/encounter state preserved, and combat handoff/return is unchanged.
+
 ### Dialogue Cinematics
 
 - Goal: Upgrade dialogue from functional windows to cinematic RPG conversations with portraits, pacing, transitions, and accessible controls.
-- Dependencies: Playable Overworld, AI Director narration contract, UI Vision.
+- Dependencies: Unified Adventure Screen (StoryHud), AI Director narration contract, UI Vision.
 - Status: Planned.
 - Estimated complexity: Medium.
 - Acceptance criteria: Dialogue presents real Director output, supports choices/free input, preserves escape routes, respects reduced motion, and never creates facts outside the action pipeline.

@@ -7,17 +7,21 @@
  * all game consequences flow through the adapter into the existing
  * Adventure Controller.
  *
- * Dialogue mode: ANY interact intent opens the dialogue window with
- * the entity as the speaker — the window displays the Director's real
- * response (streaming text live, then the completed turn's narration).
- * While open, the scene is locked (movement and turning frozen);
- * closing restores movement. Choices and free-form input submit
- * through the same actions.submitAction contract as ActionBar.
+ * Story surface: the persistent StoryHud (B2). Talk intents put it in
+ * dialogue mode with the NPC as the speaker — showing
+ * the Director's real response (streaming live, then the completed
+ * turn's narration) with the scene locked; closing restores movement.
+ * Outside dialogue it shows the current ambient beat (exit/rest/
+ * examine narration) WITHOUT locking movement, collapsing to a free-
+ * input strip when there is no fresh beat. Choices and free-form
+ * input submit through the same actions.submitAction contract as
+ * ActionBar. DialogueWindow is superseded (kept until cleanup).
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { OverworldScene } from './OverworldScene'
-import { DialogueWindow } from './DialogueWindow'
+import { StoryHud } from './StoryHud'
+import { ActionStrip } from './ActionStrip'
 import { PauseMenu } from './PauseMenu'
 import type { PauseTab } from './PauseMenu'
 import { WorldTransition, TRANSITION_PHASE_MS } from './WorldTransition'
@@ -25,8 +29,12 @@ import type { TransitionPhase } from './WorldTransition'
 import { handleOverworldIntent } from './overworldAdapter'
 import { OVERWORLD_MAPS, monasteryCourtyard } from './maps'
 import type { OverworldIntent } from './overworldTypes'
-import type { FacingDirection, TileCoord } from './overworldTypes'
+import type { FacingDirection, InteractionVerb, OverworldEntity, TileCoord } from './overworldTypes'
 import type { AdventureState, AdventureActions } from '../useAdventureSession'
+
+/** Grounded text for the standing Rest action — the same text the old
+ *  ActionBar quick action used; the controller/rules resolve it. */
+const REST_ACTION_TEXT = 'I attempt to rest and recover.'
 
 export interface OverworldArea {
   mapId: string
@@ -46,6 +54,13 @@ interface OverworldModeProps {
   actions: AdventureActions
   area?: OverworldArea
   onAreaChange?: (area: OverworldArea) => void
+  /** Controlled pause-overlay tab — AdventureHub owns this since the
+   *  unified screen (B1) so the bottom tab nav can open the same
+   *  overlay the Esc key does. Omit both to keep it local (tests,
+   *  standalone use). */
+  pauseTab?: PauseTab | null
+  onPauseTabChange?: (tab: PauseTab | null) => void
+  onLevelUp?: () => void
 }
 
 export function OverworldMode({
@@ -53,8 +68,13 @@ export function OverworldMode({
   actions,
   area: controlledArea,
   onAreaChange,
+  pauseTab: controlledPauseTab,
+  onPauseTabChange,
+  onLevelUp,
 }: OverworldModeProps) {
   const [dialogue, setDialogue] = useState<{ speaker: string } | null>(null)
+  // The entity the player faces — drives the contextual ActionStrip (B3).
+  const [faced, setFaced] = useState<OverworldEntity | null>(null)
   // Current area — presentation state; named-location persistence
   // happens ONLY via the exit intent's grounded text through the
   // controller, never per tile. AdventureHub may own this so combat
@@ -67,8 +87,28 @@ export function OverworldMode({
   // Narration older than the dialogue is stale — only show responses
   // that arrive after it opened.
   const turnCountAtOpen = useRef(0)
+  // Ambient story beats: only turns that arrive AFTER this count are
+  // fresh. Initialized to the mount-time count so remounting (combat
+  // return, tab churn) never replays an old turn as new narration —
+  // history belongs to the Journal. Dismissing a beat (or closing a
+  // dialogue that consumed it) advances the watermark.
+  const [seenTurnCount, setSeenTurnCount] = useState(() => state.turns.length)
+  // Live turn count for handlers registered in effects (avoids stale closures).
+  const turnsLenRef = useRef(state.turns.length)
+  turnsLenRef.current = state.turns.length
 
-  const [pauseTab, setPauseTab] = useState<PauseTab | null>(null)
+  const [localPauseTab, setLocalPauseTab] = useState<PauseTab | null>(null)
+  const pauseTab = controlledPauseTab !== undefined ? controlledPauseTab : localPauseTab
+  const setPauseTab = useCallback(
+    (next: PauseTab | null) => {
+      if (onPauseTabChange) {
+        onPauseTabChange(next)
+      } else {
+        setLocalPauseTab(next)
+      }
+    },
+    [onPauseTabChange],
+  )
 
   const isStreaming = state.narrationStatus === 'streaming'
   const busy = state.isActionInFlight || isStreaming
@@ -102,14 +142,16 @@ export function OverworldMode({
       if (e.key !== 'Escape') return
       e.preventDefault()
       if (dialogue) {
+        // Closing consumes the beat so it doesn't re-show ambiently.
+        setSeenTurnCount(turnsLenRef.current)
         setDialogue(null)
         return
       }
-      setPauseTab((current) => (current ? null : 'character'))
+      setPauseTab(pauseTab ? null : 'character')
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [dialogue])
+  }, [dialogue, pauseTab, setPauseTab])
 
   // Timer-driven fade: out → swap at full black → in → clear.
   useEffect(() => {
@@ -129,7 +171,7 @@ export function OverworldMode({
   }, [transition, commitArea])
 
   function onIntent(intent: OverworldIntent) {
-    if (intent.type === 'interact') {
+    if (intent.type === 'interact' && intent.verb === 'talk') {
       turnCountAtOpen.current = state.turns.length
       setDialogue({ speaker: intent.entityName })
     }
@@ -152,11 +194,33 @@ export function OverworldMode({
   const map = OVERWORLD_MAPS[area.mapId] ?? monasteryCourtyard
 
   const latestTurn = state.turns[state.turns.length - 1]
+  // Dialogue mode: only responses newer than the dialogue's opening.
   const responseText = isStreaming
     ? state.streamingText
     : state.turns.length > turnCountAtOpen.current
       ? latestTurn?.aiNarration ?? ''
       : ''
+  // Ambient mode: the current beat — streaming text live, else the
+  // latest narration if it arrived after the seen watermark.
+  const ambientText = isStreaming
+    ? state.streamingText
+    : state.turns.length > seenTurnCount
+      ? latestTurn?.aiNarration ?? ''
+      : ''
+
+  function closeStoryHud() {
+    // Either door consumes the current beat: it won't re-show ambiently.
+    setSeenTurnCount(turnsLenRef.current)
+    setDialogue(null)
+  }
+
+  // ActionStrip verbs route through the SAME intent path the keyboard
+  // uses — identical grounding, dialogue behavior, and adapter contract.
+  function onActionVerb(entity: OverworldEntity, verb: InteractionVerb) {
+    const text = entity.intentText[verb]
+    if (!text) return
+    onIntent({ type: 'interact', verb, entityId: entity.id, entityName: entity.name, text })
+  }
 
   return (
     <div className="relative w-full h-full" data-testid="overworld-mode">
@@ -170,6 +234,7 @@ export function OverworldMode({
         initialFacing={area.facing}
         initialZoneKey={area.activeZoneKey}
         onPlayerStateChange={commitPlayerState}
+        onFacedChange={setFaced}
       />
 
       <WorldTransition phase={transition} />
@@ -180,21 +245,39 @@ export function OverworldMode({
           tab={pauseTab}
           onSelectTab={setPauseTab}
           onClose={() => setPauseTab(null)}
+          onLevelUp={onLevelUp}
         />
       )}
 
-      {dialogue && (
-        <DialogueWindow
-          speaker={dialogue.speaker}
-          text={responseText}
+      {/* The bottom dock: contextual ActionStrip (B3) stacked above the
+          persistent Story HUD (B2). Dialogue mode locks the scene (via
+          `locked` above) and hides the strip — actions live in the HUD
+          then; ambient beats leave movement free (only busy/streaming
+          locks). */}
+      <div className="absolute inset-x-0 bottom-0 z-20 flex flex-col">
+        {!dialogue && (
+          <div className="self-end px-3">
+            <ActionStrip
+              faced={faced}
+              locked={locked}
+              busy={busy}
+              onVerb={onActionVerb}
+              onRest={() => actions.submitAction(REST_ACTION_TEXT)}
+              onMenu={() => setPauseTab('character')}
+            />
+          </div>
+        )}
+        <StoryHud
+          speaker={dialogue?.speaker ?? null}
+          text={dialogue ? responseText : ambientText}
           streaming={isStreaming}
           suggestedActions={isStreaming ? [] : state.suggestedActions}
           busy={busy}
           onChoose={(text) => actions.submitAction(text)}
           onSubmitFree={(text) => actions.submitAction(text)}
-          onClose={() => setDialogue(null)}
+          onClose={closeStoryHud}
         />
-      )}
+      </div>
     </div>
   )
 }
