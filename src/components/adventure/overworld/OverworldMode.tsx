@@ -73,7 +73,14 @@ export function OverworldMode({
   onPauseTabChange,
   onLevelUp,
 }: OverworldModeProps) {
-  const [dialogue, setDialogue] = useState<{ speaker: string } | null>(null)
+  // Dialogue speaker + honest identity for the portrait slot (B1):
+  // fixture entity id/glyph when the speaker is a map entity, or the
+  // stable npcMemory id when the Director knows them — never invented.
+  const [dialogue, setDialogue] = useState<{
+    speaker: string
+    identityKey?: string | null
+    glyph?: string | null
+  } | null>(null)
   // The entity the player faces — drives the contextual ActionStrip (B3).
   const [faced, setFaced] = useState<OverworldEntity | null>(null)
   // Current area — presentation state; named-location persistence
@@ -174,7 +181,18 @@ export function OverworldMode({
   function onIntent(intent: OverworldIntent) {
     if (intent.type === 'interact' && intent.verb === 'talk') {
       turnCountAtOpen.current = state.turns.length
-      setDialogue({ speaker: intent.entityName })
+      // Resolve honest portrait identity: the fixture entity (id +
+      // glyph) first, else the Director's npcMemory entry by display
+      // name (read-only) — unknown speakers stay generic.
+      const entity = map.entities.find((e) => e.id === intent.entityId) ?? null
+      const memory = entity
+        ? null
+        : state.campaign?.directorConfig.npcMemory.find((n) => n.name === intent.entityName) ?? null
+      setDialogue({
+        speaker: intent.entityName,
+        identityKey: entity?.id ?? memory?.id ?? null,
+        glyph: entity?.glyph ?? null,
+      })
     }
     if (intent.type === 'exit' && OVERWORLD_MAPS[intent.to]) {
       pendingArea.current = { mapId: intent.to, spawnId: intent.spawn }
@@ -282,6 +300,8 @@ export function OverworldMode({
         )}
         <StoryHud
           speaker={dialogue?.speaker ?? null}
+          speakerIdentityKey={dialogue?.identityKey ?? null}
+          speakerGlyph={dialogue?.glyph ?? null}
           text={dialogue ? responseText : ambientText}
           streaming={isStreaming}
           suggestedActions={isStreaming ? [] : state.suggestedActions}

@@ -1,10 +1,10 @@
 # ChronAI Project State
 
 - Last updated: 2026-07-15
-- Current branch: `feature/presentation-check-result-feedback`
-- Current milestone: Unified Check Result Feedback (micro-milestone) — complete, pending review/PR. Unified Adventure Screen (PR #4) and its hygiene pass (PR #5) are merged to `main`.
-- Current roadmap position: `docs/ROADMAP.md` > Presentation > Unified Adventure Screen (complete) → Dialogue Cinematics (next).
-- Current PR: Draft PR for `feature/presentation-check-result-feedback`.
+- Current branch: `feature/presentation-dialogue-cinematics`
+- Current milestone: Dialogue Cinematics v1 — in progress (B1–B4). Unified Adventure Screen (PR #4), its hygiene pass (PR #5), and Unified Check Result Feedback (PR #6) are merged to `main`.
+- Current roadmap position: `docs/ROADMAP.md` > Presentation > Dialogue Cinematics.
+- Current PR: none yet (draft PR opens after B4).
 
 ## Recent Architectural Decisions
 

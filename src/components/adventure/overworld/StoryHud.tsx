@@ -31,6 +31,8 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui'
+import { NpcName } from '@/components/pixel'
+import { SpeakerPortrait } from './SpeakerPortrait'
 
 const CHAR_MS = 18
 
@@ -44,6 +46,11 @@ function prefersReducedMotion(): boolean {
 interface StoryHudProps {
   /** NPC dialogue mode when set; ambient story mode when null. */
   speaker?: string | null
+  /** Stable portrait identity (fixture entity id / npcMemory id) —
+   *  drives SpeakerPortrait's asset probe + deterministic tile. */
+  speakerIdentityKey?: string | null
+  /** Fixture entity glyph, when the speaker is a map entity. */
+  speakerGlyph?: string | null
   /** The current beat — streaming or completed. Empty = collapsed. */
   text: string
   streaming: boolean
@@ -58,6 +65,8 @@ interface StoryHudProps {
 
 export function StoryHud({
   speaker = null,
+  speakerIdentityKey = null,
+  speakerGlyph = null,
   text,
   streaming,
   suggestedActions,
@@ -107,18 +116,34 @@ export function StoryHud({
     >
       <div className="chr-panel rounded-lg max-w-3xl max-h-[35vh] mx-auto p-3 sm:p-4 overflow-y-auto">
         {(isDialogue || hasBeat) && (
-          <div className="flex items-center justify-between mb-2">
-            <span
-              className="font-pixel-display text-[10px] text-bronze-400 uppercase"
-              data-testid="story-hud-speaker"
-            >
-              {isDialogue ? speaker : 'The Story'}
-            </span>
+          <div className="flex items-center justify-between gap-3 mb-2">
+            {isDialogue ? (
+              /* Cinematic speaker framing (B1): portrait slot + NpcName.
+                 The portrait is decorative; the name text is the
+                 announced identity. Keyed by speaker so a new speaker
+                 remounts the portrait (B2 hooks its enter animation
+                 here). */
+              <div className="flex items-center gap-3 min-w-0" key={speaker}>
+                <SpeakerPortrait name={speaker} identityKey={speakerIdentityKey} glyph={speakerGlyph} />
+                <div className="min-w-0">
+                  <NpcName data-testid="story-hud-speaker">{speaker}</NpcName>
+                  <p className="font-pixel-display text-[8px] text-bronze-400 uppercase">Dialogue</p>
+                </div>
+              </div>
+            ) : (
+              /* Narrator mode: explicitly voiceless — no portrait. */
+              <span
+                className="font-pixel-display text-[10px] text-bronze-400 uppercase"
+                data-testid="story-hud-speaker"
+              >
+                The Story
+              </span>
+            )}
             <button
               type="button"
               onClick={onClose}
               aria-label={isDialogue ? 'Close dialogue' : 'Dismiss narration'}
-              className="text-void-500 hover:text-arcane-300 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-arcane-400 rounded"
+              className="flex-shrink-0 text-void-500 hover:text-arcane-300 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-arcane-400 rounded"
               data-testid="story-hud-close"
             >
               ✕ {isDialogue ? 'Close' : 'Dismiss'}
