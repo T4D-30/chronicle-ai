@@ -51,7 +51,7 @@ export function SpeakerPortrait({ name = null, identityKey = null, glyph = null 
 
   return (
     <div
-      className="relative w-12 h-12 sm:w-14 sm:h-14 flex-shrink-0 rounded border border-bronze-700/60 bg-void-900 overflow-hidden flex items-center justify-center"
+      className="dialogue-portrait-enter relative w-12 h-12 sm:w-14 sm:h-14 flex-shrink-0 rounded border border-bronze-700/60 bg-void-900 overflow-hidden flex items-center justify-center"
       aria-hidden="true"
       data-testid="speaker-portrait"
       data-portrait-kind={assetReady ? 'asset' : glyph ? 'glyph' : initial ? 'initial' : 'silhouette'}

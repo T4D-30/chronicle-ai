@@ -365,6 +365,29 @@
   animation: menu-slide-in 160ms steps(4) forwards;
 }
 
+/* ── Dialogue cinematics (v1) ──────────────────────────────────────────────
+   Portrait enter: a short stepped rise as a speaker appears/changes.
+   Dialogue advance: a brief settle when the beat or speaker's text
+   swaps. Both ≤200ms, both in the reduced-motion kill-list below. */
+
+@keyframes dialogue-portrait-in {
+  0%   { transform: translateY(6px) scale(0.92); opacity: 0; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.dialogue-portrait-enter {
+  animation: dialogue-portrait-in 180ms steps(4) forwards;
+}
+
+@keyframes dialogue-advance-in {
+  0%   { transform: translateY(3px); opacity: 0.35; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+.dialogue-advance {
+  animation: dialogue-advance-in 140ms steps(3) forwards;
+}
+
 /* ── Typing indicator (Director is narrating) ──────────────────────────────── */
 
 @keyframes pixel-type {
@@ -482,6 +505,8 @@
   .pixel-sparkle:hover,
   .pixel-sparkle:focus-visible,
   .dialogue-reveal,
+  .dialogue-portrait-enter,
+  .dialogue-advance,
   .world-band,
   .world-clouds,
   .world-sway,

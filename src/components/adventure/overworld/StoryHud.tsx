@@ -152,10 +152,16 @@ export function StoryHud({
         )}
 
         {hasBeat && (
+          /* Keyed by beat identity: a completed beat remounts the block
+             and plays the brief advance settle (B2) — reduced-motion-
+             safe via the pixel.css kill-list. While streaming the key
+             is stable so growing token text never remounts or replays
+             the animation. */
           <button
+            key={streaming ? '(streaming)' : text}
             type="button"
             onClick={() => setVisibleChars(text.length)}
-            className="block w-full text-left lore-text text-sm text-void-100 min-h-[3.5rem] focus-visible:outline-none"
+            className="dialogue-advance block w-full text-left lore-text text-sm text-void-100 min-h-[3.5rem] focus-visible:outline-none"
             data-testid="story-hud-text"
             aria-label={revealed ? undefined : 'Reveal full text'}
           >
