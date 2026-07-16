@@ -253,7 +253,7 @@ The standing pattern for "procedural now, real art later":
 | Slot | Location | Fallback today |
 |---|---|---|
 | Environment backdrops | `public/assets/sprites/environments/<scene>.png` | WorldRenderer's procedural SVG scenery |
-| Portraits | `public/assets/sprites/portraits/` | emoji/initial placeholder (portrait phase not started) |
+| Portraits | `public/assets/sprites/portraits/` | dialogue speakers: fixture glyph → deterministic initial tile → silhouette (SpeakerPortrait probes `npc-<id>.png`; player sprite probes `player-<archetype>.png`) |
 | Items / enemies / UI sprites | `public/assets/sprites/{items,enemies,ui}/` | emoji via `Icon` registry |
 | Music | `public/audio/music/<key>.ogg` | silence (AudioManager silent-fail) |
 | Ambience loops | `public/audio/ambience/<key>.ogg` | silence |
@@ -294,13 +294,12 @@ Not in UI 3.0; each is a later phase evaluated against this document:
 - Real environment/sprite/audio assets (licensing decision required).
 - Day/night cycle and weather-driven scenes (blocked on Phase 10
   Living World data — honesty rule).
-- Dialogue cinematics beyond the unified-screen foundation. `StoryHud`
-  (which superseded `DialogueWindow` in the Unified Adventure Screen)
-  docks real Director text — NPC dialogue and ambient story beats —
-  typed reveal, suggested actions, and free input over the always-
-  visible playable world; a later phase may add real portraits, richer
-  pacing, and cinematic transitions without changing its action or
-  narration contracts.
+- Dialogue cinematics beyond v1. Dialogue Cinematics v1 shipped
+  speaker portraits (asset-ready slot with honest procedural
+  fallback), stepped enter/advance transitions, and player-adjustable
+  text speed on `StoryHud`. Still deferred: real portrait art
+  (licensing decision), emotion variants, camera zooms, letterboxing —
+  all layerable without changing the action or narration contracts.
 - `/menu` route alias (dedicated routing-cleanup phase; `/dashboard`
   path is unchanged by UI 3.0 by explicit decision).
 
